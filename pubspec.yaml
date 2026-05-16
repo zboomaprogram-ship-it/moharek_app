@@ -50,7 +50,7 @@ dependencies:
   permission_handler: ^12.0.1
   cached_network_image: ^3.4.1
   appflowy_board: ^0.1.2
-  livekit_client: 2.3.1
+  livekit_client: ^2.3.1
   flutter_webrtc: ^0.12.3
   flutter_callkeep: any
   onesignal_flutter: ^5.5.4

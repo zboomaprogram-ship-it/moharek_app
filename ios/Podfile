@@ -31,10 +31,6 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  
-  # Force WebRTC-SDK version to resolve conflict between flutter_webrtc and livekit_client
-  pod 'WebRTC-SDK', '125.6422.06'
-  
   target 'RunnerTests' do
     inherit! :search_paths
   end
