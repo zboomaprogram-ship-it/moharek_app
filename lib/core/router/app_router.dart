@@ -1,0 +1,457 @@
+import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_billing_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_channels_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_chat_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_logs_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_reports_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_support_screen.dart';
+import 'package:moharek_app/features/ai_assistant/presentation/screens/ai_assistant_screen.dart';
+import 'package:moharek_app/features/dashboard/presentation/screens/growth_story_screen.dart';
+import 'package:moharek_app/features/notifications/presentation/screens/notification_center_screen.dart';
+import 'package:moharek_app/features/profile/presentation/screens/settings_screen.dart';
+import 'package:moharek_app/features/profile/presentation/screens/team_management_screen.dart';
+import 'package:moharek_app/features/support/presentation/screens/support_ticket_detail_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:moharek_app/features/auth/presentation/screens/web_login_screen.dart';
+import 'package:moharek_app/features/auth/presentation/screens/splash_screen.dart';
+import 'package:moharek_app/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:moharek_app/features/auth/presentation/screens/profile_screen.dart';
+import 'package:moharek_app/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:moharek_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:moharek_app/features/dashboard/presentation/screens/main_shell.dart';
+import 'package:moharek_app/features/journey/presentation/screens/journey_screen.dart';
+import 'package:moharek_app/features/strategy/presentation/screens/strategy_screen.dart';
+import 'package:moharek_app/features/tasks/presentation/screens/tasks_screen.dart';
+import 'package:moharek_app/features/results/presentation/screens/results_screen.dart';
+import 'package:moharek_app/features/reports/presentation/screens/reports_screen.dart';
+import 'package:moharek_app/features/approvals/presentation/screens/approvals_screen.dart';
+import 'package:moharek_app/features/files/presentation/screens/files_screen.dart';
+import 'package:moharek_app/features/meetings/presentation/screens/meetings_screen.dart';
+import 'package:moharek_app/features/contracts/presentation/screens/contracts_screen.dart';
+import 'package:moharek_app/features/financials/presentation/screens/billing_screen.dart';
+import 'package:moharek_app/features/campaigns/presentation/screens/campaigns_screen.dart';
+import 'package:moharek_app/features/support/presentation/screens/support_screen.dart';
+import 'package:moharek_app/features/campaigns/presentation/screens/campaign_detail_screen.dart';
+import 'package:moharek_app/features/chat/presentation/screens/channels_screen.dart';
+import 'package:moharek_app/features/chat/presentation/screens/chat_screen.dart';
+import 'package:moharek_app/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:moharek_app/features/profile/presentation/screens/company_profile_screen.dart';
+
+// Admin Dashboard Imports
+import 'package:moharek_app/features/admin/presentation/screens/admin_shell.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_overview_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_team_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_am_detail_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_clients_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_notifications_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_settings_screen.dart';
+
+// AM Dashboard Imports
+import 'package:moharek_app/features/am/presentation/screens/am_shell.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_clients_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_tasks_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_approvals_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_reports_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_chat_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_calendar_screen.dart';
+import 'package:moharek_app/features/am/presentation/screens/am_profile_screen.dart';
+
+// Shared Imports
+import 'package:moharek_app/features/shared/presentation/screens/shared_client_hub_screen.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+class SupabaseAuthListenable extends ChangeNotifier {
+  bool _notifying = false;
+
+  SupabaseAuthListenable() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // On explicit sign-out, clear cache immediately
+      if (data.event == AuthChangeEvent.signedOut) {
+        _cachedRole = null;
+        _cachedIsActive = null;
+        _cachedUserId = null;
+      }
+      // Debounce rapid auth events (e.g. token refresh) to avoid flicker
+      if (_notifying) return;
+      _notifying = true;
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _notifying = false;
+        notifyListeners();
+      });
+    });
+  }
+}
+
+// Cache for user role to avoid redundant DB calls on every redirect
+String? _cachedRole;
+bool? _cachedIsActive;
+String? _cachedUserId;
+
+String? _processRedirect(
+  String path,
+  String role,
+  bool isActive,
+  bool isLoginPage,
+  bool isRoot,
+) {
+  // Status Gate: Check if user is active
+  if (!isActive) {
+    Supabase.instance.client.auth.signOut();
+    return '/login';
+  }
+
+  final bool isAdmin = role == 'admin';
+  final bool isAM = role == 'account_manager';
+
+  // Entry Gate: Redirect from Login/Root to appropriate Dashboard
+  if (isLoginPage || isRoot) {
+    if (isAdmin) return '/admin/overview';
+    if (isAM) return '/am/clients';
+    return '/dashboard';
+  }
+
+  // Security Gate: Protect Web Dashboards
+  if (path.startsWith('/admin') && !isAdmin) {
+    return isAM ? '/am/clients' : '/dashboard';
+  }
+
+  if (path.startsWith('/am') && !isAM && !isAdmin) {
+    return '/dashboard';
+  }
+
+  return null;
+}
+
+final appRouter = GoRouter(
+  initialLocation: '/',
+  navigatorKey: rootNavigatorKey,
+  refreshListenable: SupabaseAuthListenable(),
+  redirect: (context, state) async {
+    // Give Supabase time to restore a persisted session from storage
+    final client = Supabase.instance.client;
+    Session? session = client.auth.currentSession;
+
+    // If session is null, wait briefly for token refresh before deciding
+    if (session == null) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      session = client.auth.currentSession;
+    }
+
+    final path = state.matchedLocation;
+    final isLoginPage = path == '/login';
+    final isRoot = path == '/';
+    final isForgotPass = path == '/forgot-password';
+
+    // 1. Unauthenticated users (even after retry)
+    if (session == null) {
+      // Only clear cache on confirmed sign-out, not transient null
+      if (_cachedUserId != null) {
+        _cachedRole = null;
+        _cachedIsActive = null;
+        _cachedUserId = null;
+      }
+      if (isRoot || isForgotPass || isLoginPage) return null;
+      return '/login';
+    }
+
+    // 2. Use cache if available and userId matches (avoids repeated DB calls)
+    if (_cachedUserId == session.user.id && _cachedRole != null) {
+      return _processRedirect(
+        path,
+        _cachedRole!,
+        _cachedIsActive ?? true,
+        isLoginPage,
+        isRoot,
+      );
+    }
+
+    // 3. Fetch profile for security verification
+    try {
+      final profile = await client
+          .from('profiles')
+          .select('role, is_active')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+      if (profile == null) {
+        if (path.startsWith('/admin') || path.startsWith('/am')) return '/dashboard';
+        return null;
+      }
+
+      // Update cache
+      _cachedUserId = session.user.id;
+      _cachedRole = (profile['role'] as String? ?? 'client').toLowerCase();
+      _cachedIsActive = profile['is_active'] ?? true;
+
+      return _processRedirect(
+        path,
+        _cachedRole!,
+        _cachedIsActive!,
+        isLoginPage,
+        isRoot,
+      );
+    } catch (e) {
+      debugPrint('Security Gate Error: $e');
+      // On error, don't redirect — let the user stay on their current page
+      return null;
+    }
+  },
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const WebLoginScreen(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
+
+    // ── Client/Mobile Shell ───────────────────────────────────
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          MainShell(navigationShell: navigationShell),
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/dashboard',
+              builder: (context, state) => const DashboardScreen(),
+              routes: [
+                GoRoute(
+                  path: 'approvals',
+                  builder: (c, s) => const ApprovalsScreen(),
+                ),
+                GoRoute(path: 'files', builder: (c, s) => const FilesScreen()),
+                GoRoute(
+                  path: 'meetings',
+                  builder: (c, s) => const MeetingsScreen(),
+                ),
+                GoRoute(
+                  path: 'contracts',
+                  builder: (c, s) => const ContractsScreen(),
+                ),
+                GoRoute(
+                  path: 'billing',
+                  builder: (c, s) => const BillingScreen(),
+                ),
+                GoRoute(
+                  path: 'campaigns',
+                  builder: (c, s) => const CampaignsScreen(),
+                ),
+                GoRoute(
+                  path: 'campaigns/:id',
+                  builder: (c, s) =>
+                      CampaignDetailScreen(campaignId: s.pathParameters['id']!),
+                ),
+                GoRoute(
+                  path: 'ai-assistant',
+                  builder: (c, s) => const AiAssistantScreen(),
+                ),
+                GoRoute(
+                  path: 'growth-story',
+                  builder: (c, s) => const GrowthStoryScreen(),
+                ),
+                GoRoute(
+                  path: 'notifications',
+                  builder: (c, s) => const NotificationCenterScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/tasks', builder: (c, s) => const TasksScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/chat',
+              builder: (c, s) => const ChannelsScreen(),
+              routes: [
+                GoRoute(
+                  path: ':channelId',
+                  builder: (c, s) => ChatScreen(
+                    channelId: s.pathParameters['channelId']!,
+                    channelName: s.uri.queryParameters['name'] ?? 'Chat',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/results', builder: (c, s) => const ResultsScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/reports', builder: (c, s) => const ReportsScreen()),
+          ],
+        ),
+      ],
+    ),
+
+    // ── Admin Dashboard (Web) ──────────────────────────────────
+    ShellRoute(
+      builder: (context, state, child) => AdminShell(child: child),
+      routes: [
+        GoRoute(path: '/admin', redirect: (_, __) => '/admin/overview'),
+        GoRoute(
+          path: '/admin/overview',
+          builder: (_, __) => const AdminOverviewScreen(),
+        ),
+        GoRoute(
+          path: '/admin/team',
+          builder: (_, __) => const AdminTeamScreen(),
+        ),
+        GoRoute(
+          path: '/admin/team/:amId',
+          builder: (_, s) =>
+              AdminAmDetailScreen(amId: s.pathParameters['amId']!),
+        ),
+        GoRoute(
+          path: '/admin/clients',
+          builder: (_, __) => const AdminClientsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/clients/:projectId',
+          builder: (_, s) => SharedClientHubScreen(
+            projectId: s.pathParameters['projectId']!,
+            isAdmin: true,
+          ),
+          routes: [
+            GoRoute(
+              path: 'channels',
+              builder: (_, s) => AdminChannelsScreen(
+                projectId: s.pathParameters['projectId']!,
+                clientName: s.uri.queryParameters['clientName'] ?? 'Client',
+              ),
+            ),
+          ],
+        ),
+        // Direct chat routes
+        GoRoute(
+          path: '/admin/chat/:projectId',
+          builder: (_, s) => AdminChannelsScreen(
+            projectId: s.pathParameters['projectId']!,
+            clientName: s.uri.queryParameters['name'] ?? 'Client',
+          ),
+        ),
+        GoRoute(
+          path: '/admin/chat/:projectId/:channelId',
+          builder: (_, s) => AdminChatScreen(
+            projectId: s.pathParameters['projectId']!,
+            channelId: s.pathParameters['channelId']!,
+            clientName: s.uri.queryParameters['clientName'] ?? 'Client',
+            channelName: s.uri.queryParameters['channelName'] ?? 'Chat',
+          ),
+        ),
+        GoRoute(
+          path: '/admin/reports',
+          builder: (_, __) => const AdminReportsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/billing',
+          builder: (_, __) => const AdminBillingScreen(),
+        ),
+        GoRoute(
+          path: '/admin/logs',
+          builder: (_, __) => const AdminLogsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/settings',
+          builder: (_, __) => const AdminSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/support',
+          builder: (_, __) => const AdminSupportScreen(),
+        ),
+        GoRoute(
+          path: '/admin/support/:ticketId',
+          builder: (_, s) => SupportTicketDetailScreen(
+            ticketId: s.pathParameters['ticketId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/admin/notifications',
+          builder: (_, __) => const AdminNotificationsScreen(),
+        ),
+      ],
+    ),
+
+    // ── Account Manager Dashboard (Web) ────────────────────────
+    ShellRoute(
+      builder: (context, state, child) => AmShell(child: child),
+      routes: [
+        GoRoute(path: '/am', redirect: (_, __) => '/am/clients'),
+        GoRoute(
+          path: '/am/clients',
+          builder: (_, __) => const AmClientsScreen(),
+        ),
+        GoRoute(
+          path: '/am/clients/:projectId',
+          builder: (_, s) => SharedClientHubScreen(
+            projectId: s.pathParameters['projectId']!,
+            isAdmin: false,
+          ),
+        ),
+        GoRoute(path: '/am/tasks', builder: (_, __) => const AmTasksScreen()),
+        GoRoute(
+          path: '/am/approvals',
+          builder: (_, __) => const AmApprovalsScreen(),
+        ),
+        GoRoute(
+          path: '/am/reports',
+          builder: (_, __) => const AmReportsScreen(),
+        ),
+        GoRoute(path: '/am/chat', builder: (_, __) => const AmChatScreen()),
+        GoRoute(
+          path: '/am/calendar',
+          builder: (_, __) => const AmCalendarScreen(),
+        ),
+        GoRoute(
+          path: '/am/profile',
+          builder: (_, __) => const AmProfileScreen(),
+        ),
+      ],
+    ),
+    // ── Global/Extra Routes ───────────────────────────────────
+    GoRoute(path: '/journey', builder: (c, s) => const JourneyScreen()),
+    GoRoute(path: '/strategy', builder: (c, s) => const StrategyScreen()),
+    GoRoute(
+      path: '/profile',
+      builder: (c, s) => const ProfileScreen(),
+      routes: [
+        GoRoute(path: 'edit', builder: (c, s) => const EditProfileScreen()),
+        GoRoute(
+          path: 'company',
+          builder: (c, s) => const CompanyProfileScreen(),
+        ),
+        GoRoute(
+          path: 'support',
+          builder: (c, s) => const SupportScreen(),
+          routes: [
+            GoRoute(
+              path: ':ticketId',
+              builder: (c, s) => SupportTicketDetailScreen(
+                ticketId: s.pathParameters['ticketId']!,
+              ),
+            ),
+          ],
+        ),
+        GoRoute(path: 'team', builder: (c, s) => const TeamManagementScreen()),
+        GoRoute(path: 'settings', builder: (c, s) => const SettingsScreen()),
+      ],
+    ),
+  ],
+);

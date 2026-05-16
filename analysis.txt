@@ -1,0 +1,315 @@
+Analyzing moharek_app...                                        
+
+   info • Dangling library doc comment • lib/core/config/app_config.dart:1:1 • dangling_library_doc_comments
+   info • 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre • lib/core/theme/app_theme.dart:21:9 • deprecated_member_use
+warning • Duplicate import • lib/core/utils/date_formatter.dart:4:8 • duplicate_import
+   info • Statements in an if should be enclosed in a block • lib/core/utils/date_formatter.dart:14:7 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:94:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:105:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:114:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:126:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:152:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_approvals_screen.dart:154:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_clients_screen.dart:68:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_clients_screen.dart:110:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_clients_screen.dart:271:72 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_contracts_screen.dart:80:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_contracts_screen.dart:90:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_contracts_screen.dart:91:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_contracts_screen.dart:132:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_contracts_screen.dart:133:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_dashboard.dart:219:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_dashboard.dart:253:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_dashboard.dart:278:55 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/features/admin/presentation/screens/admin_dashboard.dart:320:57 • curly_braces_in_flow_control_structures
+   info • Unnecessary braces in a string interpolation • lib/features/admin/presentation/screens/admin_invoices_screen.dart:335:41 • unnecessary_brace_in_string_interps
+   info • Use the null-aware operator '?.' rather than an explicit 'null' comparison • lib/features/admin/presentation/screens/admin_invoices_screen.dart:364:40 • prefer_null_aware_operators
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_notifications_screen.dart:96:54 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_notifications_screen.dart:96:94 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_notifications_screen.dart:100:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_notifications_screen.dart:100:101 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_notifications_screen.dart:130:28 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_shell.dart:22:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_shell.dart:42:50 • deprecated_member_use
+  error • The property 'adminDashboard' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:68:58 • unchecked_use_of_nullable_value
+  error • The property 'clients' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:73:58 • unchecked_use_of_nullable_value
+  error • The property 'tasksTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:78:58 • unchecked_use_of_nullable_value
+  error • The property 'contracts' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:83:58 • unchecked_use_of_nullable_value
+  error • The property 'waitingApproval' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:88:58 • unchecked_use_of_nullable_value
+  error • The property 'invoices' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:93:58 • unchecked_use_of_nullable_value
+  error • The property 'notify' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:98:58 • unchecked_use_of_nullable_value
+  error • The property 'settings' can't be unconditionally accessed because the receiver can be 'null' • lib/features/admin/presentation/screens/admin_shell.dart:103:58 • unchecked_use_of_nullable_value
+   info • Statements in an if should be enclosed in a block • lib/features/admin/presentation/screens/admin_tasks_screen.dart:294:25 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/admin_tasks_screen.dart:367:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/manage_client.dart:159:50 • deprecated_member_use
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/admin/presentation/screens/manage_client.dart:236:46 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/admin/presentation/screens/manage_client.dart:236:74 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/screens/manage_client.dart:311:13 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/screens/manage_client.dart:378:118 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/screens/manage_client.dart:406:13 • deprecated_member_use
+   info • The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/features/approvals/presentation/screens/approvals_screen.dart:2:8 • unnecessary_import
+  error • The property 'waitingApproval' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:40:63 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:43:76 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/approvals/presentation/screens/approvals_screen.dart:76:38 • deprecated_member_use
+  error • The property 'requestChanges' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:127:62 • unchecked_use_of_nullable_value
+  error • The property 'approve' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:141:62 • unchecked_use_of_nullable_value
+  error • The property 'approved' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:156:48 • unchecked_use_of_nullable_value
+  error • The property 'changesRequested' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:170:48 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/approvals/presentation/screens/approvals_screen.dart:199:22 • deprecated_member_use
+  error • The property 'feedback' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:224:50 • unchecked_use_of_nullable_value
+  error • The property 'describeChanges' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:230:52 • unchecked_use_of_nullable_value
+  error • The property 'cancel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:238:54 • unchecked_use_of_nullable_value
+  error • The property 'send' can't be unconditionally accessed because the receiver can be 'null' • lib/features/approvals/presentation/screens/approvals_screen.dart:245:54 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/forgot_password_screen.dart:87:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/forgot_password_screen.dart:136:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/forgot_password_screen.dart:138:52 • deprecated_member_use
+  error • The property 'loginError' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:32:67 • unchecked_use_of_nullable_value
+  error • The property 'unexpectedError' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:86:54 • unchecked_use_of_nullable_value
+  error • The property 'loginTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:112:48 • unchecked_use_of_nullable_value
+  error • The property 'loginSubtitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:122:48 • unchecked_use_of_nullable_value
+  error • The property 'emailLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:134:61 • unchecked_use_of_nullable_value
+  error • The property 'passwordLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:161:61 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/login_screen.dart:196:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/login_screen.dart:198:60 • deprecated_member_use
+  error • The property 'forgotPassword' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:213:52 • unchecked_use_of_nullable_value
+  error • The property 'signIn' can't be unconditionally accessed because the receiver can be 'null' • lib/features/auth/presentation/screens/login_screen.dart:235:58 • unchecked_use_of_nullable_value
+warning • The declaration '_buildToggleItem' isn't referenced • lib/features/auth/presentation/screens/profile_screen.dart:149:10 • unused_element
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/features/auth/presentation/screens/profile_screen.dart:156:9 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/features/auth/presentation/screens/splash_screen.dart:51:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/auth/presentation/screens/splash_screen.dart:53:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/auth/presentation/screens/splash_screen.dart:58:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/auth/presentation/screens/splash_screen.dart:60:13 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/auth/presentation/screens/splash_screen.dart:65:9 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/splash_screen.dart:91:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/web_only_screen.dart:26:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/auth/presentation/screens/web_only_screen.dart:29:49 • deprecated_member_use
+warning • Unused import: 'package:moharek_app/core/theme/app_theme.dart' • lib/features/calls/screens/active_call_screen.dart:3:8 • unused_import
+   info • Unnecessary use of 'toList' in a spread • lib/features/calls/screens/active_call_screen.dart:77:16 • unnecessary_to_list_in_spreads
+   info • 'roomOptions' is deprecated and shouldn't be used. deprecated, please use roomOptions in Room constructor • lib/features/calls/services/call_service.dart:33:7 • deprecated_member_use
+  error • The method 'uploadFailed' can't be unconditionally invoked because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:102:63 • unchecked_use_of_nullable_value
+  error • Undefined name 'l10n' • lib/features/chat/presentation/screens/chat_screen.dart:145:21 • undefined_identifier
+  error • Undefined name 'l10n' • lib/features/chat/presentation/screens/chat_screen.dart:146:21 • undefined_identifier
+  error • The property 'chatTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:188:47 • unchecked_use_of_nullable_value
+  error • The property 'supportTeam' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:189:47 • unchecked_use_of_nullable_value
+  error • The property 'videoCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:196:51 • unchecked_use_of_nullable_value
+  error • The property 'voiceCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:201:51 • unchecked_use_of_nullable_value
+  error • The property 'noMessagesYet' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:216:57 • unchecked_use_of_nullable_value
+  error • The property 'sendMessageToStart' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:217:57 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:237:82 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/chat/presentation/screens/chat_screen.dart:289:63 • deprecated_member_use
+  error • Undefined name 'l10n' • lib/features/chat/presentation/screens/chat_screen.dart:310:60 • undefined_identifier
+  error • Undefined name 'l10n' • lib/features/chat/presentation/screens/chat_screen.dart:310:85 • undefined_identifier
+  error • Undefined name 'l10n' • lib/features/chat/presentation/screens/chat_screen.dart:313:22 • undefined_identifier
+  error • The property 'photo' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:345:65 • unchecked_use_of_nullable_value
+  error • The property 'file' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:346:77 • unchecked_use_of_nullable_value
+  error • The property 'videoCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:347:68 • unchecked_use_of_nullable_value
+  error • The property 'voiceCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:348:64 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/chat/presentation/screens/chat_screen.dart:359:50 • deprecated_member_use
+  error • The property 'typeMessage' can't be unconditionally accessed because the receiver can be 'null' • lib/features/chat/presentation/screens/chat_screen.dart:390:58 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/chat/widgets/voice_message_bubble.dart:121:84 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/contracts/presentation/screens/contracts_screen.dart:59:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/contracts/presentation/screens/contracts_screen.dart:72:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/contracts/presentation/screens/contracts_screen.dart:159:22 • deprecated_member_use
+warning • Unused import: 'package:moharek_app/shared/services/haptic_service.dart' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:13:8 • unused_import
+  error • The property 'thankYouFeedback' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:66:71 • unchecked_use_of_nullable_value
+  error • The property 'goodEvening' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:290:28 • unchecked_use_of_nullable_value
+  error • The property 'goodMorning' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:292:23 • unchecked_use_of_nullable_value
+  error • The property 'goodAfternoon' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:294:23 • unchecked_use_of_nullable_value
+  error • The method 'focusedOn' can't be unconditionally invoked because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:319:48 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:321:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:343:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:344:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:348:56 • deprecated_member_use
+  error • The property 'projectGrowth' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:417:48 • unchecked_use_of_nullable_value
+  error • The method 'currentStage' can't be unconditionally invoked because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:426:48 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:437:60 • deprecated_member_use
+  error • The property 'viewJourney' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:441:60 • unchecked_use_of_nullable_value
+  error • The property 'completed' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:494:40 • unchecked_use_of_nullable_value
+  error • The property 'inProgress' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:501:40 • unchecked_use_of_nullable_value
+  error • The property 'keywords' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:508:40 • unchecked_use_of_nullable_value
+  error • The method 'tasksCompletedSince' can't be unconditionally invoked because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:602:48 • unchecked_use_of_nullable_value
+  error • The method 'itemNeedsApproval' can't be unconditionally invoked because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:609:48 • unchecked_use_of_nullable_value
+   info • The local variable '_getMetricValue' starts with an underscore • lib/features/dashboard/presentation/screens/dashboard_screen.dart:617:12 • no_leading_underscores_for_local_identifiers
+  error • The property 'performanceSnapshots' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:635:40 • unchecked_use_of_nullable_value
+  error • The property 'organicTraffic' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:649:46 • unchecked_use_of_nullable_value
+  error • The property 'adSpend' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:654:46 • unchecked_use_of_nullable_value
+  error • The property 'keywords' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:658:66 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:715:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:716:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:720:51 • deprecated_member_use
+  error • The property 'contractAwaitingSignature' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:731:50 • unchecked_use_of_nullable_value
+  error • The property 'tapToReview' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:738:50 • unchecked_use_of_nullable_value
+  error • The property 'quickActions' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:756:40 • unchecked_use_of_nullable_value
+  error • The property 'tasksTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:766:90 • unchecked_use_of_nullable_value
+  error • The property 'chatTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:770:44 • unchecked_use_of_nullable_value
+  error • The property 'resultsTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:776:44 • unchecked_use_of_nullable_value
+  error • The property 'contracts' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/dashboard_screen.dart:782:44 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:885:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/dashboard_screen.dart:893:43 • deprecated_member_use
+  error • The property 'offlineMessage' can't be unconditionally accessed because the receiver can be 'null' • lib/features/dashboard/presentation/screens/main_shell.dart:50:46 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/screens/main_shell.dart:61:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/milestones_feed.dart:62:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/nps_survey_bottom_sheet.dart:69:80 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/nps_survey_bottom_sheet.dart:106:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/whats_new_banner.dart:22:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/whats_new_banner.dart:23:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/whats_new_banner.dart:27:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/dashboard/presentation/widgets/whats_new_banner.dart:35:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/files/presentation/screens/files_screen.dart:66:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/files/presentation/screens/files_screen.dart:150:41 • deprecated_member_use
+  error • The property 'invoices' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:18:50 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:22:76 • unchecked_use_of_nullable_value
+  error • The property 'noInvoicesFound' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:25:68 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/financials/presentation/screens/invoices_screen.dart:49:63 • deprecated_member_use
+  error • The property 'invoiceLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:58:46 • unchecked_use_of_nullable_value
+  error • The property 'amountDue' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:71:53 • unchecked_use_of_nullable_value
+  error • The argument type 'String Function(String)' can't be assigned to the parameter type 'String'.  • lib/features/financials/presentation/screens/invoices_screen.dart:82:26 • argument_type_not_assignable
+  error • The property 'dueDate' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:82:55 • unchecked_use_of_nullable_value
+  error • The property 'payNow' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:102:58 • unchecked_use_of_nullable_value
+  error • The property 'paid' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:118:22 • unchecked_use_of_nullable_value
+  error • The property 'unpaid' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:122:22 • unchecked_use_of_nullable_value
+  error • The property 'pending' can't be unconditionally accessed because the receiver can be 'null' • lib/features/financials/presentation/screens/invoices_screen.dart:126:22 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/financials/presentation/screens/invoices_screen.dart:136:22 • deprecated_member_use
+  error • The property 'audit' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:26:38 • unchecked_use_of_nullable_value
+  error • The property 'strategy' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:27:41 • unchecked_use_of_nullable_value
+  error • The property 'setup' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:28:38 • unchecked_use_of_nullable_value
+  error • The property 'execution' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:29:42 • unchecked_use_of_nullable_value
+  error • The property 'optimization' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:30:45 • unchecked_use_of_nullable_value
+  error • The property 'results' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:31:40 • unchecked_use_of_nullable_value
+  error • The property 'growthJourney' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:52:32 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/screens/journey_screen.dart:58:52 • deprecated_member_use
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:75:46 • unchecked_use_of_nullable_value
+warning • The value of the local variable 'currentStage' isn't used • lib/features/journey/presentation/screens/journey_screen.dart:82:29 • unused_local_variable
+  error • The property 'nextPhaseGrowth' can't be unconditionally accessed because the receiver can be 'null' • lib/features/journey/presentation/screens/journey_screen.dart:107:77 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/screens/journey_screen.dart:168:61 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/screens/journey_screen.dart:197:64 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/screens/journey_screen.dart:197:96 • deprecated_member_use
+  error • Undefined name 'l10n' • lib/features/journey/presentation/screens/journey_screen.dart:225:52 • undefined_identifier
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/widgets/journey_timeline_connector.dart:27:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/widgets/next_stage_preview.dart:22:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/widgets/next_stage_preview.dart:24:48 • deprecated_member_use
+warning • Unused import: 'package:moharek_app/core/theme/app_theme.dart' • lib/features/journey/presentation/widgets/stage_progress_bar.dart:2:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/journey/presentation/widgets/stage_progress_bar.dart:37:36 • deprecated_member_use
+  error • The property 'meetings' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:17:50 • unchecked_use_of_nullable_value
+  error • The property 'request' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:22:54 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:28:76 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/meetings/presentation/screens/meetings_screen.dart:48:74 • deprecated_member_use
+  error • The property 'noMeetingsScheduled' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:50:57 • unchecked_use_of_nullable_value
+  error • The property 'tapRequestSchedule' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:52:57 • unchecked_use_of_nullable_value
+  error • The property 'upcoming' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:57:51 • unchecked_use_of_nullable_value
+  error • The property 'pastMeetings' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:63:51 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/meetings/presentation/screens/meetings_screen.dart:88:50 • deprecated_member_use
+  error • The property 'voiceCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:148:62 • unchecked_use_of_nullable_value
+  error • The property 'videoCall' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:167:62 • unchecked_use_of_nullable_value
+  error • The property 'completed' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:191:22 • unchecked_use_of_nullable_value
+  error • The property 'ongoing' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:195:22 • unchecked_use_of_nullable_value
+  error • The property 'cancelled' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:199:22 • unchecked_use_of_nullable_value
+  error • The property 'upcoming' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:203:22 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/meetings/presentation/screens/meetings_screen.dart:207:46 • deprecated_member_use
+  error • The property 'requestMeeting' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:230:51 • unchecked_use_of_nullable_value
+  error • The property 'whatDiscuss' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:236:60 • unchecked_use_of_nullable_value
+  error • The property 'pickDate' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:256:153 • unchecked_use_of_nullable_value
+  error • The property 'sendRequest' can't be unconditionally accessed because the receiver can be 'null' • lib/features/meetings/presentation/screens/meetings_screen.dart:279:62 • unchecked_use_of_nullable_value
+warning • The value of the field '_goals' isn't used • lib/features/onboarding/presentation/screens/onboarding_screen.dart:21:22 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:75:50 • deprecated_member_use
+  error • The property 'welcomeTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:135:18 • unchecked_use_of_nullable_value
+  error • The property 'thrilledPartner' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:141:18 • unchecked_use_of_nullable_value
+  error • The property 'letsBegin' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:155:32 • unchecked_use_of_nullable_value
+  error • The property 'meetYourTeam' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:173:21 • unchecked_use_of_nullable_value
+  error • The property 'peopleWorkingForYou' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:175:21 • unchecked_use_of_nullable_value
+  error • The property 'next' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:202:32 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:224:74 • deprecated_member_use
+  error • The property 'roadmapTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:242:21 • unchecked_use_of_nullable_value
+  error • The property 'structuredPlan' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:244:21 • unchecked_use_of_nullable_value
+  error • The property 'auditOnboarding' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:250:45 • unchecked_use_of_nullable_value
+  error • The property 'strategyDelivered' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:251:45 • unchecked_use_of_nullable_value
+  error • The property 'firstCampaign' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:252:46 • unchecked_use_of_nullable_value
+  error • The property 'optimizationReview' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:253:46 • unchecked_use_of_nullable_value
+  error • The property 'quarterlyReport' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:254:46 • unchecked_use_of_nullable_value
+  error • The property 'next' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:269:32 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:287:69 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:292:85 • deprecated_member_use
+  error • The property 'whatToExpect' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:322:21 • unchecked_use_of_nullable_value
+  error • The property 'trackResults' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:325:49 • unchecked_use_of_nullable_value
+  error • The property 'approveContent' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:327:60 • unchecked_use_of_nullable_value
+  error • The property 'talkGrowthManager' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:329:59 • unchecked_use_of_nullable_value
+  error • The property 'almostDone' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:342:32 • unchecked_use_of_nullable_value
+  error • The property 'increaseSales' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:368:12 • unchecked_use_of_nullable_value
+  error • The property 'improvePresence' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:369:12 • unchecked_use_of_nullable_value
+  error • The property 'launchProduct' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:370:12 • unchecked_use_of_nullable_value
+  error • The property 'rebrand' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:371:12 • unchecked_use_of_nullable_value
+  error • The property 'tellUsGoal' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:380:21 • unchecked_use_of_nullable_value
+  error • The property 'goalQuestion' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:382:21 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:391:70 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/onboarding/presentation/screens/onboarding_screen.dart:412:54 • deprecated_member_use
+  error • The property 'finishEnterDashboard' can't be unconditionally accessed because the receiver can be 'null' • lib/features/onboarding/presentation/screens/onboarding_screen.dart:416:32 • unchecked_use_of_nullable_value
+warning • The value of the field '_isLoading' isn't used • lib/features/profile/presentation/screens/settings_screen.dart:16:8 • unused_field
+  error • The property 'settings' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:43:63 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:46:74 • unchecked_use_of_nullable_value
+  error • The property 'language' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:53:64 • unchecked_use_of_nullable_value
+  error • The property 'english' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:55:63 • unchecked_use_of_nullable_value
+  error • The property 'arabic' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:56:63 • unchecked_use_of_nullable_value
+  error • The property 'notifications' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:59:64 • unchecked_use_of_nullable_value
+  error • The property 'monthlyReports' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:62:46 • unchecked_use_of_nullable_value
+  error • The property 'taskUpdates' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:68:46 • unchecked_use_of_nullable_value
+  error • The property 'chatMessages' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:74:46 • unchecked_use_of_nullable_value
+  error • The property 'milestonesWins' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:80:46 • unchecked_use_of_nullable_value
+  error • The property 'logout' can't be unconditionally accessed because the receiver can be 'null' • lib/features/profile/presentation/screens/settings_screen.dart:90:60 • unchecked_use_of_nullable_value
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/features/profile/presentation/screens/settings_screen.dart:121:7 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/report_viewer_screen.dart:85:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/report_viewer_screen.dart:85:87 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/report_viewer_screen.dart:96:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/report_viewer_screen.dart:138:56 • deprecated_member_use
+  error • The property 'reportsTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:20:50 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:24:76 • unchecked_use_of_nullable_value
+  error • The property 'monthlyReport' can't be unconditionally accessed because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:45:40 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/reports_screen.dart:64:47 • deprecated_member_use
+  error • The property 'ready' can't be unconditionally accessed because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:73:46 • unchecked_use_of_nullable_value
+  error • The property 'growthStory' can't be unconditionally accessed because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:106:60 • unchecked_use_of_nullable_value
+  error • The property 'downloadPdf' can't be unconditionally accessed because the receiver can be 'null' • lib/features/reports/presentation/screens/reports_screen.dart:130:60 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/reports/presentation/screens/reports_screen.dart:132:60 • deprecated_member_use
+  error • The property 'resultsTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:37:50 • unchecked_use_of_nullable_value
+  error • The property 'seoResults' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:44:52 • unchecked_use_of_nullable_value
+  error • The property 'adsResults' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:45:52 • unchecked_use_of_nullable_value
+  error • The property 'aiVisibility' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:46:52 • unchecked_use_of_nullable_value
+  error • The property 'trustEngine' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:47:52 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:53:76 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/results/presentation/screens/results_screen.dart:80:63 • deprecated_member_use
+  error • The property 'noDataYet' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:82:47 • unchecked_use_of_nullable_value
+  error • The method 'resultsAppearLater' can't be unconditionally invoked because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:84:47 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/results/presentation/screens/results_screen.dart:176:46 • deprecated_member_use
+  error • The property 'aiVisibilityTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:193:45 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/results/presentation/screens/results_screen.dart:222:62 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/results/presentation/screens/results_screen.dart:222:93 • deprecated_member_use
+  error • The property 'notVisible' can't be unconditionally accessed because the receiver can be 'null' • lib/features/results/presentation/screens/results_screen.dart:235:106 • unchecked_use_of_nullable_value
+  error • The property 'tasksTitle' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:21:52 • unchecked_use_of_nullable_value
+  error • Methods can't be invoked in constant expressions • lib/features/tasks/presentation/screens/tasks_screen.dart:28:25 • const_eval_method_invocation
+  error • The property 'allTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:28:54 • unchecked_use_of_nullable_value
+  error • The property 'inProgress' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:29:54 • unchecked_use_of_nullable_value
+  error • The property 'waitingMeTab' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:30:54 • unchecked_use_of_nullable_value
+  error • The property 'completed' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:31:54 • unchecked_use_of_nullable_value
+  error • The method 'errorOccurred' can't be unconditionally invoked because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:37:82 • unchecked_use_of_nullable_value
+  error • Undefined name 'context' • lib/features/tasks/presentation/screens/tasks_screen.dart:58:31 • undefined_identifier
+  error • The property 'general' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:70:57 • unchecked_use_of_nullable_value
+  error • The property 'noDate' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:71:114 • unchecked_use_of_nullable_value
+  error • The property 'completed' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:93:27 • unchecked_use_of_nullable_value
+  error • The property 'waitingApproval' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:97:27 • unchecked_use_of_nullable_value
+  error • The property 'inProgress' can't be unconditionally accessed because the receiver can be 'null' • lib/features/tasks/presentation/screens/tasks_screen.dart:101:27 • unchecked_use_of_nullable_value
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/tasks/presentation/screens/tasks_screen.dart:115:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/tasks/presentation/screens/tasks_screen.dart:127:47 • deprecated_member_use
+warning • Unused import: 'package:supabase_flutter/supabase_flutter.dart' • lib/shared/services/chat_provider.dart:3:8 • unused_import
+   info • Invalid use of a private type in a public API • lib/shared/services/onesignal_stub.dart:17:16 • library_private_types_in_public_api
+   info • The variable name 'Debug' isn't a lowerCamelCase identifier • lib/shared/services/onesignal_stub.dart:17:32 • non_constant_identifier_names
+   info • Invalid use of a private type in a public API • lib/shared/services/onesignal_stub.dart:18:16 • library_private_types_in_public_api
+   info • The variable name 'Notifications' isn't a lowerCamelCase identifier • lib/shared/services/onesignal_stub.dart:18:40 • non_constant_identifier_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/empty_state.dart:32:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/empty_state.dart:35:72 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/empty_state.dart:56:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/milestone_overlay.dart:53:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/milestone_overlay.dart:82:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/milestone_overlay.dart:84:69 • deprecated_member_use
+warning • Unused import: 'package:moharek_app/core/theme/app_theme.dart' • lib/shared/widgets/pdf_viewer_screen.dart:3:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/shimmer_loading.dart:22:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/shared/widgets/shimmer_loading.dart:23:36 • deprecated_member_use
+
+311 issues found. (ran in 28.3s)

@@ -1,0 +1,9 @@
+{
+  "en": [
+    "connecting",
+    "ringing",
+    "accepted",
+    "callDeclined",
+    "callTimeout"
+  ]
+}
