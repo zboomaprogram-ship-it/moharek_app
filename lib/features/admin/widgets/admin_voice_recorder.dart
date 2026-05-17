@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class AdminVoiceRecorder extends ConsumerStatefulWidget {
   final String projectId;
@@ -69,13 +70,8 @@ class _AdminVoiceRecorderState extends ConsumerState<AdminVoiceRecorder> {
   Future<void> _uploadRecording(String path) async {
     setState(() => _isUploading = true);
     try {
-      final file = File(path);
       final fileName = 'voice_${widget.projectId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      
-      final supabase = Supabase.instance.client;
-      await supabase.storage.from('voice_updates').upload(fileName, file);
-      
-      final url = supabase.storage.from('voice_updates').getPublicUrl(fileName);
+      final url = await WordPressUploadService.uploadFile(path, fileName);
       
       final actions = ref.read(adminActionsProvider);
       await actions.createVoiceUpdate({

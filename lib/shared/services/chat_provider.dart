@@ -18,13 +18,21 @@ List<ChatMessage> _parseMessages(List<dynamic> raw) {
 // ─── Messages Notifier ────────────────────────────────────────────────────────
 // Handles pagination, polling, and background parsing.
 class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessage>, String> {
-  int _limit = 10;
+  int _limit = 20;
   Timer? _timer;
   bool _isFetching = false;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
 
   @override
   FutureOr<List<ChatMessage>> build(String arg) async {
+    _limit = 20;
+    _hasMore = true;
     final messages = await _fetch(arg, _limit);
+    if (messages.length < _limit) {
+      _hasMore = false;
+    }
     
     // Start polling for new messages every 4 seconds
     _timer?.cancel();
@@ -74,11 +82,14 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
   }
 
   Future<void> loadMore() async {
-    if (_isFetching || state.isLoading) return;
+    if (!_hasMore || _isFetching || state.isLoading) return;
     _isFetching = true;
     _limit += 10;
     try {
       final messages = await _fetch(arg, _limit);
+      if (messages.length < _limit) {
+        _hasMore = false;
+      }
       state = AsyncData(messages);
     } catch (e) {
       state = AsyncError(e, StackTrace.current);

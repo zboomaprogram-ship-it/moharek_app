@@ -5,6 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/models/contract.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:signature/signature.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class ContractSignScreen extends ConsumerStatefulWidget {
   final Contract contract;
@@ -50,12 +51,10 @@ class _ContractSignScreenState extends ConsumerState<ContractSignScreen> {
       if (signature == null) throw Exception('Failed to capture signature');
 
       final client = ref.read(supabaseClientProvider);
-      final userId = client.auth.currentUser!.id;
-      final fileName = 'signatures/${widget.contract.id}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final fileName = 'signature_${widget.contract.id}_${DateTime.now().millisecondsSinceEpoch}.png';
 
-      // Upload signature to Supabase Storage
-      await client.storage.from('contracts').uploadBinary(fileName, signature);
-      final publicUrl = client.storage.from('contracts').getPublicUrl(fileName);
+      // Upload signature to WordPress Media Library
+      final publicUrl = await WordPressUploadService.uploadBytes(signature, fileName);
 
       // Update contract status and signature URL
       await client.from('contracts').update({

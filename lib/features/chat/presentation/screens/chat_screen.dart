@@ -20,6 +20,11 @@ import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 
+final _urlRegExp = RegExp(
+  r'((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))',
+  caseSensitive: false,
+);
+
 class ChatScreen extends ConsumerStatefulWidget {
   final String channelId;
   final String channelName;
@@ -53,8 +58,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
     _scrollCtrl.addListener(() {
       if (_scrollCtrl.hasClients) {
-        if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
-          ref.read(chatMessagesProvider(widget.channelId).notifier).loadMore();
+        final maxScroll = _scrollCtrl.position.maxScrollExtent;
+        final currentScroll = _scrollCtrl.position.pixels;
+        final notifier = ref.read(chatMessagesProvider(widget.channelId).notifier);
+        if (notifier.hasMore && maxScroll > 0 && currentScroll > 0 && currentScroll >= maxScroll - 100) {
+          notifier.loadMore();
         }
       }
     });
@@ -299,8 +307,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         vertical: 12,
                       ),
                       itemCount: messages.length,
-                      addAutomaticKeepAlives: false,
-                      addRepaintBoundaries: false,
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
                       itemBuilder: (_, i) {
                         final msg = messages[i];
                         final isMe = msg.senderId == currentUser?.id;
@@ -441,12 +449,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildLinkifiedText(String text, bool isMe) {
-    final urlRegExp = RegExp(
-      r'((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))',
-      caseSensitive: false,
-    );
-
-    final matches = urlRegExp.allMatches(text);
+    final matches = _urlRegExp.allMatches(text);
     if (matches.isEmpty) {
       return SelectableText(
         text,

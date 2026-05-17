@@ -15,6 +15,11 @@ class AppConfig {
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cGJhZGRxcWhwZXBwenBiYmhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNTE4MTEsImV4cCI6MjA5MzcyNzgxMX0.nxk43GEdtyEUYvmT6K6uj4MPJVXRFb80uEA_mE9NGJI';
 
   // -----------------------------------------------------------
+  // 1b. WORDPRESS MEDIA API ✅
+  // -----------------------------------------------------------
+  static const String wordpressMediaUrl = 'https://mohrek.com/media-api.php';
+
+  // -----------------------------------------------------------
   // 2. LIVEKIT — In-App Video & Voice Calls ✅
   // -----------------------------------------------------------
   static const bool livekitEnabled = true;

@@ -20,39 +20,52 @@ class VoiceMessageBubble extends StatefulWidget {
 }
 
 class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
-  final AudioPlayer _player = AudioPlayer();
+  AudioPlayer? _player;
   bool _isPlaying = false;
+  bool _isLoading = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  StreamSubscription? _stateSub;
+  StreamSubscription? _posSub;
+  StreamSubscription? _durSub;
 
   @override
   void initState() {
     super.initState();
-    _initAudio();
   }
 
   Future<void> _initAudio() async {
+    if (_player != null || _isLoading) return;
+    if (mounted) setState(() => _isLoading = true);
+    
     try {
-      await _player.setUrl(widget.url);
-      _player.playerStateStream.listen((state) {
+      final player = AudioPlayer();
+      _player = player;
+      await player.setUrl(widget.url);
+      
+      _stateSub = player.playerStateStream.listen((state) {
         if (mounted) {
           setState(() {
             _isPlaying = state.playing && state.processingState != ProcessingState.completed;
           });
         }
         if (state.processingState == ProcessingState.completed) {
-          _player.seek(Duration.zero);
-          _player.pause();
+          player.seek(Duration.zero);
+          player.pause();
         }
       });
-      _player.positionStream.listen((pos) {
+      
+      _posSub = player.positionStream.listen((pos) {
         if (mounted) setState(() => _position = pos);
       });
-      _player.durationStream.listen((dur) {
+      
+      _durSub = player.durationStream.listen((dur) {
         if (mounted && dur != null) setState(() => _duration = dur);
       });
     } catch (e) {
       debugPrint("Error loading audio: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -62,17 +75,25 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     return '$m:$s';
   }
 
-  void _togglePlay() {
-    if (_isPlaying) {
-      _player.pause();
-    } else {
-      _player.play();
+  void _togglePlay() async {
+    if (_player == null) {
+      await _initAudio();
+    }
+    if (_player != null) {
+      if (_isPlaying) {
+        _player!.pause();
+      } else {
+        _player!.play();
+      }
     }
   }
 
   @override
   void dispose() {
-    _player.dispose();
+    _stateSub?.cancel();
+    _posSub?.cancel();
+    _durSub?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -99,11 +120,23 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           // Play/Pause button
           GestureDetector(
             onTap: _togglePlay,
-            child: Icon(
-              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-              color: widget.isMe ? Colors.white : AppTheme.primaryGreen,
-              size: 36,
-            ),
+            child: _isLoading
+                ? SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: widget.isMe ? Colors.white : AppTheme.primaryGreen,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                    color: widget.isMe ? Colors.white : AppTheme.primaryGreen,
+                    size: 36,
+                  ),
           ),
           const SizedBox(width: 12),
           
@@ -123,9 +156,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                   ),
                   child: Slider(
                     value: progress.clamp(0.0, 1.0),
-                    onChanged: (val) {
-                      final pos = Duration(milliseconds: (val * totalDuration.inMilliseconds).round());
-                      _player.seek(pos);
+                    onChanged: _isLoading ? null : (val) async {
+                      if (_player == null) {
+                        await _initAudio();
+                      }
+                      if (_player != null) {
+                        final pos = Duration(milliseconds: (val * totalDuration.inMilliseconds).round());
+                        _player!.seek(pos);
+                      }
                     },
                   ),
                 ),

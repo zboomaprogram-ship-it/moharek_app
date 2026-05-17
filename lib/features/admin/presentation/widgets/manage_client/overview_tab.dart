@@ -5,6 +5,7 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class OverviewTab extends ConsumerWidget {
   final String pid;
@@ -178,18 +179,22 @@ class OverviewTab extends ConsumerWidget {
   }
 
   Future<void> _uploadReport(BuildContext context, WidgetRef ref) async {
-    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: kIsWeb);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf'], withData: true);
     if (result == null) return;
     
     final file = result.files.first;
-    final client = ref.read(supabaseClientProvider);
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_report.pdf';
 
     try {
-      if (kIsWeb && file.bytes != null) {
-        await client.storage.from('reports').uploadBinary(fileName, file.bytes!);
+      String url = '';
+      if (file.bytes != null) {
+        url = await WordPressUploadService.uploadBytes(file.bytes!, fileName);
+      } else if (file.path != null) {
+        url = await WordPressUploadService.uploadFile(file.path!, fileName);
+      } else {
+        throw Exception('No file data available');
       }
-      final url = client.storage.from('reports').getPublicUrl(fileName);
+
       final actions = ref.read(adminActionsProvider);
       await actions.createReport({
         'project_id': pid,

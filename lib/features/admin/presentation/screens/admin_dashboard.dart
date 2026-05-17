@@ -11,7 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/features/admin/widgets/admin_voice_recorder.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 // ── Screen ───────────────────────────────────────────────────────
 
@@ -778,7 +778,7 @@ class AdminDashboard extends ConsumerWidget {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
-      withData: kIsWeb,
+      withData: true,
     );
 
     if (result == null) return;
@@ -849,23 +849,17 @@ class AdminDashboard extends ConsumerWidget {
 
     if (proceed != true) return;
 
-    final supabase = ref.read(supabaseClientProvider);
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
 
     try {
-      if (kIsWeb && file.bytes != null) {
-        await supabase.storage
-            .from('files')
-            .uploadBinary('contracts/$fileName', file.bytes!);
-      } else if (!kIsWeb && file.path != null) {
-        // Mobile/Desktop
-        final ioFile = Supabase.instance.client.storage.from('files');
-        // This is handled by supabase_flutter's upload method which takes File
+      String url = '';
+      if (file.bytes != null) {
+        url = await WordPressUploadService.uploadBytes(file.bytes!, fileName);
+      } else if (file.path != null) {
+        url = await WordPressUploadService.uploadFile(file.path!, fileName);
+      } else {
+        throw Exception('No file data available');
       }
-
-      final url = supabase.storage
-          .from('files')
-          .getPublicUrl('contracts/$fileName');
 
       final actions = ref.read(adminActionsProvider);
       await actions.uploadContract({

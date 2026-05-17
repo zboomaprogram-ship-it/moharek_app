@@ -90,17 +90,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.rocket_launch,
-                  size: 80,
-                  color: AppTheme.primaryGreen,
-                ),
+              Image.asset(
+                'assets/logo.png',
+                height: 180,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 24),
               const Text(

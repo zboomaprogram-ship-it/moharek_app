@@ -5,6 +5,7 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class FilesTab extends ConsumerWidget {
   final String pid;
@@ -89,18 +90,20 @@ class FilesTab extends ConsumerWidget {
   }
 
   Future<void> _uploadFile(BuildContext context, WidgetRef ref) async {
-    final result = await FilePicker.pickFiles(withData: kIsWeb);
+    final result = await FilePicker.pickFiles(withData: true);
     if (result == null) return;
     final file = result.files.first;
-    final client = ref.read(supabaseClientProvider);
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
     try {
-      if (kIsWeb && file.bytes != null) {
-        await client.storage.from('files').uploadBinary(fileName, file.bytes!);
+      String url = '';
+      if (file.bytes != null) {
+        url = await WordPressUploadService.uploadBytes(file.bytes!, fileName);
       } else if (file.path != null) {
-        // Mobile/desktop upload handled by native file path
+        url = await WordPressUploadService.uploadFile(file.path!, fileName);
+      } else {
+        throw Exception('No file data available');
       }
-      final url = client.storage.from('files').getPublicUrl(fileName);
+
       await ref.read(adminActionsProvider).createFile({
         'project_id': pid,
         'name': file.name,

@@ -16,6 +16,7 @@ import 'package:moharek_app/features/chat/services/voice_upload_service.dart';
 import 'package:moharek_app/features/chat/widgets/voice_record_button.dart';
 import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
 
   // ── Send file ────────────────────────────────────────────────────────────
   Future<void> _sendFile() async {
-    final result = await FilePicker.pickFiles(withData: kIsWeb);
+    final result = await FilePicker.pickFiles(withData: true);
     if (result == null) return;
     final file = result.files.first;
     final client = ref.read(supabaseClientProvider);
@@ -153,16 +154,15 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
 
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
     try {
-      Uint8List? bytes = file.bytes;
-      if (!kIsWeb && file.path != null) {
-        bytes = await _readFileBytes(file.path!);
+      String url = '';
+      if (file.bytes != null) {
+        url = await WordPressUploadService.uploadBytes(file.bytes!, fileName);
+      } else if (file.path != null) {
+        url = await WordPressUploadService.uploadFile(file.path!, fileName);
+      } else {
+        throw Exception('No file data available');
       }
-      if (bytes != null) {
-        await client.storage
-            .from('files')
-            .uploadBinary('chat/$fileName', bytes);
-      }
-      final url = client.storage.from('files').getPublicUrl('chat/$fileName');
+
       final actions = ref.read(adminActionsProvider);
       await actions.sendChatMessage({
         'channel_id': channelId,

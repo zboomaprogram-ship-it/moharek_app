@@ -6,6 +6,7 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 final allContractsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
@@ -360,7 +361,7 @@ class AdminContractsScreen extends ConsumerWidget {
                   final result = await FilePicker.pickFiles(
                     type: FileType.custom,
                     allowedExtensions: ['pdf'],
-                    withData: kIsWeb,
+                    withData: true,
                   );
                   if (result != null) {
                     setState(() => selectedFile = result.files.first);
@@ -393,14 +394,18 @@ class AdminContractsScreen extends ConsumerWidget {
                       ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
                       return;
                     }
-                    final client = ref.read(supabaseClientProvider);
                     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${selectedFile!.name}';
                     
                     try {
-                      if (kIsWeb && selectedFile!.bytes != null) {
-                        await client.storage.from('contracts').uploadBinary(fileName, selectedFile!.bytes!);
+                      String url = '';
+                      if (selectedFile!.bytes != null) {
+                        url = await WordPressUploadService.uploadBytes(selectedFile!.bytes!, fileName);
+                      } else if (selectedFile!.path != null) {
+                        url = await WordPressUploadService.uploadFile(selectedFile!.path!, fileName);
+                      } else {
+                        throw Exception('No file data available');
                       }
-                      final url = client.storage.from('contracts').getPublicUrl(fileName);
+
                       final actions = ref.read(adminActionsProvider);
                       await actions.uploadContract({
                         'project_id': selectedProjectId!,

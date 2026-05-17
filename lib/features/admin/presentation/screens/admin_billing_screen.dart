@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class AdminBillingScreen extends ConsumerWidget {
   const AdminBillingScreen({super.key});
@@ -461,7 +462,7 @@ class AdminBillingScreen extends ConsumerWidget {
                     final result = await FilePicker.pickFiles(
                       type: FileType.custom,
                       allowedExtensions: ['pdf'],
-                      withData: kIsWeb,
+                      withData: true,
                     );
                     if (result != null) {
                       setModalState(() => selectedFile = result.files.first);
@@ -516,19 +517,21 @@ class AdminBillingScreen extends ConsumerWidget {
                       try {
                         String? fileUrl;
                         if (selectedFile != null) {
-                          final client = ref.read(supabaseClientProvider);
                           final fileName = 'invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
                           
-                          if (kIsWeb && selectedFile!.bytes != null) {
-                            await client.storage.from('invoices').uploadBinary(
-                                  fileName,
-                                  selectedFile!.bytes!,
-                                );
-                          } else if (!kIsWeb && selectedFile!.path != null) {
-                            // Non-web handling would go here if needed, 
-                            // but for this dashboard usually kIsWeb is true
+                          if (selectedFile!.bytes != null) {
+                            fileUrl = await WordPressUploadService.uploadBytes(
+                              selectedFile!.bytes!,
+                              fileName,
+                            );
+                          } else if (selectedFile!.path != null) {
+                            fileUrl = await WordPressUploadService.uploadFile(
+                              selectedFile!.path!,
+                              fileName,
+                            );
+                          } else {
+                            throw Exception('No file data available');
                           }
-                          fileUrl = client.storage.from('invoices').getPublicUrl(fileName);
                         }
 
                         final actions = ref.read(adminActionsProvider);

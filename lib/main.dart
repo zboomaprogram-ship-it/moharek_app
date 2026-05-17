@@ -12,9 +12,21 @@ import 'package:moharek_app/core/providers/locale_provider.dart';
 import 'package:flutter_callkeep/flutter_callkeep.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkeep_stub.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/calls/widgets/call_signal_listener.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize WordPress Media API secret key in secure storage
+  const secureStorage = FlutterSecureStorage();
+  try {
+    final hasKey = await secureStorage.containsKey(key: 'wp_media_api_secret');
+    if (!hasKey) {
+      await secureStorage.write(key: 'wp_media_api_secret', value: 'omarmahmoud23112002');
+    }
+  } catch (e) {
+    debugPrint('Secure storage init error: $e');
+  }
 
   // Initialize CallKeep for background call handling
   if (!kIsWeb) {
