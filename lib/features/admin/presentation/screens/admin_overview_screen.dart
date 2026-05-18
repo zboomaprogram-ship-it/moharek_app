@@ -296,7 +296,7 @@ class _AmPerformanceSection extends ConsumerWidget {
                   radius: 18,
                   backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
                   backgroundImage: am.avatarUrl != null ? NetworkImage(am.avatarUrl!) : null,
-                  child: am.avatarUrl == null ? Text(am.name[0], style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 14, fontWeight: FontWeight.bold)) : null,
+                  child: am.avatarUrl == null ? Text(am.name.isNotEmpty ? am.name[0] : 'A', style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 14, fontWeight: FontWeight.bold)) : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -411,7 +411,7 @@ class _AmPerformanceSection extends ConsumerWidget {
                         : null,
                     child: am.avatarUrl == null
                         ? Text(
-                            am.name[0],
+                            am.name.isNotEmpty ? am.name[0] : 'A',
                             style: const TextStyle(
                               color: AppTheme.primaryGreen,
                               fontSize: 12,

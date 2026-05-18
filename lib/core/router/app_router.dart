@@ -14,10 +14,14 @@ import 'package:moharek_app/features/profile/presentation/screens/team_managemen
 import 'package:moharek_app/features/support/presentation/screens/support_ticket_detail_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/features/auth/presentation/screens/web_login_screen.dart';
+import 'package:moharek_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:moharek_app/features/auth/presentation/screens/web_only_screen.dart';
 import 'package:moharek_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:moharek_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:moharek_app/features/auth/presentation/screens/profile_screen.dart';
 import 'package:moharek_app/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'package:moharek_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:moharek_app/features/dashboard/presentation/screens/main_shell.dart';
 import 'package:moharek_app/features/journey/presentation/screens/journey_screen.dart';
@@ -62,25 +66,45 @@ import 'package:moharek_app/features/shared/presentation/screens/shared_client_h
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
+final _authListenable = SupabaseAuthListenable();
+
 class SupabaseAuthListenable extends ChangeNotifier {
-  bool _notifying = false;
+  bool _initialized = false;
+  Timer? _debounceTimer;
+
+  bool get isInitialized => _initialized;
 
   SupabaseAuthListenable() {
+    // If a session already exists synchronously (e.g. on hot restart), mark initialized
+    if (Supabase.instance.client.auth.currentSession != null) {
+      _initialized = true;
+    }
+
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      // On explicit sign-out, clear cache immediately
+      _initialized = true;
+
+      // On explicit sign-out, clear cache and notify immediately for instant security
       if (data.event == AuthChangeEvent.signedOut) {
         _cachedRole = null;
         _cachedIsActive = null;
         _cachedUserId = null;
+        _debounceTimer?.cancel();
+        notifyListeners();
+        return;
       }
-      // Debounce rapid auth events (e.g. token refresh) to avoid flicker
-      if (_notifying) return;
-      _notifying = true;
-      Future.delayed(const Duration(milliseconds: 300), () {
-        _notifying = false;
+
+      // For other events (e.g. token refresh, login), debounce to avoid rapid rebuilds/flicker
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 150), () {
         notifyListeners();
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 }
 
@@ -105,6 +129,17 @@ String? _processRedirect(
   final bool isAdmin = role == 'admin';
   final bool isAM = role == 'account_manager';
 
+  // Mobile Web-Only Gate: Redirect admin/AM to dedicated web-only warning on native platforms
+  if (!kIsWeb && (isAdmin || isAM)) {
+    if (path == '/web-only') return null;
+    return '/web-only';
+  }
+
+  // Prevent clients from manually visiting /web-only on mobile
+  if (path == '/web-only' && (kIsWeb || (!isAdmin && !isAM))) {
+    return '/dashboard';
+  }
+
   // Entry Gate: Redirect from Login/Root to appropriate Dashboard
   if (isLoginPage || isRoot) {
     if (isAdmin) return '/admin/overview';
@@ -127,17 +162,16 @@ String? _processRedirect(
 final appRouter = GoRouter(
   initialLocation: '/',
   navigatorKey: rootNavigatorKey,
-  refreshListenable: SupabaseAuthListenable(),
+  refreshListenable: _authListenable,
   redirect: (context, state) async {
-    // Give Supabase time to restore a persisted session from storage
+    // If the auth listenable hasn't finished restoring the initial session yet,
+    // immediately return null to stay on the current path (avoiding premature /login redirect)
+    if (!_authListenable.isInitialized) {
+      return null;
+    }
+
     final client = Supabase.instance.client;
     Session? session = client.auth.currentSession;
-
-    // If session is null, wait briefly for token refresh before deciding
-    if (session == null) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      session = client.auth.currentSession;
-    }
 
     final path = state.matchedLocation;
     final isLoginPage = path == '/login';
@@ -202,7 +236,11 @@ final appRouter = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const WebLoginScreen(),
+      builder: (context, state) => kIsWeb ? const WebLoginScreen() : const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/web-only',
+      builder: (context, state) => const WebOnlyScreen(),
     ),
     GoRoute(
       path: '/forgot-password',

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.support_ticket_messages (
 ALTER TABLE public.support_ticket_messages ENABLE ROW LEVEL SECURITY;
 
 -- 3. Policies
+DROP POLICY IF EXISTS "Users can view messages for their own tickets" ON public.support_ticket_messages;
 CREATE POLICY "Users can view messages for their own tickets"
     ON public.support_ticket_messages FOR SELECT
     USING (
@@ -21,9 +22,10 @@ CREATE POLICY "Users can view messages for their own tickets"
             SELECT id FROM public.support_tickets 
             WHERE project_id IN (SELECT id FROM public.projects WHERE client_id = auth.uid())
         ) OR 
-        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND team_role IS NOT NULL)
+        public.is_admin()
     );
 
+DROP POLICY IF EXISTS "Users can send messages to their own tickets" ON public.support_ticket_messages;
 CREATE POLICY "Users can send messages to their own tickets"
     ON public.support_ticket_messages FOR INSERT
     WITH CHECK (
@@ -31,7 +33,7 @@ CREATE POLICY "Users can send messages to their own tickets"
             SELECT id FROM public.support_tickets 
             WHERE project_id IN (SELECT id FROM public.projects WHERE client_id = auth.uid())
         ) OR 
-        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND team_role IS NOT NULL)
+        public.is_admin()
     );
 
 -- 4. Activity Trigger for replies

@@ -40,34 +40,25 @@ class CallSignalService {
 
   /// Listen for status changes on a specific signal (used by the caller)
   Stream<Map<String, dynamic>> watchSignal(String signalId) {
-    return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
-      try {
-        final data = await _supabase
-            .from('call_signals')
-            .select()
-            .eq('id', signalId)
-            .maybeSingle();
-        return data ?? <String, dynamic>{};
-      } catch (_) {
-        return <String, dynamic>{};
-      }
-    });
+    return _supabase
+        .from('call_signals')
+        .stream(primaryKey: ['id'])
+        .eq('id', signalId)
+        .map((data) => data.isNotEmpty ? data.first : <String, dynamic>{});
   }
 
   /// Listen for incoming calls for a specific project (used by the callee)
   Stream<List<Map<String, dynamic>>> watchIncomingCalls(String projectId) {
     final currentUserId = _supabase.auth.currentUser?.id;
-    return Stream.periodic(const Duration(seconds: 2)).asyncMap((_) async {
-      final data = await _supabase
-          .from('call_signals')
-          .select()
-          .eq('project_id', projectId)
-          .eq('status', 'ringing');
-      return (data as List)
-          .cast<Map<String, dynamic>>()
-          .where((s) => s['caller_id'] != currentUserId)
-          .toList();
-    });
+    return _supabase
+        .from('call_signals')
+        .stream(primaryKey: ['id'])
+        .eq('project_id', projectId)
+        .map((data) {
+          return data
+              .where((s) => s['status'] == 'ringing' && s['caller_id'] != currentUserId)
+              .toList();
+        });
   }
 
   /// Listen for ALL incoming calls for the current user (across all projects)
@@ -75,24 +66,27 @@ class CallSignalService {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return const Stream.empty();
 
-    return Stream.periodic(const Duration(seconds: 2)).asyncMap((_) async {
-      try {
-        final cutoff = DateTime.now().toUtc()
-            .subtract(const Duration(seconds: 35))
-            .toIso8601String();
-        final data = await _supabase
-            .from('call_signals')
-            .select()
-            .eq('status', 'ringing')
-            .neq('caller_id', currentUserId)
-            .gte('created_at', cutoff)
-            .order('created_at', ascending: false)
-            .limit(5);
-        return (data as List).cast<Map<String, dynamic>>();
-      } catch (_) {
-        return <Map<String, dynamic>>[];
-      }
-    });
+    return _supabase
+        .from('call_signals')
+        .stream(primaryKey: ['id'])
+        .eq('status', 'ringing')
+        .map((data) {
+          final cutoff = DateTime.now().toUtc().subtract(const Duration(seconds: 35));
+          return data
+              .where((s) {
+                final callerId = s['caller_id'] as String?;
+                final createdAtStr = s['created_at'] as String?;
+                if (callerId == currentUserId) return false;
+                if (createdAtStr == null) return false;
+                try {
+                  final createdAt = DateTime.parse(createdAtStr).toUtc();
+                  return createdAt.isAfter(cutoff);
+                } catch (_) {
+                  return false;
+                }
+              })
+              .toList();
+        });
   }
 
   /// Accept a call

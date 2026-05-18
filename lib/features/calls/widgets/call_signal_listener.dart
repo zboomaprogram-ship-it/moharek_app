@@ -5,6 +5,7 @@ import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/widgets/incoming_call_overlay.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
+import 'package:moharek_app/shared/models/profile.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/router/app_router.dart';
 
@@ -24,8 +25,15 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
   @override
   void initState() {
     super.initState();
-    // Start listening for signals after a small delay to ensure auth is ready
-    Future.delayed(const Duration(seconds: 2), _startListening);
+    // Start listening immediately if the user is already authenticated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final profile = ref.read(profileProvider).value;
+        if (profile != null) {
+          _startListening();
+        }
+      }
+    });
   }
 
   void _startListening() {
@@ -55,7 +63,7 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
     final callerName = signal['caller_name'];
 
     setState(() => _activeSignal = null);
-    
+
     await _signalService.acceptCall(signalId);
 
     try {
@@ -72,10 +80,7 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
       // Navigate using the root navigator key
       rootNavigatorKey.currentState?.push(
         MaterialPageRoute(
-          builder: (_) => ActiveCallScreen(
-            room: room,
-            callType: callType,
-          ),
+          builder: (_) => ActiveCallScreen(room: room, callType: callType),
         ),
       );
     } catch (e) {
@@ -91,6 +96,19 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<Profile?>>(profileProvider, (prev, next) {
+      final user = next.value;
+      if (user != null) {
+        _startListening();
+      } else {
+        _sub?.cancel();
+        _sub = null;
+        if (mounted && _activeSignal != null) {
+          setState(() => _activeSignal = null);
+        }
+      }
+    });
+
     return Stack(
       children: [
         widget.child,

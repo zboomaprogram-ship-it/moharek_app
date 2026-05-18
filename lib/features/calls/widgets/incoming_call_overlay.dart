@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 
@@ -24,6 +25,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
   int _secondsLeft = 30;
   Timer? _timer;
   final _signalService = CallSignalService();
+  final _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -43,6 +45,18 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
         }
       });
     });
+
+    _playRingtone();
+  }
+
+  Future<void> _playRingtone() async {
+    try {
+      await _audioPlayer.setUrl('https://assets.mixkit.co/active_storage/sfx/903/903-84.wav');
+      await _audioPlayer.setLoopMode(LoopMode.one);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('Error playing ringtone: $e');
+    }
   }
 
   void _onTimeout() async {
@@ -54,6 +68,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
   void dispose() {
     _pulseController.dispose();
     _timer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 

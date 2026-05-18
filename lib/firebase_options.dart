@@ -70,7 +70,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '835240027261',
     projectId: 'moharek-e353b',
     storageBucket: 'moharek-e353b.firebasestorage.app',
-    iosBundleId: 'com.example.moharekApp',
+    iosBundleId: 'com.zbooma.moharek',
   );
 
 }

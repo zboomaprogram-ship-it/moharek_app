@@ -39,7 +39,7 @@ class NotificationService {
     });
 
     // Request permission on iOS/Android
-    OneSignal.Notifications.requestPermission(true);
+    await OneSignal.Notifications.requestPermission(true);
   }
 
   static Future<void> setExternalUserId(String userId) async {

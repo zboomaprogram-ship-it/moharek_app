@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:moharek_app/firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,9 +15,74 @@ import 'package:flutter_callkeep/flutter_callkeep.dart' if (dart.library.html) '
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/calls/widgets/call_signal_listener.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+class SafeLocalStorage extends LocalStorage {
+  final _inMemoryStore = <String, String>{};
+  SharedPreferences? _prefs;
+  bool _useInMemory = false;
+  static const _key = 'supabase.auth.token';
+
+  @override
+  Future<void> initialize() async {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      _useInMemory = true;
+      debugPrint('SharedPreferences secure/Private Browsing error: $e');
+    }
+  }
+
+  @override
+  Future<String?> accessToken() async {
+    if (_useInMemory || _prefs == null) return _inMemoryStore[_key];
+    try {
+      return _prefs!.getString(_key);
+    } catch (e) {
+      return _inMemoryStore[_key];
+    }
+  }
+
+  @override
+  Future<bool> hasAccessToken() async {
+    if (_useInMemory || _prefs == null) return _inMemoryStore.containsKey(_key);
+    try {
+      return _prefs!.containsKey(_key);
+    } catch (e) {
+      return _inMemoryStore.containsKey(_key);
+    }
+  }
+
+  @override
+  Future<void> persistSession(String session) async {
+    _inMemoryStore[_key] = session;
+    if (_useInMemory || _prefs == null) return;
+    try {
+      await _prefs!.setString(_key, session);
+    } catch (e) {
+      _useInMemory = true;
+    }
+  }
+
+  @override
+  Future<void> removePersistedSession() async {
+    _inMemoryStore.remove(_key);
+    if (_useInMemory || _prefs == null) return;
+    try {
+      await _prefs!.remove(_key);
+    } catch (e) {
+      _useInMemory = true;
+    }
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Register Arabic and English locales for timeago to prevent system-wide layout crashes
+  timeago.setLocaleMessages('ar', timeago.ArMessages());
+  timeago.setLocaleMessages('en', timeago.EnMessages());
 
   // Initialize WordPress Media API secret key in secure storage
   const secureStorage = FlutterSecureStorage();
@@ -30,19 +97,23 @@ void main() async {
 
   // Initialize CallKeep for background call handling
   if (!kIsWeb) {
-    CallKeep.instance.configure(CallKeepConfig(
-      appName: 'Moharek',
-      android: CallKeepAndroidConfig(
-        logo: "ic_launcher", // Standard launcher icon
-        incomingCallNotificationChannelName: 'Moharek Calls',
-        missedCallNotificationChannelName: 'Missed Calls',
-      ),
-      ios: CallKeepIosConfig(
-        iconName: 'ic_launcher',
-        handleType: CallKitHandleType.generic,
-        isVideoSupported: true,
-      ),
-    ));
+    try {
+      CallKeep.instance.configure(CallKeepConfig(
+        appName: 'Moharek',
+        android: CallKeepAndroidConfig(
+          logo: "ic_launcher", // Standard launcher icon
+          incomingCallNotificationChannelName: 'Moharek Calls',
+          missedCallNotificationChannelName: 'Missed Calls',
+        ),
+        ios: CallKeepIosConfig(
+          iconName: 'ic_launcher',
+          handleType: CallKitHandleType.generic,
+          isVideoSupported: true,
+        ),
+      ));
+    } catch (e) {
+      debugPrint('CallKeep Configuration Error: $e');
+    }
   }
 
   // Load saved locale before running the app
@@ -51,12 +122,22 @@ void main() async {
 
   // Firebase & OneSignal are mobile-only — skip on web
   if (!kIsWeb) {
-    await NotificationService.init();
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      await NotificationService.init();
+    } catch (e) {
+      debugPrint('Notification Service Initialization Error: $e');
+    }
   }
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SafeLocalStorage(),
+    ),
   );
 
   runApp(

@@ -19,7 +19,7 @@ List<ChatMessage> _parseMessages(List<dynamic> raw) {
 // Handles pagination, polling, and background parsing.
 class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessage>, String> {
   int _limit = 20;
-  Timer? _timer;
+  StreamSubscription<List<Map<String, dynamic>>>? _streamSub;
   bool _isFetching = false;
   bool _hasMore = true;
 
@@ -29,20 +29,47 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
   FutureOr<List<ChatMessage>> build(String arg) async {
     _limit = 20;
     _hasMore = true;
+
+    _setupStreamSubscription();
+
+    ref.onDispose(() {
+      _streamSub?.cancel();
+    });
+
     final messages = await _fetch(arg, _limit);
     if (messages.length < _limit) {
       _hasMore = false;
     }
-    
-    // Start polling for new messages every 4 seconds
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) => _poll());
-    
-    ref.onDispose(() {
-      _timer?.cancel();
-    });
-    
     return messages;
+  }
+
+  void _setupStreamSubscription() {
+    _streamSub?.cancel();
+    final client = ref.read(supabaseClientProvider);
+    
+    _streamSub = client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('channel_id', arg)
+        .order('created_at', ascending: false)
+        .limit(_limit)
+        .map((data) {
+          final sorted = List<Map<String, dynamic>>.from(data);
+          sorted.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+          return sorted;
+        })
+        .listen((data) async {
+          final parsed = kIsWeb 
+              ? data.map((json) => ChatMessage.fromJson(json)).toList()
+              : await compute(_parseMessages, data);
+              
+          if (parsed.length < _limit) {
+            _hasMore = false;
+          }
+          state = AsyncData(parsed);
+        }, onError: (e) {
+          debugPrint('Real-time Stream Error: $e');
+        });
   }
 
   Future<List<ChatMessage>> _fetch(String channelId, int limit) async {
@@ -57,15 +84,21 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
           .order('created_at', ascending: false)
           .limit(limit);
       
-      return await compute(_parseMessages, raw as List<dynamic>);
+      if (kIsWeb) {
+        return (raw as List<dynamic>)
+            .map((json) => ChatMessage.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        return await compute(_parseMessages, raw as List<dynamic>);
+      }
     } catch (e) {
       debugPrint('Error fetching messages: $e');
       return [];
     }
   }
 
-  Future<void> _poll() async {
-    if (_isFetching || state.isLoading) return;
+  Future<void> refresh() async {
+    if (_isFetching) return;
     _isFetching = true;
     try {
       final messages = await _fetch(arg, _limit);
@@ -77,19 +110,18 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
     }
   }
 
-  Future<void> refresh() async {
-    await _poll();
-  }
-
   Future<void> loadMore() async {
     if (!_hasMore || _isFetching || state.isLoading) return;
     _isFetching = true;
-    _limit += 10;
+    _limit += 15;
     try {
       final messages = await _fetch(arg, _limit);
       if (messages.length < _limit) {
         _hasMore = false;
       }
+      
+      _setupStreamSubscription();
+      
       state = AsyncData(messages);
     } catch (e) {
       state = AsyncError(e, StackTrace.current);

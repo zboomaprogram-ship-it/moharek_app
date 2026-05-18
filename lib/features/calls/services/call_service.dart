@@ -47,9 +47,17 @@ class CallService {
         connectOptions: connectOptions,
       );
 
-      // 3. Turn on camera and mic
-      await room.localParticipant?.setCameraEnabled(true);
-      await room.localParticipant?.setMicrophoneEnabled(true);
+      // 3. Turn on camera and mic (graceful hardware fallback)
+      try {
+        await room.localParticipant?.setCameraEnabled(true);
+      } catch (e) {
+        debugPrint('Warning: Failed to enable camera (possibly no camera device): $e');
+      }
+      try {
+        await room.localParticipant?.setMicrophoneEnabled(true);
+      } catch (e) {
+        debugPrint('Warning: Failed to enable microphone: $e');
+      }
 
       return room;
     } catch (e) {

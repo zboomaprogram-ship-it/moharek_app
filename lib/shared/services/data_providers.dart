@@ -73,7 +73,7 @@ final currentProjectProvider = FutureProvider<Project?>((ref) async {
 // ── Real-time Stream Providers ──
 
 // Tasks (Stream)
-final tasksProvider = StreamProvider<List<ProjectTask>>((ref) {
+final tasksProvider = StreamProvider.autoDispose<List<ProjectTask>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -93,7 +93,7 @@ final tasksProvider = StreamProvider<List<ProjectTask>>((ref) {
 });
 
 // Results (Stream)
-final resultsProvider = StreamProvider<List<ResultMetric>>((ref) {
+final resultsProvider = StreamProvider.autoDispose<List<ResultMetric>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -113,7 +113,7 @@ final resultsProvider = StreamProvider<List<ResultMetric>>((ref) {
 });
 
 // Engine Progress (Stream)
-final engineProgressListProvider = StreamProvider<List<EngineProgress>>((ref) {
+final engineProgressListProvider = StreamProvider.autoDispose<List<EngineProgress>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -132,7 +132,7 @@ final engineProgressListProvider = StreamProvider<List<EngineProgress>>((ref) {
 });
 
 // Approvals (Stream)
-final approvalsProvider = StreamProvider<List<ApprovalRequest>>((ref) {
+final approvalsProvider = StreamProvider.autoDispose<List<ApprovalRequest>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -152,7 +152,7 @@ final approvalsProvider = StreamProvider<List<ApprovalRequest>>((ref) {
 });
 
 // Journey Stages (Stream)
-final journeyStagesProvider = StreamProvider<List<JourneyStage>>((ref) {
+final journeyStagesProvider = StreamProvider.autoDispose<List<JourneyStage>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -172,7 +172,7 @@ final journeyStagesProvider = StreamProvider<List<JourneyStage>>((ref) {
 });
 
 // Reports (Stream)
-final reportsProvider = StreamProvider<List<ProjectReport>>((ref) {
+final reportsProvider = StreamProvider.autoDispose<List<ProjectReport>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -192,7 +192,7 @@ final reportsProvider = StreamProvider<List<ProjectReport>>((ref) {
 });
 
 // Invoices (Stream)
-final invoicesProvider = StreamProvider<List<Invoice>>((ref) {
+final invoicesProvider = StreamProvider.autoDispose<List<Invoice>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -212,7 +212,7 @@ final invoicesProvider = StreamProvider<List<Invoice>>((ref) {
 });
 
 // Contracts (Stream)
-final contractsProvider = StreamProvider<List<Contract>>((ref) {
+final contractsProvider = StreamProvider.autoDispose<List<Contract>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -232,7 +232,7 @@ final contractsProvider = StreamProvider<List<Contract>>((ref) {
 });
 
 // Files (Stream)
-final filesProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+final filesProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -251,7 +251,7 @@ final filesProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
 });
 
 // Meetings (Stream)
-final meetingsProvider = StreamProvider<List<ProjectMeeting>>((ref) {
+final meetingsProvider = StreamProvider.autoDispose<List<ProjectMeeting>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -271,7 +271,7 @@ final meetingsProvider = StreamProvider<List<ProjectMeeting>>((ref) {
 });
 
 // Support Tickets (Stream)
-final ticketsProvider = StreamProvider<List<SupportTicket>>((ref) {
+final ticketsProvider = StreamProvider.autoDispose<List<SupportTicket>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -291,7 +291,7 @@ final ticketsProvider = StreamProvider<List<SupportTicket>>((ref) {
 });
 
 // Client-specific Activity Feed (Stream)
-final clientActivityFeedProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+final clientActivityFeedProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -311,7 +311,7 @@ final clientActivityFeedProvider = StreamProvider<List<Map<String, dynamic>>>((r
 });
 
 // Support Ticket Messages (Stream)
-final ticketMessagesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, ticketId) {
+final ticketMessagesProvider = StreamProvider.family.autoDispose<List<Map<String, dynamic>>, String>((ref, ticketId) {
   final client = ref.watch(supabaseClientProvider);
   return client
       .from('support_ticket_messages')
@@ -340,7 +340,7 @@ final milestonesProvider = FutureProvider.autoDispose<List<Milestone>>((ref) asy
 
 
 // Campaigns (Stream)
-final campaignsProvider = StreamProvider<List<ProjectCampaign>>((ref) {
+final campaignsProvider = StreamProvider.autoDispose<List<ProjectCampaign>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 
@@ -360,7 +360,7 @@ final campaignsProvider = StreamProvider<List<ProjectCampaign>>((ref) {
 });
 
 // Campaign Results (Stream)
-final campaignResultsProvider = StreamProvider.family<List<CampaignResult>, String>((ref, campaignId) {
+final campaignResultsProvider = StreamProvider.family.autoDispose<List<CampaignResult>, String>((ref, campaignId) {
   final client = ref.watch(supabaseClientProvider);
   return client
       .from('campaign_results')
@@ -371,7 +371,7 @@ final campaignResultsProvider = StreamProvider.family<List<CampaignResult>, Stri
 });
 
 // Engine Progress (Stream)
-final engineProgressMapProvider = StreamProvider<Map<String, double>>((ref) {
+final engineProgressMapProvider = StreamProvider.autoDispose<Map<String, double>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 
 class ActiveCallScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class ActiveCallScreen extends StatefulWidget {
 class _ActiveCallScreenState extends State<ActiveCallScreen> {
   bool _isMuted = false;
   bool _isVideoOff = false;
+  bool _isSpeakerOn = false;
 
   // Duration timer
   int _seconds = 0;
@@ -32,9 +34,22 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   void initState() {
     super.initState();
 
+    _isSpeakerOn = (widget.callType == 'video');
+
     if (widget.callType == 'voice') {
       _isVideoOff = true;
-      widget.room.localParticipant?.setCameraEnabled(false);
+      try {
+        widget.room.localParticipant?.setCameraEnabled(false);
+      } catch (e) {
+        debugPrint('Warning: Failed to disable camera: $e');
+      }
+    }
+
+    // Initialize speakerphone routing
+    try {
+      Helper.setSpeakerphoneOn(_isSpeakerOn);
+    } catch (e) {
+      debugPrint('Warning: Failed to initialize speakerphone routing: $e');
     }
 
     // Start call timer
@@ -62,15 +77,43 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   void _toggleMute() async {
     final p = widget.room.localParticipant;
     if (p == null) return;
-    await p.setMicrophoneEnabled(_isMuted);
-    if (mounted) setState(() => _isMuted = !_isMuted);
+    try {
+      await p.setMicrophoneEnabled(_isMuted);
+      if (mounted) setState(() => _isMuted = !_isMuted);
+    } catch (e) {
+      debugPrint('Error toggling microphone: $e');
+    }
   }
 
   void _toggleVideo() async {
     final p = widget.room.localParticipant;
     if (p == null) return;
-    await p.setCameraEnabled(_isVideoOff);
-    if (mounted) setState(() => _isVideoOff = !_isVideoOff);
+    try {
+      final nextVideoState = !_isVideoOff;
+      await p.setCameraEnabled(nextVideoState);
+      if (mounted) {
+        setState(() {
+          _isVideoOff = nextVideoState;
+          if (!_isVideoOff) {
+            // Force speaker ON when turning camera back on
+            _isSpeakerOn = true;
+            Helper.setSpeakerphoneOn(true);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error toggling camera: $e');
+    }
+  }
+
+  void _toggleSpeaker() async {
+    try {
+      final target = !_isSpeakerOn;
+      await Helper.setSpeakerphoneOn(target);
+      if (mounted) setState(() => _isSpeakerOn = target);
+    } catch (e) {
+      debugPrint('Error toggling speaker: $e');
+    }
   }
 
   String get _durationLabel {
@@ -226,7 +269,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
             Positioned(
               bottom: 0, left: 0, right: 0,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(32, 24, 32, 40),
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
@@ -243,6 +286,33 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
                       color: _isMuted ? Colors.red : Colors.white24,
                       onTap: _toggleMute,
                     ),
+                    if (widget.callType == 'video')
+                      _ControlButton(
+                        icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                        label: _isVideoOff ? 'تشغيل الكاميرا' : 'إيقاف الكاميرا',
+                        color: _isVideoOff ? Colors.red : Colors.white24,
+                        onTap: _toggleVideo,
+                      ),
+                    _ControlButton(
+                      icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+                      label: 'سماعة',
+                      color: _isSpeakerOn ? AppTheme.primaryGreen : Colors.white24,
+                      onTap: () {
+                        if (widget.callType == 'video' && !_isVideoOff) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'لا يمكن إيقاف مكبر الصوت أثناء تشغيل الكاميرا',
+                                style: TextStyle(fontFamily: 'monospace'),
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+                        _toggleSpeaker();
+                      },
+                    ),
                     _ControlButton(
                       icon: Icons.call_end,
                       label: 'إنهاء',
@@ -252,20 +322,6 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
                         if (mounted) Navigator.of(context).pop();
                       },
                     ),
-                    if (widget.callType == 'video')
-                      _ControlButton(
-                        icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
-                        label: _isVideoOff ? 'تشغيل' : 'إيقاف',
-                        color: _isVideoOff ? Colors.red : Colors.white24,
-                        onTap: _toggleVideo,
-                      )
-                    else
-                      _ControlButton(
-                        icon: Icons.volume_up,
-                        label: 'سماعة',
-                        color: Colors.white24,
-                        onTap: () {}, // Speaker toggle placeholder
-                      ),
                   ],
                 ),
               ),

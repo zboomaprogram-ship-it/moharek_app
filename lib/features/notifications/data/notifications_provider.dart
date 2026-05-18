@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/shared/models/notification.dart';
 
-final notificationsProvider = StreamProvider<List<AppNotification>>((ref) {
+final notificationsProvider = StreamProvider.autoDispose<List<AppNotification>>((ref) {
   final supabase = Supabase.instance.client;
   final userId = supabase.auth.currentUser?.id;
 
