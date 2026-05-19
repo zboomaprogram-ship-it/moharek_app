@@ -1,8 +1,4 @@
 import 'dart:async';
-import 'package:moharek_app/features/chat/services/file_io_native.dart'
-    if (dart.library.html) 'package:moharek_app/features/chat/services/file_io_web.dart'
-    as file_io;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
@@ -18,6 +14,7 @@ import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/services/chat_provider.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -42,47 +39,6 @@ final adminChatChannelProvider = FutureProvider.family<String?, String>((
       .select()
       .single();
   return inserted['id'];
-});
-
-final adminMessagesStreamProvider =
-    StreamProvider.family<List<ChatMessage>, String>((ref, channelId) async* {
-  final client = ref.watch(supabaseClientProvider);
-  if (channelId.isEmpty || channelId == 'null') {
-    yield [];
-    return;
-  }
-
-  final stream = client
-      .from('messages')
-      .stream(primaryKey: ['id'])
-      .eq('channel_id', channelId)
-      .order('created_at', ascending: true);
-
-  await for (final data in stream) {
-    try {
-      final messages = data.map((json) {
-        try {
-          return ChatMessage.fromJson(json);
-        } catch (e) {
-          debugPrint('Error parsing message: $e');
-          // Return a placeholder or empty message rather than crashing the whole stream
-          return ChatMessage(
-            id: 'err-${DateTime.now().millisecondsSinceEpoch}',
-            channelId: channelId,
-            senderId: '',
-            content: 'Error loading message',
-            messageType: 'text',
-            isRead: true,
-            createdAt: DateTime.now(),
-          );
-        }
-      }).toList();
-      yield messages;
-    } catch (e) {
-      debugPrint('Stream processing error: $e');
-      yield [];
-    }
-  }
 });
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -116,13 +72,16 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   bool _isConnecting = false; // call loading overlay
   String _connectionStatus = 'جاري الاتصال...';
 
-  void _scrollToBottom() {
-    if (_scrollCtrl.hasClients) {
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent + 60,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    // Reverse list: scrolling up (towards older messages) increases pixels towards maxScrollExtent
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
+      ref.read(chatMessagesProvider(widget.channelId).notifier).loadMore();
     }
   }
 
@@ -142,6 +101,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
       'content': text,
       'message_type': 'text',
     });
+    ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
   }
 
   // ── Send file ────────────────────────────────────────────────────────────
@@ -171,6 +131,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         'message_type': 'file',
         'file_url': url,
       });
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,16 +144,11 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     }
   }
 
-  Future<Uint8List?> _readFileBytes(String path) async {
-    return file_io.readFileBytes(path);
-  }
-
   // ── Send voice message ────────────────────────────────────────────────────
   Future<void> _handleVoiceRecording(VoiceRecordingResult recording) async {
     final client = ref.read(supabaseClientProvider);
     final channelId = widget.channelId;
 
-    // Use a fake project ID based on channelId for the upload path
     try {
       await _voiceUploadService.uploadAndSend(
         channelId: channelId,
@@ -200,6 +156,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         senderId: client.auth.currentUser!.id,
         recording: recording,
       );
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -263,6 +220,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           'content': isVideo ? '📹 بدأت مكالمة فيديو' : '📞 بدأت مكالمة صوتية',
           'message_type': isVideo ? 'video_call' : 'voice_call',
         });
+        ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
       }
     } catch (e) {
       if (mounted) {
@@ -350,7 +308,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
 
   // ── Messages list ─────────────────────────────────────────────────────────
   Widget _buildMessages(String channelId) {
-    final msgsAsync = ref.watch(adminMessagesStreamProvider(channelId));
+    final msgsAsync = ref.watch(chatMessagesProvider(channelId));
     final currentUserId = ref.read(supabaseClientProvider).auth.currentUser?.id;
 
     return msgsAsync.when(
@@ -359,7 +317,6 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
       ),
       error: (e, _) => Center(child: Text('خطأ: $e')),
       data: (messages) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
         if (messages.isEmpty) {
           return const Center(
             child: Column(
@@ -381,8 +338,11 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         }
         return ListView.builder(
           controller: _scrollCtrl,
+          reverse: true,
           padding: const EdgeInsets.all(16),
           itemCount: messages.length,
+          addAutomaticKeepAlives: true,
+          addRepaintBoundaries: true,
           itemBuilder: (_, i) {
             final msg = messages[i];
             final isMe = msg.senderId == currentUserId;

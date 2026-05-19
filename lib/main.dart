@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:moharek_app/core/router/app_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/core/config/moharek_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
 import 'package:moharek_app/core/providers/locale_provider.dart';
@@ -78,6 +79,13 @@ class SafeLocalStorage extends LocalStorage {
 }
 
 void main() async {
+  // If no instance has been set (e.g. running raw main.dart), default to MoharekConfig
+  try {
+    AppConfig.instance;
+  } catch (_) {
+    AppConfig.setInstance(const MoharekConfig());
+  }
+
   WidgetsFlutterBinding.ensureInitialized();
 
   // Register Arabic and English locales for timeago to prevent system-wide layout crashes
@@ -166,7 +174,7 @@ class MoharekApp extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
-      title: 'محرك',
+      title: AppConfig.appName,
       theme: AppTheme.darkTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,

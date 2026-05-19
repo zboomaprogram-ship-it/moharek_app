@@ -7,6 +7,7 @@ import 'package:moharek_app/shared/services/connectivity_service.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/milestone_celebration_overlay.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/main_drawer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, Key? key})
@@ -175,7 +176,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           const SizedBox(height: 32),
           Image.asset('assets/logo.png', height: 60, fit: BoxFit.contain),
           const SizedBox(height: 12),
-          const Text('محرك', style: TextStyle(color: AppTheme.primaryGreen, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(AppConfig.appName, style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 32),
           _SidebarItem(
             icon: Icons.home_outlined,

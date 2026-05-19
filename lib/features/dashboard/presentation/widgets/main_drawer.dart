@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 
 class MainDrawer extends ConsumerWidget {
   const MainDrawer({super.key});
@@ -85,6 +86,15 @@ class MainDrawer extends ConsumerWidget {
                   onTap: () => context.push('/profile/support'),
                 ),
                 const Divider(color: Colors.white10),
+                if (AppConfig.flavorName == 'rabhan') ...[
+                  _buildItem(
+                    context,
+                    leading: const Icon(Icons.workspace_premium_outlined, color: Colors.amber, size: 22),
+                    title: isAr ? 'الحساب والباقة' : 'Growth Pro',
+                    onTap: () => context.push('/dashboard/package'),
+                  ),
+                  const Divider(color: Colors.white10),
+                ],
                 _buildItem(
                   context,
                   leading: const Icon(Icons.person_outline, color: Colors.white70, size: 22),
@@ -99,7 +109,7 @@ class MainDrawer extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Text(
-              'v3.0.0 — Moharek Growth Hub',
+              'v3.0.0 — ${AppConfig.appName} Growth Hub',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 10),
             ),
           ),

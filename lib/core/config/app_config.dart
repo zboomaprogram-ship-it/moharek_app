@@ -7,37 +7,71 @@
 /// =============================================================
 
 class AppConfig {
-  // -----------------------------------------------------------
-  // 1. SUPABASE ✅
-  // -----------------------------------------------------------
-  static const String supabaseUrl = 'https://typbaddqqhpeppzpbbhj.supabase.co';
-  static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5cGJhZGRxcWhwZXBwenBiYmhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNTE4MTEsImV4cCI6MjA5MzcyNzgxMX0.nxk43GEdtyEUYvmT6K6uj4MPJVXRFb80uEA_mE9NGJI';
+  static AppConfig? _instance;
+
+  static void setInstance(AppConfig instance) {
+    _instance = instance;
+  }
+
+  static AppConfig get instance {
+    if (_instance == null) {
+      throw StateError('AppConfig instance has not been initialized. Call AppConfig.setInstance() first.');
+    }
+    return _instance!;
+  }
 
   // -----------------------------------------------------------
-  // 1b. WORDPRESS MEDIA API ✅
+  // Static forwarding getters to preserve backward compatibility
   // -----------------------------------------------------------
-  static const String wordpressMediaUrl = 'https://mohrek.com/media-api.php';
+  static String get supabaseUrl => instance.supabaseUrlVal;
+  static String get supabaseAnonKey => instance.supabaseAnonKeyVal;
+  static String get wordpressMediaUrl => instance.wordpressMediaUrlVal;
+  static String get oneSignalAppId => instance.oneSignalAppIdVal;
+  static bool get notificationsEnabled => instance.notificationsEnabledVal;
+  static bool get livekitEnabled => instance.livekitEnabledVal;
+  static String get bucketReports => instance.bucketReportsVal;
+  static String get bucketFiles => instance.bucketFilesVal;
+  static String get bucketAvatars => instance.bucketAvatarsVal;
+  static String get bucketApprovals => instance.bucketApprovalsVal;
+  static String get bucketContracts => instance.bucketContractsVal;
+
+  // Flavor flags
+  static String get appName => instance.appNameVal;
+  static String get flavorName => instance.flavorNameVal;
 
   // -----------------------------------------------------------
-  // 2. LIVEKIT — In-App Video & Voice Calls ✅
+  // Instance properties configured per flavor
   // -----------------------------------------------------------
-  static const bool livekitEnabled = true;
+  final String supabaseUrlVal;
+  final String supabaseAnonKeyVal;
+  final String wordpressMediaUrlVal;
+  final String oneSignalAppIdVal;
+  final bool notificationsEnabledVal;
+  final bool livekitEnabledVal;
+  final String bucketReportsVal;
+  final String bucketFilesVal;
+  final String bucketAvatarsVal;
+  final String bucketApprovalsVal;
+  final String bucketContractsVal;
 
-  // -----------------------------------------------------------
-  // 3. ONESIGNAL — Push Notifications ✅
-  // -----------------------------------------------------------
-  static const String oneSignalAppId = '234d893b-ca81-493d-9afd-6a287a69b27e';
-  static const bool notificationsEnabled = true;
+  final String appNameVal;
+  final String flavorNameVal;
 
-  // -----------------------------------------------------------
-  // 4. SUPABASE STORAGE BUCKETS ✅
-  // -----------------------------------------------------------
-  static const String bucketReports = 'reports';
-  static const String bucketFiles = 'files';
-  static const String bucketAvatars = 'avatars';
-  static const String bucketApprovals = 'approvals';
-  static const String bucketContracts = 'contracts';
+  const AppConfig({
+    required this.supabaseUrlVal,
+    required this.supabaseAnonKeyVal,
+    required this.wordpressMediaUrlVal,
+    required this.oneSignalAppIdVal,
+    this.notificationsEnabledVal = true,
+    this.livekitEnabledVal = true,
+    this.bucketReportsVal = 'reports',
+    this.bucketFilesVal = 'files',
+    this.bucketAvatarsVal = 'avatars',
+    this.bucketApprovalsVal = 'approvals',
+    this.bucketContractsVal = 'contracts',
+    required this.appNameVal,
+    required this.flavorNameVal,
+  });
 
   // -----------------------------------------------------------
   // 5. SUPABASE RLS POLICIES ❌ TODO

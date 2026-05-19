@@ -60,6 +60,9 @@ import 'package:moharek_app/features/am/presentation/screens/am_reports_screen.d
 import 'package:moharek_app/features/am/presentation/screens/am_chat_screen.dart';
 import 'package:moharek_app/features/am/presentation/screens/am_calendar_screen.dart';
 import 'package:moharek_app/features/am/presentation/screens/am_profile_screen.dart';
+import 'package:moharek_app/features/rabhan/screens/growth_pro_screen.dart';
+import 'package:moharek_app/features/rabhan/screens/growth_system_screen.dart';
+import 'package:moharek_app/features/rabhan/screens/rabhan_analytics_screen.dart';
 
 // Shared Imports
 import 'package:moharek_app/features/shared/presentation/screens/shared_client_hub_screen.dart';
@@ -346,6 +349,18 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: 'notifications',
                   builder: (c, s) => const NotificationCenterScreen(),
+                ),
+                GoRoute(
+                  path: 'package',
+                  builder: (c, s) => const GrowthProScreen(),
+                ),
+                GoRoute(
+                  path: 'growth-system',
+                  builder: (c, s) => const GrowthSystemScreen(),
+                ),
+                GoRoute(
+                  path: 'analytics',
+                  builder: (c, s) => const RabhanAnalyticsScreen(),
                 ),
               ],
             ),

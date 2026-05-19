@@ -21,6 +21,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/core/utils/arabic_formatter.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/ai_chat_bottom_sheet.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/rabhan/widgets/ecom_kpi_section.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -217,6 +219,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ),
                               ),
                             ),
+                        ],
+
+                        // Ecom KPI Section for Rabhan
+                        if (AppConfig.flavorName == 'rabhan' && projectAsync.valueOrNull != null) ...[
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 325),
+                            child: EcomKpiSection(projectId: projectAsync.valueOrNull!.id),
+                          ),
+                          const SizedBox(height: 24),
                         ],
 
                         projectAsync.when(
