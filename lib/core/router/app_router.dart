@@ -93,6 +93,11 @@ class SupabaseAuthListenable extends ChangeNotifier {
         return;
       }
 
+      // Ignore initialSession if session is null to prevent premature redirects
+      if (data.event == AuthChangeEvent.initialSession && data.session == null) {
+        return;
+      }
+
       // For other events (e.g. token refresh, login), debounce to avoid rapid rebuilds/flicker
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 150), () {
@@ -122,8 +127,9 @@ String? _processRedirect(
 ) {
   // Status Gate: Check if user is active
   if (!isActive) {
-    Supabase.instance.client.auth.signOut();
-    return '/login';
+    // Do not aggressively call signOut() here as it can cause a redirect loop. 
+    // Just route them to a suspended page.
+    return '/suspended';
   }
 
   final bool isAdmin = role == 'admin';
@@ -172,6 +178,12 @@ final appRouter = GoRouter(
 
     final client = Supabase.instance.client;
     Session? session = client.auth.currentSession;
+    
+    // Fallback for transient null session on Web after login
+    if (session == null && kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      session = client.auth.currentSession;
+    }
 
     final path = state.matchedLocation;
     final isLoginPage = path == '/login';
@@ -214,10 +226,21 @@ final appRouter = GoRouter(
         return null;
       }
 
+      bool active = true;
+      if (profile['is_active'] != null) {
+        if (profile['is_active'] is bool) {
+          active = profile['is_active'];
+        } else if (profile['is_active'] is int) {
+          active = profile['is_active'] == 1;
+        } else if (profile['is_active'] is String) {
+          active = profile['is_active'] == 'true' || profile['is_active'] == '1';
+        }
+      }
+
       // Update cache
       _cachedUserId = session.user.id;
       _cachedRole = (profile['role'] as String? ?? 'client').toLowerCase();
-      _cachedIsActive = profile['is_active'] ?? true;
+      _cachedIsActive = active;
 
       return _processRedirect(
         path,
@@ -234,6 +257,30 @@ final appRouter = GoRouter(
   },
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    GoRoute(
+      path: '/suspended',
+      builder: (context, state) => const Scaffold(
+        backgroundColor: Color(0xFF0F172A),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.block, color: Colors.redAccent, size: 64),
+              SizedBox(height: 16),
+              Text(
+                'الحساب معلق',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'عذراً، هذا الحساب غير نشط حالياً. يرجى التواصل مع الدعم.',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
     GoRoute(
       path: '/login',
       builder: (context, state) => kIsWeb ? const WebLoginScreen() : const LoginScreen(),
