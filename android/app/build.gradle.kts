@@ -54,6 +54,23 @@ android {
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        // Moharek signing (existing upload keystore)
+        create("moharekRelease") {
+            keyAlias = moharekKeystoreProps["keyAlias"] as String?
+            keyPassword = moharekKeystoreProps["keyPassword"] as String?
+            storeFile = (moharekKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
+            storePassword = moharekKeystoreProps["storePassword"] as String?
+        }
+        // Rabhan signing (separate keystore — no conflict with Moharek Play Console)
+        create("rabhanRelease") {
+            keyAlias = rabhanKeystoreProps["keyAlias"] as String?
+            keyPassword = rabhanKeystoreProps["keyPassword"] as String?
+            storeFile = (rabhanKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
+            storePassword = rabhanKeystoreProps["storePassword"] as String?
+        }
+    }
+
     flavorDimensions.add("app")
 
     productFlavors {
@@ -82,23 +99,6 @@ android {
             pickFirsts += "lib/x86_64/libc++_shared.so"
             pickFirsts += "lib/armeabi-v7a/libc++_shared.so"
             pickFirsts += "lib/arm64-v8a/libc++_shared.so"
-        }
-    }
-
-    signingConfigs {
-        // Moharek signing (existing upload keystore)
-        create("moharekRelease") {
-            keyAlias = moharekKeystoreProps["keyAlias"] as String?
-            keyPassword = moharekKeystoreProps["keyPassword"] as String?
-            storeFile = (moharekKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
-            storePassword = moharekKeystoreProps["storePassword"] as String?
-        }
-        // Rabhan signing (separate keystore — no conflict with Moharek Play Console)
-        create("rabhanRelease") {
-            keyAlias = rabhanKeystoreProps["keyAlias"] as String?
-            keyPassword = rabhanKeystoreProps["keyPassword"] as String?
-            storeFile = (rabhanKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
-            storePassword = rabhanKeystoreProps["storePassword"] as String?
         }
     }
 
