@@ -19,4 +19,4 @@ samples, guidance on mobile development, and a full API reference.
 
 Please refer to `lib/core/config/app_config.dart` for application configuration. Secrets should be managed via environment variables or a secure vault in production.
 rahaban supabase pass:r92Ok2LvkcwImqTS
-os_v2_app_ay5cg7n37ffkzb4r55pfo5jiaemja5r4lpuummnsemnjicntymrtd25trqpclad6oik3sw7l67ba7arrkivy5ktah4hb4kqaouwxuti
+os_v2_app_ay5cg7n37ffkzb4r55pfo5jiahjdar625s2exs5v7ynfaorrrrun7r4wiixnimq3vgjdxyfjlsfszrangkwvcy4i5rt52zyg3xlpc2q

@@ -110,13 +110,14 @@ android {
 
     // Apply correct signing config per flavor + build type
     applicationVariants.all {
+        val variant = this as com.android.build.gradle.api.ApkVariant
         val flavor = flavorName
         val buildType = buildType.name
         if (buildType == "release") {
             if (flavor == "moharek") {
-                signingConfig = signingConfigs.getByName("moharekRelease")
+                variant.signingConfig = signingConfigs.getByName("moharekRelease")
             } else if (flavor == "rabhan") {
-                signingConfig = signingConfigs.getByName("rabhanRelease")
+                variant.signingConfig = signingConfigs.getByName("rabhanRelease")
             }
         }
     }
