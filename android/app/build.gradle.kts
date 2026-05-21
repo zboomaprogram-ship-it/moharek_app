@@ -115,9 +115,9 @@ android {
         val buildType = buildType.name
         if (buildType == "release") {
             if (flavor == "moharek") {
-                variant.signingConfig = signingConfigs.getByName("moharekRelease")
+                variant.setSigningConfig(signingConfigs.getByName("moharekRelease"))
             } else if (flavor == "rabhan") {
-                variant.signingConfig = signingConfigs.getByName("rabhanRelease")
+                variant.setSigningConfig(signingConfigs.getByName("rabhanRelease"))
             }
         }
     }
