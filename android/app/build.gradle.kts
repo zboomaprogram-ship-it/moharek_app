@@ -61,11 +61,17 @@ android {
             dimension = "app"
             applicationId = "com.zbooma.moharek"
             manifestPlaceholders["appName"] = "Moharek"
+            if (moharekKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("moharekRelease")
+            }
         }
         create("rabhan") {
             dimension = "app"
             applicationId = "com.zbooma.rabhan"
             manifestPlaceholders["appName"] = "ربحان"
+            if (rabhanKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("rabhanRelease")
+            }
         }
     }
 
@@ -98,7 +104,6 @@ android {
 
     buildTypes {
         release {
-            // Signing config is overridden per-flavor in the flavorConfigurations below
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -106,19 +111,8 @@ android {
                 "proguard-rules.pro"
             )
         }
-    }
-
-    // Apply correct signing config per flavor + build type
-    applicationVariants.all {
-        val variant = this as com.android.build.gradle.api.ApkVariant
-        val flavor = flavorName
-        val buildType = buildType.name
-        if (buildType == "release") {
-            if (flavor == "moharek") {
-                variant.setSigningConfig(signingConfigs.getByName("moharekRelease"))
-            } else if (flavor == "rabhan") {
-                variant.setSigningConfig(signingConfigs.getByName("rabhanRelease"))
-            }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
