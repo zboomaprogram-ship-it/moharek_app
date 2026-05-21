@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
@@ -71,7 +72,10 @@ class AdminClientsScreen extends ConsumerWidget {
                       ),
                       Text(
                         'متابعة كافة مشاريع العملاء والنشاط الحالي',
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -118,7 +122,7 @@ class AdminClientsScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  
+
                   if (isMobile) {
                     return _buildClientCards(context, projects);
                   }
@@ -127,7 +131,10 @@ class AdminClientsScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E293B),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF334155), width: 1),
+                      border: Border.all(
+                        color: const Color(0xFF334155),
+                        width: 1,
+                      ),
                     ),
                     child: _buildClientTable(context, projects),
                   );
@@ -170,7 +177,9 @@ class AdminClientsScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                      backgroundColor: AppTheme.primaryBlue.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         name.isNotEmpty ? name[0] : '?',
                         style: const TextStyle(
@@ -202,10 +211,7 @@ class AdminClientsScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: Color(0xFF64748B),
-                    ),
+                    const Icon(Icons.chevron_right, color: Color(0xFF64748B)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -214,9 +220,27 @@ class AdminClientsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildStageBadge(p['current_stage']),
                     Row(
                       children: [
+                        _buildStageBadge(p['current_stage']),
+                        if (AppConfig.flavorName == 'rabhan') ...[
+                          const SizedBox(width: 8),
+                          _buildPackageBadge(p),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (AppConfig.flavorName == 'rabhan') ...[
+                          const Icon(
+                            Icons.show_chart,
+                            color: Color(0xFF64748B),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          _buildRoasText(p),
+                          const SizedBox(width: 12),
+                        ],
                         const Icon(
                           Icons.favorite,
                           color: Color(0xFF64748B),
@@ -255,8 +279,8 @@ class AdminClientsScreen extends ConsumerWidget {
           headingRowColor: WidgetStateProperty.all(const Color(0xFF0F172A)),
           dataRowMaxHeight: 80,
           horizontalMargin: 24,
-          columns: const [
-            DataColumn(
+          columns: [
+            const DataColumn(
               label: Text(
                 'العميل',
                 style: TextStyle(
@@ -265,7 +289,7 @@ class AdminClientsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            DataColumn(
+            const DataColumn(
               label: Text(
                 'الشركة',
                 style: TextStyle(
@@ -274,7 +298,27 @@ class AdminClientsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            DataColumn(
+            if (AppConfig.flavorName == 'rabhan') ...const [
+              const DataColumn(
+                label: Text(
+                  'الباقة',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const DataColumn(
+                label: Text(
+                  'ROAS',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            const DataColumn(
               label: Text(
                 'المرحلة',
                 style: TextStyle(
@@ -283,7 +327,7 @@ class AdminClientsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            DataColumn(
+            const DataColumn(
               label: Text(
                 'مؤشر الصحة',
                 style: TextStyle(
@@ -292,7 +336,7 @@ class AdminClientsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            DataColumn(
+            const DataColumn(
               label: Text(
                 'الإجراءات',
                 style: TextStyle(
@@ -354,6 +398,10 @@ class AdminClientsScreen extends ConsumerWidget {
                     style: const TextStyle(color: Color(0xFF94A3B8)),
                   ),
                 ),
+                if (AppConfig.flavorName == 'rabhan') ...[
+                  DataCell(_buildPackageBadge(p)),
+                  DataCell(_buildRoasText(p)),
+                ],
                 DataCell(_buildStageBadge(p['current_stage'])),
                 DataCell(
                   Row(
@@ -434,6 +482,69 @@ class AdminClientsScreen extends ConsumerWidget {
           letterSpacing: 0.5,
         ),
       ),
+    );
+  }
+
+  Widget _buildPackageBadge(Map<String, dynamic> project) {
+    final packages = project['packages'] as List<dynamic>? ?? [];
+    if (packages.isEmpty)
+      return const Text('—', style: TextStyle(color: Color(0xFF94A3B8)));
+
+    final pkg = packages.first as Map<String, dynamic>;
+    final tier = pkg['tier'] as String? ?? 'basic';
+
+    Color color;
+    String label;
+    switch (tier.toLowerCase()) {
+      case 'startup':
+      case 'basic':
+        color = const Color(0xFF2196F3);
+        label = 'انطلاق';
+        break;
+      case 'growth':
+      case 'pro':
+        color = AppTheme.primaryGreen;
+        label = 'نمو';
+        break;
+      case 'scale':
+      case 'enterprise':
+        color = const Color(0xFFD4A017); // Gold
+        label = 'توسع';
+        break;
+      default:
+        color = Colors.grey;
+        label = tier;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoasText(Map<String, dynamic> project) {
+    final metricsList = project['ecom_metrics'] as List<dynamic>? ?? [];
+    if (metricsList.isEmpty)
+      return const Text('—', style: TextStyle(color: Color(0xFF94A3B8)));
+
+    final metrics = metricsList.first as Map<String, dynamic>;
+    final roas = metrics['roas'] ?? 0;
+
+    return Text(
+      '${roas}x',
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
     );
   }
 

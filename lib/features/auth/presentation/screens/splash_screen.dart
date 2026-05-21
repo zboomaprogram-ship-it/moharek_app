@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -58,12 +59,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
             context.go('/admin/overview');
           }
         } else {
-          // Check onboarding for clients
-          if (profile?.onboardingCompleted == false) {
+          // Check onboarding for clients:
+          // Show onboarding when onboardingCompleted is false OR null (new user)
+          if (profile?.onboardingCompleted != true) {
             context.go('/onboarding');
           } else {
             context.go('/dashboard');
           }
+
         }
       } catch (e) {
         debugPrint('Splash Error: $e');
@@ -91,18 +94,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset(
-                'assets/logo.png',
+                AppConfig.logoAsset,
                 height: 180,
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 24),
-              const Text(
-                'M O H A R E K',
+              Text(
+                AppConfig.appName,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 4,
+                  letterSpacing: AppConfig.flavorName == 'rabhan' ? 0 : 4,
                 ),
               ),
               const SizedBox(height: 8),

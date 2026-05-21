@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
@@ -95,13 +96,13 @@ class AmSidebar extends ConsumerWidget {
             child: Row(
               children: [
                 Image.asset(
-                  'assets/logo.png',
+                  AppConfig.logoAsset,
                   height: 32,
                   fit: BoxFit.contain,
                 ),
                 SizedBox(width: 12),
                 Text(
-                  'محرك',
+                  AppConfig.appName,
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
                     fontSize: 22,

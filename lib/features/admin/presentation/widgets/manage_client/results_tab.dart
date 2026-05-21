@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 
 class ResultsTab extends ConsumerWidget {
   final String pid;
@@ -91,13 +92,20 @@ class ResultsTab extends ConsumerWidget {
 
   void _showEditResult(BuildContext context, WidgetRef ref, Map<String, dynamic>? r) {
     final isEditing = r != null;
+    final isRabhan = AppConfig.flavorName == 'rabhan';
     final labelCtrl = TextEditingController(text: r?['metric_label'] ?? '');
     final valCtrl = TextEditingController(text: r?['metric_value']?.toString() ?? '');
     final unitCtrl = TextEditingController(text: r?['metric_unit'] ?? '');
-    String selectedType = r?['result_type'] ?? 'seo';
-    bool saving = false;
+    
+    final types = isRabhan
+        ? ['store', 'product', 'ads', 'sales_page', 'operations', 'analytics', 'general']
+        : ['seo', 'ads', 'ai_visibility', 'trust_engine', 'conversion', 'leads', 'general'];
 
-    final types = ['seo', 'ads', 'ai_visibility', 'trust_engine', 'conversion', 'leads', 'general'];
+    String selectedType = r?['result_type'] ?? (isRabhan ? 'store' : 'seo');
+    if (!types.contains(selectedType)) {
+      selectedType = isRabhan ? 'store' : 'seo';
+    }
+    bool saving = false;
 
     showDialog(
       context: context,

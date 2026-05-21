@@ -21,12 +21,11 @@ class VoiceUploadService {
     String publicUrl = '';
 
     if (kIsWeb) {
-      // On web, recording.fileBytes is populated by the recorder service
+      // On web, upload to Supabase Storage 'files' bucket to bypass CORS limitations on the WordPress server
       if (recording.fileBytes != null) {
-        publicUrl = await WordPressUploadService.uploadBytes(
-          recording.fileBytes!,
-          fileName,
-        );
+        final storagePath = 'voice/$fileName';
+        await _supabase.storage.from('files').uploadBinary(storagePath, recording.fileBytes!);
+        publicUrl = _supabase.storage.from('files').getPublicUrl(storagePath);
       } else {
         throw Exception('VoiceUploadService: Voice bytes are null on web');
       }

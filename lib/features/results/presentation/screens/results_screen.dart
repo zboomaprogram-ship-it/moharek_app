@@ -7,6 +7,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/core/utils/arabic_formatter.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/rabhan/widgets/rabhan_results_view.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
@@ -33,6 +35,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    if (AppConfig.flavorName == 'rabhan') {
+      return const RabhanResultsView();
+    }
+
     final resultsAsync = ref.watch(resultsProvider);
     final l10n = AppLocalizations.of(context)!;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';

@@ -62,6 +62,10 @@ class CallSignalService {
   }
 
   /// Listen for ALL incoming calls for the current user (across all projects)
+  /// NOTE: We intentionally do NOT use .eq('status', 'ringing') on the stream
+  /// because .stream().eq() fails if the column doesn't exist in the DB schema,
+  /// causing an unhandled exception that crashes all Realtime subscriptions.
+  /// Instead we stream all recent call_signals and filter in-memory.
   Stream<List<Map<String, dynamic>>> watchAllIncomingCalls() {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return const Stream.empty();
@@ -69,14 +73,16 @@ class CallSignalService {
     return _supabase
         .from('call_signals')
         .stream(primaryKey: ['id'])
-        .eq('status', 'ringing')
         .map((data) {
           final cutoff = DateTime.now().toUtc().subtract(const Duration(seconds: 35));
           return data
               .where((s) {
                 final callerId = s['caller_id'] as String?;
+                final status = s['status'] as String?;
                 final createdAtStr = s['created_at'] as String?;
+                // Only show ringing calls that aren't ours and are recent
                 if (callerId == currentUserId) return false;
+                if (status != null && status != 'ringing') return false;
                 if (createdAtStr == null) return false;
                 try {
                   final createdAt = DateTime.parse(createdAtStr).toUtc();
@@ -86,6 +92,9 @@ class CallSignalService {
                 }
               })
               .toList();
+        })
+        .handleError((e) {
+          debugPrint('watchAllIncomingCalls stream error (non-fatal): $e');
         });
   }
 

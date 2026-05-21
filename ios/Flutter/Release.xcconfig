@@ -1,2 +1,21 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// Dynamic bundle identifier based on build flavor
+APP_BUNDLE_ID_moharek = com.zbooma.moharek
+APP_BUNDLE_ID_rabhan = com.zbooma.rabhan
+APP_BUNDLE_ID_ = com.zbooma.moharek
+APP_BUNDLE_ID = $(APP_BUNDLE_ID_$(FLUTTER_FLAVOR))
+
+// Dynamic app display name based on build flavor
+APP_DISPLAY_NAME_moharek = Moharek
+APP_DISPLAY_NAME_rabhan = Rabhan
+APP_DISPLAY_NAME_ = Moharek
+APP_DISPLAY_NAME = $(APP_DISPLAY_NAME_$(FLUTTER_FLAVOR))
+
+// Dynamic app icon based on build flavor
+APP_ICON_NAME_moharek = AppIcon-moharek
+APP_ICON_NAME_rabhan = AppIcon-rabhan
+APP_ICON_NAME_ = AppIcon
+APP_ICON_NAME = $(APP_ICON_NAME_$(FLUTTER_FLAVOR))
+

@@ -44,5 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 key.properties
+key-rabhan.properties
 *.jks
 *.keystore

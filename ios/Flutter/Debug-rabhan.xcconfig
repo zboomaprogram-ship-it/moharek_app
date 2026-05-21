@@ -1,0 +1,6 @@
+#include "Debug.xcconfig"
+
+// Rabhan flavor config (debug)
+PRODUCT_BUNDLE_IDENTIFIER = com.zbooma.rabhan
+APP_DISPLAY_NAME = ربحان
+FLUTTER_TARGET = lib/main_rabhan.dart

@@ -16,4 +16,6 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 ## Configuration
+
 Please refer to `lib/core/config/app_config.dart` for application configuration. Secrets should be managed via environment variables or a secure vault in production.
+rahaban supabase pass:r92Ok2LvkcwImqTS

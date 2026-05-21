@@ -45,6 +45,7 @@ class BillingTab extends ConsumerWidget {
   Widget _buildCard(BuildContext context, WidgetRef ref, Map<String, dynamic> inv) {
     final status = inv['status'] as String? ?? 'pending';
     final amount = (inv['amount'] as num?)?.toDouble() ?? 0.0;
+    final existingLink = inv['payment_link'] as String?;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -53,59 +54,103 @@ class BillingTab extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: (status == 'paid' ? AppTheme.primaryGreen : Colors.amber).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            status == 'paid' ? Icons.check_circle_outline : Icons.pending_outlined,
-            color: status == 'paid' ? AppTheme.primaryGreen : Colors.amber,
-          ),
-        ),
-        title: Text('فاتورة #${inv['id'].toString().substring(0, 8)}',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        subtitle: Text('${(inv['created_at'] as String).split('T')[0]} • ${inv['currency'] ?? 'AED'}',
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (status == 'paid' ? AppTheme.primaryGreen : Colors.amber).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                status == 'paid' ? Icons.check_circle_outline : Icons.pending_outlined,
+                color: status == 'paid' ? AppTheme.primaryGreen : Colors.amber,
+              ),
+            ),
+            title: Text('فاتورة #${inv['id'].toString().substring(0, 8)}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: Text('${(inv['created_at'] as String).split('T')[0]} • ${inv['currency'] ?? 'AED'}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                Text(status.toUpperCase(), style: TextStyle(
-                  color: status == 'paid' ? AppTheme.primaryGreen : Colors.amber,
-                  fontSize: 10, fontWeight: FontWeight.bold,
-                )),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('$amount', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text(status.toUpperCase(), style: TextStyle(
+                      color: status == 'paid' ? AppTheme.primaryGreen : Colors.amber,
+                      fontSize: 10, fontWeight: FontWeight.bold,
+                    )),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                PopupMenuButton<String>(
+                  color: const Color(0xFF1E293B),
+                  icon: const Icon(Icons.more_vert, color: Colors.white54),
+                  onSelected: (value) async {
+                    if (value == 'delete') {
+                      await _confirmDelete(context, ref, inv);
+                    } else {
+                      await _updateStatus(context, ref, inv, value);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'pending', child: Text('معلق', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 'paid', child: Text('مدفوع', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 'void', child: Text('ملغي', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 'refunded', child: Text('مسترجع', style: TextStyle(color: Colors.white))),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(value: 'delete', child: Text('حذف', style: TextStyle(color: Colors.redAccent))),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(width: 4),
-            PopupMenuButton<String>(
-              color: const Color(0xFF1E293B),
-              icon: const Icon(Icons.more_vert, color: Colors.white54),
-              onSelected: (value) async {
-                if (value == 'delete') {
-                  await _confirmDelete(context, ref, inv);
-                } else {
-                  await _updateStatus(context, ref, inv, value);
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'pending', child: Text('معلق', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'paid', child: Text('مدفوع', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'void', child: Text('ملغي', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'refunded', child: Text('مسترجع', style: TextStyle(color: Colors.white))),
-                const PopupMenuDivider(),
-                const PopupMenuItem(value: 'delete', child: Text('حذف', style: TextStyle(color: Colors.redAccent))),
-              ],
+          ),
+          // ── Payment Link Row ────────────────────────────────────────
+          if (existingLink != null && existingLink.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.link, size: 12, color: AppTheme.primaryGreen),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      existingLink,
+                      style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showSendPaymentLinkDialog(context, ref, inv),
+              icon: const Icon(Icons.send_to_mobile, size: 15),
+              label: Text(
+                existingLink != null && existingLink.isNotEmpty
+                    ? 'إعادة إرسال رابط الدفع'
+                    : 'إرسال رابط الدفع',
+                style: const TextStyle(fontSize: 12),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.amber,
+                side: const BorderSide(color: Colors.amber, width: 1),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -146,6 +191,7 @@ class BillingTab extends ConsumerWidget {
   void _showCreateInvoice(BuildContext context, WidgetRef ref) {
     final amountCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final linkCtrl = TextEditingController();
     bool saving = false;
 
     showModalBottomSheet(
@@ -165,6 +211,8 @@ class BillingTab extends ConsumerWidget {
               _field(amountCtrl, 'المبلغ', Icons.attach_money, type: TextInputType.number),
               const SizedBox(height: 12),
               _field(descCtrl, 'الوصف (مثال: اشتراك شهري)', Icons.description, maxLines: 2),
+              const SizedBox(height: 12),
+              _field(linkCtrl, 'رابط الدفع (اختياري)', Icons.link),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -180,6 +228,8 @@ class BillingTab extends ConsumerWidget {
                         'currency': 'AED',
                         'status': 'pending',
                         'description': descCtrl.text.trim(),
+                        if (linkCtrl.text.trim().isNotEmpty)
+                          'payment_link': linkCtrl.text.trim(),
                       }]);
                       ref.invalidate(projectInvoicesProvider(pid));
                       if (ctx.mounted) Navigator.pop(ctx);
@@ -194,6 +244,116 @@ class BillingTab extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showSendPaymentLinkDialog(BuildContext context, WidgetRef ref, Map<String, dynamic> inv) {
+    final linkCtrl = TextEditingController(text: inv['payment_link'] as String? ?? '');
+    bool sending = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.send_to_mobile, color: Colors.amber, size: 22),
+              SizedBox(width: 10),
+              Text('إرسال رابط الدفع', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'المبلغ: ${inv['currency'] ?? 'AED'} ${inv['amount'] ?? 0}',
+                style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              const Text('رابط الدفع:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: linkCtrl,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  hintText: 'https://payment.example.com/...',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  prefixIcon: const Icon(Icons.link, color: Colors.amber, size: 18),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'سيتم إرسال الرابط للعميل عبر المحادثة وإشعار فوري.',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء', style: TextStyle(color: Color(0xFF64748B))),
+            ),
+            ElevatedButton.icon(
+              onPressed: sending ? null : () async {
+                final link = linkCtrl.text.trim();
+                if (link.isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('أدخل رابط الدفع أولاً'), backgroundColor: Colors.orange),
+                  );
+                  return;
+                }
+                setState(() => sending = true);
+                try {
+                  await ref.read(adminActionsProvider).sendPaymentLink(
+                    invoiceId: inv['id'] as String,
+                    projectId: pid,
+                    paymentLink: link,
+                    description: inv['description'] as String?,
+                    amount: (inv['amount'] as num?)?.toDouble(),
+                    currency: inv['currency'] as String? ?? 'AED',
+                  );
+                  ref.invalidate(projectInvoicesProvider(pid));
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ تم إرسال رابط الدفع للعميل'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                } finally {
+                  if (ctx.mounted) setState(() => sending = false);
+                }
+              },
+              icon: sending
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : const Icon(Icons.send, size: 16),
+              label: const Text('إرسال', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                foregroundColor: Colors.black,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -16,6 +16,10 @@ class ProjectTask {
   final String? requestType;
   final DateTime? clientProposedDeadline;
 
+  final String? stageType;
+  final bool isClientPending;
+  final int journeyOrder;
+
   ProjectTask({
     required this.id,
     required this.projectId,
@@ -33,6 +37,9 @@ class ProjectTask {
     this.isClientRequest = false,
     this.requestType,
     this.clientProposedDeadline,
+    this.stageType,
+    this.isClientPending = false,
+    this.journeyOrder = 0,
   });
 
   factory ProjectTask.fromJson(Map<String, dynamic> json) {
@@ -59,6 +66,9 @@ class ProjectTask {
       clientProposedDeadline: json['client_proposed_deadline'] != null 
           ? DateTime.parse(json['client_proposed_deadline']) 
           : null,
+      stageType: json['stage_type'],
+      isClientPending: json['is_client_pending'] ?? false,
+      journeyOrder: json['journey_order'] ?? 0,
     );
   }
 }

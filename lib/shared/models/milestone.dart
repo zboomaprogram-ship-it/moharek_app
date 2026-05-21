@@ -36,7 +36,7 @@ class Milestone {
       titleEn: json['title_en'] ?? json['title'] ?? '',
       descriptionAr: json['description_ar'] ?? json['description'] ?? '',
       descriptionEn: json['description_en'] ?? json['description'] ?? '',
-      achievedAt: DateTime.parse(json['achieved_at']),
+      achievedAt: DateTime.parse(json['achieved_at'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
       seenByClient: json['seen_by_client'] ?? false,
     );
   }

@@ -71,10 +71,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _sendText() async {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
+
+    if (widget.channelId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم إنشاء قناة للمحادثة. تواصل مع مدير حسابك.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 1. Clear input immediately for snappy UX
     _msgCtrl.clear();
     HapticService.light();
-    ref.read(chatNotifierProvider.notifier).sendMessage(widget.channelId, text);
-    ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+
+    // 2. Inject an optimistic message so it appears INSTANTLY
+    final client = ref.read(supabaseClientProvider);
+    final uid = client.auth.currentUser?.id ?? '';
+    final tempId = 'opt_${DateTime.now().millisecondsSinceEpoch}';
+    final optimistic = ChatMessage(
+      id: tempId,
+      channelId: widget.channelId,
+      senderId: uid,
+      content: text,
+      messageType: 'text',
+      isRead: false,
+      createdAt: DateTime.now(),
+    );
+    ref.read(chatMessagesProvider(widget.channelId).notifier).addOptimistic(optimistic);
+
+    // 3. Fire the actual DB insert (Realtime stream will confirm & replace optimistic row)
+    try {
+      await ref.read(chatNotifierProvider.notifier).sendMessage(widget.channelId, text);
+      // ✅ No manual refresh() needed — Realtime stream updates state automatically
+    } catch (e) {
+      debugPrint('❌ [Chat] _sendText error: $e');
+      // Remove the optimistic message on failure so user knows it didn't send
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل إرسال الرسالة: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _sendFile() async {

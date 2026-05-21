@@ -3,6 +3,8 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/rabhan_firebase_options.dart' as rabhan;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -16,6 +18,9 @@ import 'package:flutter/foundation.dart'
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
+    if (AppConfig.flavorName == 'rabhan') {
+      return rabhan.DefaultFirebaseOptions.currentPlatform;
+    }
     if (kIsWeb) {
       return web;
     }
@@ -72,5 +77,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'moharek-e353b.firebasestorage.app',
     iosBundleId: 'com.zbooma.moharek',
   );
-
 }

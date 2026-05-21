@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/theme/rabhan_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
 
 class AmClientsScreen extends ConsumerWidget {
@@ -159,12 +161,80 @@ class _ClientCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (AppConfig.flavorName == 'rabhan') ...[
+                  Row(
+                    children: [
+                      _buildPackageBadge(project),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.show_chart, color: Color(0xFF64748B), size: 14),
+                      const SizedBox(width: 4),
+                      _buildRoasText(project),
+                    ],
+                  ),
+                ],
                 const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF64748B), size: 14),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPackageBadge(Map<String, dynamic> project) {
+    final packages = project['packages'] as List<dynamic>? ?? [];
+    if (packages.isEmpty) return const SizedBox.shrink();
+    
+    final pkg = packages.first as Map<String, dynamic>;
+    final tier = pkg['tier'] as String? ?? 'basic';
+    
+    Color color;
+    String label;
+    switch (tier.toLowerCase()) {
+      case 'startup':
+      case 'basic':
+        color = const Color(0xFF2196F3);
+        label = 'انطلاق';
+        break;
+      case 'growth':
+      case 'pro':
+        color = AppTheme.primaryGreen;
+        label = 'نمو';
+        break;
+      case 'scale':
+      case 'enterprise':
+        color = const Color(0xFFD4A017); // Gold
+        label = 'توسع';
+        break;
+      default:
+        color = Colors.grey;
+        label = tier;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildRoasText(Map<String, dynamic> project) {
+    final metricsList = project['ecom_metrics'] as List<dynamic>? ?? [];
+    if (metricsList.isEmpty) return const Text('—', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12));
+    
+    final metrics = metricsList.first as Map<String, dynamic>;
+    final roas = metrics['roas'] ?? 0;
+    
+    return Text(
+      '${roas}x',
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
     );
   }
 

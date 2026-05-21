@@ -13,68 +13,60 @@ const corsHeaders = {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-// ─── Professional Arabic notification templates ───────────────────────────────
-function buildTemplate(table: string, record: any, lang: 'ar' | 'en', firstName: string) {
-  const t = {
-    // Chat message
+// ─── Arabic/English push notification templates ───────────────────────────────
+function buildTemplate(table: string, record: any, lang: 'ar' | 'en', firstName: string, senderName?: string) {
+  const sender = senderName || (lang === 'ar' ? 'فريقك' : 'Your team')
+
+  const t: Record<string, Record<'ar' | 'en', { title: string; body: string }>> = {
     messages: {
-      ar: { title: '💬 رسالة جديدة من فريقك', body: `${firstName}، وصلتك رسالة جديدة. افتح التطبيق للرد.` },
-      en: { title: '💬 New Message', body: `${firstName}, you have a new message. Tap to reply.` },
+      ar: { title: '💬 رسالة جديدة', body: `${sender}: ${record?.content ? String(record.content).substring(0, 80) : 'راجع المحادثة'}` },
+      en: { title: '💬 New Message', body: `${sender}: ${record?.content ? String(record.content).substring(0, 80) : 'Check the chat'}` },
     },
-    // In-app notifications (forwarded from notifications table)
     notifications: {
       ar: { title: record?.title_ar || '🔔 تنبيه جديد', body: record?.body_ar || 'لديك تحديث جديد في لوحة التحكم.' },
       en: { title: record?.title_en || '🔔 New Notification', body: record?.body_en || 'You have a new update.' },
     },
-    // Activity feed
     activity_feed: {
-      ar: { title: '🔔 تحديث على مشروعك', body: record?.action_ar || 'تم إجراء تحديث على مشروعك. راجع التفاصيل.' },
+      ar: { title: '🔔 تحديث على مشروعك', body: record?.action_ar || 'تم إجراء تحديث على مشروعك.' },
       en: { title: '🔔 Project Update', body: record?.action_en || 'An update was made to your project.' },
     },
-    // Call signal — high priority
     call_signals: {
       ar: {
         title: record?.call_type === 'video' ? '📹 مكالمة فيديو واردة' : '📞 مكالمة صوتية واردة',
-        body: `${record?.caller_name || 'فريق محرك'} يتصل بك. اقبل للانضمام.`,
+        body: `${senderName || 'فريق ربحان'} يتصل بك. اقبل للانضمام.`,
       },
       en: {
         title: record?.call_type === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call',
-        body: `${record?.caller_name || 'Moharek Team'} is calling you. Tap to join.`,
+        body: `${senderName || 'Rabhan Team'} is calling you. Tap to join.`,
       },
     },
-    // Tasks
     tasks: {
-      ar: { title: '📋 مهمة جديدة بانتظارك', body: `تمت إضافة مهمة جديدة: ${record?.title || ''}. راجعها في التطبيق.` },
-      en: { title: '📋 New Task Assigned', body: `A new task was added: ${record?.title || ''}. Check it now.` },
+      ar: { title: '📋 مهمة جديدة', body: `تمت إضافة مهمة: ${record?.title || ''}` },
+      en: { title: '📋 New Task', body: `A new task was added: ${record?.title || ''}` },
     },
-    // Approvals
     approvals: {
-      ar: { title: '✅ طلب موافقة جديد', body: `يوجد عنصر جديد يحتاج موافقتك: ${record?.title || ''}` },
-      en: { title: '✅ New Approval Request', body: `A new item requires your approval: ${record?.title || ''}` },
+      ar: { title: '✅ طلب موافقة جديد', body: `يحتاج موافقتك: ${record?.title || ''}` },
+      en: { title: '✅ New Approval Request', body: `Needs your approval: ${record?.title || ''}` },
     },
-    // Meetings
     meetings: {
-      ar: { title: '📅 اجتماع جديد مجدول', body: `تم جدولة اجتماع: ${record?.title || ''}. تحقق من التوقيت.` },
-      en: { title: '📅 Meeting Scheduled', body: `A meeting has been scheduled: ${record?.title || ''}. Check the time.` },
+      ar: { title: '📅 اجتماع جديد', body: `تم جدولة: ${record?.title || ''}` },
+      en: { title: '📅 Meeting Scheduled', body: `Scheduled: ${record?.title || ''}` },
     },
-    // Reports
     reports: {
-      ar: { title: '📄 تقرير جديد متاح', body: `تم رفع تقرير بعنوان: ${record?.title || ''}. يمكنك تحميله الآن.` },
-      en: { title: '📄 New Report Available', body: `A new report is ready: ${record?.title || ''}. Download it now.` },
+      ar: { title: '📄 تقرير جديد', body: `تقرير: ${record?.title || ''}` },
+      en: { title: '📄 New Report', body: `Report: ${record?.title || ''}` },
     },
-    // Invoices
     invoices: {
-      ar: { title: '💰 فاتورة جديدة', body: `تم إصدار فاتورة بمبلغ ${record?.amount || ''} ${record?.currency || 'AED'}. يرجى المراجعة.` },
-      en: { title: '💰 New Invoice', body: `An invoice for ${record?.amount || ''} ${record?.currency || 'AED'} has been issued.` },
+      ar: { title: '💰 فاتورة جديدة', body: `مبلغ ${record?.amount || ''} ${record?.currency || 'AED'}` },
+      en: { title: '💰 New Invoice', body: `Amount: ${record?.amount || ''} ${record?.currency || 'AED'}` },
     },
-    // Support tickets
     support_tickets: {
-      ar: { title: '🎫 تذكرة دعم فني', body: `تم إنشاء تذكرة دعم: ${record?.title || ''}. سيتواصل معك الفريق قريباً.` },
-      en: { title: '🎫 Support Ticket', body: `A support ticket was created: ${record?.title || ''}. We'll get back to you soon.` },
+      ar: { title: '🎫 تذكرة دعم', body: `${record?.title || ''}` },
+      en: { title: '🎫 Support Ticket', body: `${record?.title || ''}` },
     },
   }
 
-  const template = t[table as keyof typeof t] || t.activity_feed
+  const template = t[table] || t.notifications
   return template[lang]
 }
 
@@ -85,35 +77,40 @@ serve(async (req) => {
     const body = await req.json()
     const { table, record } = body
     const targetId: string | null = body.target_user_id ?? body.client_id ?? null
+    const senderName: string | undefined = body.sender_name
 
     if (!targetId) {
       return new Response(JSON.stringify({ error: 'No target user ID provided' }), { status: 400 })
     }
 
-    // Fetch user profile
+    // Fetch user profile — use maybeSingle to avoid crash if no profile row
     const { data: userData } = await supabase
       .from('profiles')
-      .select('full_name, preferred_language')
+      .select('full_name, preferred_language, onesignal_player_id')
       .eq('id', targetId)
       .maybeSingle()
 
     if (!userData) {
-      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 })
+      console.warn(`[send-notification] No profile for user ${targetId} — skipping push`)
+      return new Response(JSON.stringify({ skipped: true, reason: 'no_profile' }), { headers: corsHeaders, status: 200 })
     }
 
     const lang: 'ar' | 'en' = userData.preferred_language === 'en' ? 'en' : 'ar'
-    const firstName = userData.full_name?.split(' ')[0] || 'عزيزي'
+    const firstName = userData.full_name?.split(' ')[0] || (lang === 'ar' ? 'عزيزي' : 'there')
 
-    const { title, body: pushBody } = buildTemplate(table, record, lang, firstName)
+    const { title, body: pushBody } = buildTemplate(table, record, lang, firstName, senderName)
     const isCall = table === 'call_signals'
 
-    // Build OneSignal payload
+    // Build OneSignal payload — target by external_user_id (primary) OR player_id (fallback)
+    const targeting: Record<string, any> = userData.onesignal_player_id
+      ? { include_player_ids: [userData.onesignal_player_id] }
+      : { include_external_user_ids: [targetId], channel_for_external_user_ids: 'push' }
+
     const osPayload: Record<string, any> = {
       app_id: ONESIGNAL_APP_ID,
       headings: { ar: title, en: title },
       contents: { ar: pushBody, en: pushBody },
-      include_external_user_ids: [targetId],
-      // Deep link data — app uses this to route to the right screen
+      ...targeting,
       data: {
         table,
         id: record?.id,
@@ -121,24 +118,28 @@ serve(async (req) => {
         call_type: record?.call_type,
         caller_name: record?.caller_name,
         link_path: record?.link_path,
+        channel_id: record?.channel_id,
       },
     }
 
-    // Call notifications need special high-priority handling
     if (isCall) {
-      osPayload.priority = 10           // Max priority for calls
-      osPayload.ttl = 30               // Expire after 30s (matches call timeout)
+      osPayload.priority = 10
+      osPayload.ttl = 30
       osPayload.android_channel_id = 'moharek_calls'
       osPayload.ios_interruption_level = 'time-sensitive'
       osPayload.ios_relevance_score = 1.0
-      // Content-available = 1 wakes the app even when in background (required for CallKeep)
       osPayload.content_available = true
     } else {
       osPayload.priority = 7
       osPayload.android_channel_id = 'moharek_general'
     }
 
-    console.log(`[send-notification] → ${table} → ${targetId} | ${title}`)
+    console.log(`[send-notification] → ${table} → ${targetId} (player: ${userData.onesignal_player_id || 'none'}) | ${title}`)
+
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      console.error('[send-notification] Missing ONESIGNAL_APP_ID or ONESIGNAL_REST_API_KEY secret!')
+      return new Response(JSON.stringify({ error: 'OneSignal secrets not configured' }), { status: 500 })
+    }
 
     const osResponse = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
@@ -150,12 +151,12 @@ serve(async (req) => {
     })
 
     const osResult = await osResponse.json()
-    console.log('[send-notification] Result:', JSON.stringify(osResult))
+    console.log('[send-notification] OneSignal result:', JSON.stringify(osResult))
 
     return new Response(JSON.stringify(osResult), { headers: corsHeaders, status: 200 })
 
   } catch (error) {
     console.error('[send-notification] Error:', error)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 })
   }
 })

@@ -16,10 +16,21 @@ kotlin {
     }
 }
 
-val keystorePropertiesFile = rootProject.file("key.properties")
-val keystoreProperties = Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(keystorePropertiesFile.inputStream())
+// ── Load per-flavor keystore properties ──────────────────────────────────────
+// Moharek uses android/key.properties (alias: upload, file: upload-keystore.jks)
+// Rabhan uses android/key-rabhan.properties (alias: rabhan, file: rabhan-keystore.jks)
+// Both files are gitignored — never commit keystores or key.properties files!
+
+val moharekKeystoreFile = rootProject.file("key.properties")
+val moharekKeystoreProps = Properties()
+if (moharekKeystoreFile.exists()) {
+    moharekKeystoreProps.load(moharekKeystoreFile.inputStream())
+}
+
+val rabhanKeystoreFile = rootProject.file("key-rabhan.properties")
+val rabhanKeystoreProps = Properties()
+if (rabhanKeystoreFile.exists()) {
+    rabhanKeystoreProps.load(rabhanKeystoreFile.inputStream())
 }
 
 android {
@@ -33,18 +44,29 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    // Remove the deprecated kotlinOptions block
-    
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Fallback Application ID
         applicationId = "com.zbooma.moharek"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+    }
+
+    flavorDimensions.add("app")
+
+    productFlavors {
+        create("moharek") {
+            dimension = "app"
+            applicationId = "com.zbooma.moharek"
+            manifestPlaceholders["appName"] = "Moharek"
+        }
+        create("rabhan") {
+            dimension = "app"
+            applicationId = "com.zbooma.rabhan"
+            manifestPlaceholders["appName"] = "ربحان"
+        }
     }
 
     packaging {
@@ -57,25 +79,45 @@ android {
         }
     }
 
-
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = (keystoreProperties["storeFile"] as String?)?.let { rootProject.file("app/$it") }
-            storePassword = keystoreProperties["storePassword"] as String?
+        // Moharek signing (existing upload keystore)
+        create("moharekRelease") {
+            keyAlias = moharekKeystoreProps["keyAlias"] as String?
+            keyPassword = moharekKeystoreProps["keyPassword"] as String?
+            storeFile = (moharekKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
+            storePassword = moharekKeystoreProps["storePassword"] as String?
+        }
+        // Rabhan signing (separate keystore — no conflict with Moharek Play Console)
+        create("rabhanRelease") {
+            keyAlias = rabhanKeystoreProps["keyAlias"] as String?
+            keyPassword = rabhanKeystoreProps["keyPassword"] as String?
+            storeFile = (rabhanKeystoreProps["storeFile"] as String?)?.let { rootProject.file("app/$it") }
+            storePassword = rabhanKeystoreProps["storePassword"] as String?
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Signing config is overridden per-flavor in the flavorConfigurations below
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // Apply correct signing config per flavor + build type
+    applicationVariants.all {
+        val flavor = flavorName
+        val buildType = buildType.name
+        if (buildType == "release") {
+            if (flavor == "moharek") {
+                signingConfig = signingConfigs.getByName("moharekRelease")
+            } else if (flavor == "rabhan") {
+                signingConfig = signingConfigs.getByName("rabhanRelease")
+            }
         }
     }
 }

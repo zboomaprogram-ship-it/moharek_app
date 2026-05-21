@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/calls/services/call_notification_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // OneSignal is mobile-only — import conditionally
 import 'package:onesignal_flutter/onesignal_flutter.dart'
@@ -38,8 +39,8 @@ class NotificationService {
       }
     });
 
-    // Request permission on iOS/Android
-    await OneSignal.Notifications.requestPermission(true);
+    // Request permission on iOS/Android (non-blocking)
+    OneSignal.Notifications.requestPermission(true);
   }
 
   static Future<void> setExternalUserId(String userId) async {
@@ -47,11 +48,36 @@ class NotificationService {
     _currentUserId = userId;
     debugPrint('DEBUG: Setting OneSignal External User ID to: $userId');
     await OneSignal.login(userId);
+    
+    // Save the OneSignal push subscription ID (Player ID) to the profiles table
+    try {
+      final playerId = OneSignal.User.pushSubscription.id;
+      if (playerId != null && playerId.isNotEmpty) {
+        debugPrint('DEBUG: Saving OneSignal Player ID to Supabase profile: $playerId');
+        await Supabase.instance.client
+            .from('profiles')
+            .update({'onesignal_player_id': playerId})
+            .eq('id', userId);
+      }
+    } catch (e) {
+      debugPrint('ERROR: Failed to save OneSignal Player ID: $e');
+    }
   }
 
   static Future<void> logout() async {
     if (_currentUserId == null) return;
     debugPrint('DEBUG: Logging out from OneSignal (ID: $_currentUserId)');
+    
+    try {
+      // Clear the player ID from the profile before logging out
+      await Supabase.instance.client
+          .from('profiles')
+          .update({'onesignal_player_id': null})
+          .eq('id', _currentUserId!);
+    } catch (e) {
+      debugPrint('ERROR: Failed to clear OneSignal Player ID: $e');
+    }
+    
     _currentUserId = null;
     await OneSignal.logout();
   }

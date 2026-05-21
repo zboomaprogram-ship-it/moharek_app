@@ -45,9 +45,15 @@ class MainDrawer extends ConsumerWidget {
               children: [
                 _buildItem(
                   context,
-                  leading: Image.asset('assets/logo.png', height: 22, width: 22, fit: BoxFit.contain),
-                  title: isAr ? 'الاستراتيجية' : 'Strategy',
-                  onTap: () => context.push('/strategy'),
+                  leading: Image.asset(AppConfig.logoAsset, height: 22, width: 22, fit: BoxFit.contain),
+                  title: AppConfig.flavorName == 'rabhan'
+                      ? (isAr ? 'نظام النمو' : 'Growth System')
+                      : (isAr ? 'الاستراتيجية' : 'Strategy'),
+                  onTap: () => context.push(
+                    AppConfig.flavorName == 'rabhan'
+                        ? '/dashboard/growth-system'
+                        : '/strategy',
+                  ),
                 ),
                 _buildItem(
                   context,

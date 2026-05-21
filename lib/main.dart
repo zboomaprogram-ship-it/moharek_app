@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:moharek_app/firebase_options.dart';
+import 'package:moharek_app/firebase_options.dart' as moharek_firebase;
+import 'package:moharek_app/rabhan_firebase_options.dart' as rabhan_firebase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:moharek_app/core/router/app_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/theme/rabhan_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/core/config/moharek_config.dart';
+import 'package:moharek_app/core/config/rabhan_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
 import 'package:moharek_app/core/providers/locale_provider.dart';
@@ -83,7 +86,7 @@ void main() async {
   try {
     AppConfig.instance;
   } catch (_) {
-    AppConfig.setInstance(const MoharekConfig());
+    AppConfig.setInstance(const RabhanConfig());
   }
 
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,10 +110,10 @@ void main() async {
   if (!kIsWeb) {
     try {
       CallKeep.instance.configure(CallKeepConfig(
-        appName: 'Moharek',
+        appName: AppConfig.appName,
         android: CallKeepAndroidConfig(
           logo: "ic_launcher", // Standard launcher icon
-          incomingCallNotificationChannelName: 'Moharek Calls',
+          incomingCallNotificationChannelName: '${AppConfig.appName} Calls',
           missedCallNotificationChannelName: 'Missed Calls',
         ),
         ios: CallKeepIosConfig(
@@ -125,16 +128,20 @@ void main() async {
   }
 
   // Load saved locale before running the app
-  final container = ProviderContainer();
+  final container = ProviderContainer(
+    observers: [AppProviderObserver()],
+  );
   await container.read(localeProvider.notifier).loadSaved();
 
   // Firebase & OneSignal are mobile-only — skip on web
   if (!kIsWeb) {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      await NotificationService.init();
+      final options = AppConfig.flavorName == 'rabhan'
+          ? rabhan_firebase.DefaultFirebaseOptions.currentPlatform
+          : moharek_firebase.DefaultFirebaseOptions.currentPlatform;
+      await Firebase.initializeApp(options: options);
+      // Initialize notifications asynchronously so it doesn't block the main thread
+      NotificationService.init();
     } catch (e) {
       debugPrint('Notification Service Initialization Error: $e');
     }
@@ -175,7 +182,7 @@ class MoharekApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: AppConfig.appName,
-      theme: AppTheme.darkTheme,
+      theme: AppConfig.flavorName == 'rabhan' ? RabhanThemeData.darkTheme : AppTheme.darkTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       locale: locale,
@@ -195,5 +202,23 @@ class MoharekApp extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class AppProviderObserver extends ProviderObserver {
+  @override
+  void didUpdateProvider(
+    ProviderBase<Object?> provider,
+    Object? previousValue,
+    Object? newValue,
+    ProviderContainer container,
+  ) {
+    if (newValue is AsyncError) {
+      debugPrint('======================================================');
+      debugPrint('🚨 RIVERPOD PROVIDER ERROR: ${provider.name ?? provider.runtimeType}');
+      debugPrint('Error: ${newValue.error}');
+      debugPrint('Stacktrace: ${newValue.stackTrace}');
+      debugPrint('======================================================');
+    }
   }
 }

@@ -32,7 +32,11 @@ class _GrowthUpdatePlayerState extends State<GrowthUpdatePlayer> {
 
   Future<void> _init() async {
     try {
-      await _player.setUrl(widget.url);
+      String audioUrl = widget.url;
+      if (audioUrl.startsWith('http://')) {
+        audioUrl = audioUrl.replaceFirst('http://', 'https://');
+      }
+      await _player.setUrl(audioUrl);
       _player.durationStream.listen((d) {
         if (mounted) setState(() => _duration = d ?? Duration.zero);
       });

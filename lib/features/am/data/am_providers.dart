@@ -8,7 +8,7 @@ final amClientsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async
 
   final data = await client
       .from('projects')
-      .select('*, profiles!projects_client_id_fkey(full_name, company_name, avatar_url), tasks(status)')
+      .select('*, profiles!projects_client_id_fkey(full_name, company_name, avatar_url), tasks(status), packages(*), ecom_metrics(*)')
       .eq('account_manager_id', user.id)
       .order('created_at', ascending: false);
   

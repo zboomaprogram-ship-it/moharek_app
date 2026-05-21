@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_billing_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_channels_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_chat_screen.dart';
@@ -50,6 +51,7 @@ import 'package:moharek_app/features/admin/presentation/screens/admin_am_detail_
 import 'package:moharek_app/features/admin/presentation/screens/admin_clients_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_notifications_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_settings_screen.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_packages_screen.dart';
 
 // AM Dashboard Imports
 import 'package:moharek_app/features/am/presentation/screens/am_shell.dart';
@@ -63,13 +65,14 @@ import 'package:moharek_app/features/am/presentation/screens/am_profile_screen.d
 import 'package:moharek_app/features/rabhan/screens/growth_pro_screen.dart';
 import 'package:moharek_app/features/rabhan/screens/growth_system_screen.dart';
 import 'package:moharek_app/features/rabhan/screens/rabhan_analytics_screen.dart';
+import 'package:moharek_app/features/rabhan/screens/rabhan_strategy_screen.dart';
 
 // Shared Imports
 import 'package:moharek_app/features/shared/presentation/screens/shared_client_hub_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final _authListenable = SupabaseAuthListenable();
+late final _authListenable = SupabaseAuthListenable();
 
 class SupabaseAuthListenable extends ChangeNotifier {
   bool _initialized = false;
@@ -161,6 +164,7 @@ String? _processRedirect(
     return isAM ? '/am/clients' : '/dashboard';
   }
 
+  // Prevent admin from accidentally on AM routes (redirect back)
   if (path.startsWith('/am') && !isAM && !isAdmin) {
     return '/dashboard';
   }
@@ -168,7 +172,7 @@ String? _processRedirect(
   return null;
 }
 
-final appRouter = GoRouter(
+late final appRouter = GoRouter(
   initialLocation: '/',
   navigatorKey: rootNavigatorKey,
   refreshListenable: _authListenable,
@@ -390,12 +394,18 @@ final appRouter = GoRouter(
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/results', builder: (c, s) => const ResultsScreen()),
+            GoRoute(
+              path: '/results',
+              builder: (c, s) => AppConfig.flavorName == 'rabhan' ? const NotificationCenterScreen() : const ResultsScreen(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/reports', builder: (c, s) => const ReportsScreen()),
+            GoRoute(
+              path: '/reports',
+              builder: (c, s) => AppConfig.flavorName == 'rabhan' ? const ProfileScreen() : const ReportsScreen(),
+            ),
           ],
         ),
       ],
@@ -409,6 +419,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/admin/overview',
           builder: (_, __) => const AdminOverviewScreen(),
+        ),
+        GoRoute(
+          path: '/admin/packages',
+          builder: (_, __) => const AdminPackagesScreen(),
         ),
         GoRoute(
           path: '/admin/team',
@@ -527,7 +541,11 @@ final appRouter = GoRouter(
     ),
     // ── Global/Extra Routes ───────────────────────────────────
     GoRoute(path: '/journey', builder: (c, s) => const JourneyScreen()),
-    GoRoute(path: '/strategy', builder: (c, s) => const StrategyScreen()),
+    GoRoute(
+      path: '/strategy',
+      redirect: (context, state) => AppConfig.flavorName == 'rabhan' ? '/dashboard/growth-system' : null,
+      builder: (c, s) => const StrategyScreen(),
+    ),
     GoRoute(
       path: '/profile',
       builder: (c, s) => const ProfileScreen(),

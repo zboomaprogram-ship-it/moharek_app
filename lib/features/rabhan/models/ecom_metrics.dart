@@ -1,6 +1,7 @@
 class EcomMetrics {
   final double totalSales, prevSales, roas, prevRoas, conversionRate, netProfit, adSpend;
   final int ordersCount, prevOrders;
+  final int clicks, impressions, addToCart;
   final DateTime periodStart, periodEnd;
 
   double get salesDeltaPercent =>
@@ -16,6 +17,9 @@ class EcomMetrics {
     required this.prevSales,
     required this.ordersCount,
     required this.prevOrders,
+    required this.clicks,
+    required this.impressions,
+    required this.addToCart,
     required this.roas,
     required this.prevRoas,
     required this.conversionRate,
@@ -30,6 +34,9 @@ class EcomMetrics {
     prevSales: (j['prev_sales'] ?? 0).toDouble(),
     ordersCount: j['orders_count'] ?? 0,
     prevOrders: j['prev_orders'] ?? 0,
+    clicks: j['clicks'] ?? 0,
+    impressions: j['impressions'] ?? 0,
+    addToCart: j['add_to_cart'] ?? 0,
     roas: (j['roas'] ?? 0).toDouble(),
     prevRoas: (j['prev_roas'] ?? 0).toDouble(),
     conversionRate: (j['conversion_rate'] ?? 0).toDouble(),

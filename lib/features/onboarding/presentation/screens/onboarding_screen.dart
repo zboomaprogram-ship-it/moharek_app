@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:particles_flutter/particles_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -146,7 +147,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         children: [
           const Spacer(),
           Image.asset(
-            'assets/logo.png',
+            AppConfig.logoAsset,
             width: 120,
             errorBuilder: (c, e, s) => const Icon(
               Icons.rocket_launch,

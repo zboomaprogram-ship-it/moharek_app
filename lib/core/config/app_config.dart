@@ -38,6 +38,12 @@ class AppConfig {
   // Flavor flags
   static String get appName => instance.appNameVal;
   static String get flavorName => instance.flavorNameVal;
+  static String get logoAsset => instance.logoAssetVal;
+
+  static bool get enableSEO => instance.enableSEOVal;
+  static bool get enableAIVisibility => instance.enableAIVisibilityVal;
+  static bool get enableTrustEngine => instance.enableTrustEngineVal;
+  static bool get enableContentMarketing => instance.enableContentMarketingVal;
 
   // -----------------------------------------------------------
   // Instance properties configured per flavor
@@ -56,6 +62,12 @@ class AppConfig {
 
   final String appNameVal;
   final String flavorNameVal;
+  final String logoAssetVal;
+
+  final bool enableSEOVal;
+  final bool enableAIVisibilityVal;
+  final bool enableTrustEngineVal;
+  final bool enableContentMarketingVal;
 
   const AppConfig({
     required this.supabaseUrlVal,
@@ -71,6 +83,11 @@ class AppConfig {
     this.bucketContractsVal = 'contracts',
     required this.appNameVal,
     required this.flavorNameVal,
+    this.logoAssetVal = 'assets/logo.png',
+    this.enableSEOVal = true,
+    this.enableAIVisibilityVal = true,
+    this.enableTrustEngineVal = true,
+    this.enableContentMarketingVal = true,
   });
 
   // -----------------------------------------------------------

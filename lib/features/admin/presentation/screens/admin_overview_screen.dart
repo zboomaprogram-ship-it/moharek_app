@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/core/theme/rabhan_theme_constants.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -42,10 +44,40 @@ class AdminOverviewScreen extends ConsumerWidget {
                   final kpiWidth = isMobile 
                     ? (constraints.maxWidth > 500 ? (constraints.maxWidth - 20) / 2 : constraints.maxWidth)
                     : 240.0;
+                  final isRabhan = AppConfig.flavorName == 'rabhan';
                   return Wrap(
                     spacing: 20,
                     runSpacing: 20,
-                    children: [
+                    children: isRabhan ? [
+                      _KpiCard(
+                        label: 'إجمالي المبيعات (هذا الشهر)',
+                        value: '${d.totalSales.toStringAsFixed(0)} ر.س',
+                        icon: Icons.monetization_on_outlined,
+                        color: RabhanTheme.primaryGreen,
+                        width: kpiWidth,
+                      ),
+                      _KpiCard(
+                        label: 'متوسط العائد الإعلاني ROAS',
+                        value: '${d.avgRoas.toStringAsFixed(2)}',
+                        icon: Icons.trending_up,
+                        color: RabhanTheme.gold,
+                        width: kpiWidth,
+                      ),
+                      _KpiCard(
+                        label: 'العملاء (نشط / تجريبي)',
+                        value: '${d.activePackageClients} / ${d.trialClients}',
+                        icon: Icons.card_membership_outlined,
+                        color: const Color(0xFF2196F3),
+                        width: kpiWidth,
+                      ),
+                      _KpiCard(
+                        label: 'الموافقات المعلقة',
+                        value: '${d.pendingApprovals}',
+                        icon: Icons.pending_actions_outlined,
+                        color: const Color(0xFFEF4444),
+                        width: kpiWidth,
+                      ),
+                    ] : [
                       _KpiCard(
                         label: 'إجمالي العملاء',
                         value: '${d.totalClients}',

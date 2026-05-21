@@ -17,7 +17,7 @@
 
     <application
         tools:replace="android:label,android:allowBackup"
-        android:label="Moharek"
+        android:label="${appName}"
         android:allowBackup="false"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

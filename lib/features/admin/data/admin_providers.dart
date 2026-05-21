@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -53,8 +54,19 @@ final allProjectsProvider = FutureProvider<List<Map<String, dynamic>>>((
   final client = ref.watch(supabaseClientProvider);
   final data = await client
       .from('projects')
-      .select('*, profiles!projects_client_id_fkey(full_name, company_name)')
+      // Fetch packages (limit 1 to get latest) and ecom_metrics (limit 1 to get latest)
+      .select('*, profiles!projects_client_id_fkey(full_name, company_name), packages(*), ecom_metrics(*)')
       .order('name');
+  return (data as List).cast<Map<String, dynamic>>();
+});
+
+final adminAllPackagesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = ref.watch(supabaseClientProvider);
+  // Get all packages joined with projects and client profiles
+  final data = await client
+      .from('packages')
+      .select('*, projects!packages_project_id_fkey(name, profiles!projects_client_id_fkey(full_name, company_name))')
+      .order('created_at', ascending: false);
   return (data as List).cast<Map<String, dynamic>>();
 });
 
@@ -64,11 +76,23 @@ class AdminStats {
   final int totalAMs;
   final double avgHealthScore;
 
+  // Rabhan specific fields:
+  final double totalSales;
+  final double avgRoas;
+  final int pendingApprovals;
+  final int trialClients;
+  final int activePackageClients;
+
   AdminStats({
     required this.totalClients,
     required this.activeClients,
     required this.totalAMs,
     required this.avgHealthScore,
+    this.totalSales = 0,
+    this.avgRoas = 0,
+    this.pendingApprovals = 0,
+    this.trialClients = 0,
+    this.activePackageClients = 0,
   });
 }
 
@@ -98,6 +122,7 @@ class AmPerformance {
 
 final adminOverviewProvider = FutureProvider<AdminStats>((ref) async {
   final client = ref.watch(supabaseClientProvider);
+  final isRabhan = AppConfig.flavorName == 'rabhan';
 
   // 1. Get client counts
   final projectsRes = await client
@@ -119,11 +144,84 @@ final adminOverviewProvider = FutureProvider<AdminStats>((ref) async {
     totalHealth += (p['health_score'] ?? 0).toDouble();
   }
 
+  double totalSales = 0;
+  double avgRoas = 0;
+  int pendingApprovals = 0;
+  int trialClients = 0;
+  int activePackageClients = 0;
+
+  if (isRabhan) {
+    // A. Sum of latest total_sales & average of latest roas across all projects
+    try {
+      final metricsRes = await client
+          .from('ecom_metrics')
+          .select('project_id, total_sales, roas, is_published, period_end')
+          .eq('is_published', true)
+          .order('period_end', ascending: false);
+      
+      final metricsList = metricsRes as List;
+      final Map<String, Map<String, dynamic>> latestProjectMetrics = {};
+      for (var m in metricsList) {
+        final pid = m['project_id']?.toString();
+        if (pid != null && !latestProjectMetrics.containsKey(pid)) {
+          latestProjectMetrics[pid] = m;
+        }
+      }
+
+      if (latestProjectMetrics.isNotEmpty) {
+        double sumSales = 0;
+        double sumRoas = 0;
+        for (var m in latestProjectMetrics.values) {
+          sumSales += (m['total_sales'] ?? 0).toDouble();
+          sumRoas += (m['roas'] ?? 0).toDouble();
+        }
+        totalSales = sumSales;
+        avgRoas = sumRoas / latestProjectMetrics.length;
+      }
+    } catch (e) {
+      // Fallback if table/columns don't load or exist yet
+    }
+
+    // B. Get pending approvals count
+    try {
+      final approvalsRes = await client
+          .from('approvals')
+          .select('id')
+          .eq('status', 'pending');
+      pendingApprovals = (approvalsRes as List).length;
+    } catch (e) {}
+
+    // C. Get active vs trial packages
+    try {
+      final packagesRes = await client
+          .from('packages')
+          .select('package_tier, trial_ends_at, renews_at');
+      final packages = packagesRes as List;
+      final now = DateTime.now();
+      for (var pkg in packages) {
+        final trialEndsStr = pkg['trial_ends_at'];
+        if (trialEndsStr != null) {
+          final trialEnds = DateTime.tryParse(trialEndsStr.toString());
+          if (trialEnds != null && trialEnds.isAfter(now)) {
+            trialClients++;
+            continue;
+          }
+        }
+        activePackageClients++;
+      }
+    } catch (e) {}
+  }
+
   return AdminStats(
     totalClients: projects.length,
     activeClients: active,
     totalAMs: amCount,
     avgHealthScore: projects.isNotEmpty ? totalHealth / projects.length : 0,
+    totalSales: totalSales,
+    avgRoas: avgRoas,
+    pendingApprovals: pendingApprovals,
+    trialClients: trialClients,
+    activePackageClients: activePackageClients,
   );
 });
 
@@ -651,7 +749,63 @@ class AdminActions {
     } catch (_) {}
   }
 
-  // --- Support & Chat ---
+  /// Sends a payment link to the client via their chat channel and in-app notification.
+  /// Works for both Moharek and Rabhan flavors.
+  Future<void> sendPaymentLink({
+    required String invoiceId,
+    required String projectId,
+    required String paymentLink,
+    String? description,
+    double? amount,
+    String currency = 'AED',
+  }) async {
+    // 1. Save payment_link on the invoice row
+    await client
+        .from('invoices')
+        .update({'payment_link': paymentLink})
+        .eq('id', invoiceId);
+
+    // 2. Find the project's chat channel
+    final channelData = await client
+        .from('chat_channels')
+        .select('id')
+        .eq('project_id', projectId)
+        .maybeSingle();
+
+    if (channelData != null) {
+      final channelId = channelData['id'] as String;
+      final amountStr = amount != null ? ' ($currency ${amount.toStringAsFixed(0)})' : '';
+      final desc = description?.isNotEmpty == true ? description! : 'فاتورة مستحقة';
+
+      // 3. Send a chat message with the link
+      final messageContent = '💳 رابط الدفع — $desc$amountStr\n\n$paymentLink';
+      await client.from('messages').insert({
+        'channel_id': channelId,
+        'sender_id': client.auth.currentUser!.id,
+        'content': messageContent,
+        'message_type': 'text',
+      });
+    }
+
+    // 4. Send in-app notification
+    await _notify(
+      projectId: projectId,
+      titleAr: '💳 رابط دفع جديد',
+      bodyAr: 'تم إرسال رابط الدفع. اضغط للدفع الآن.',
+      type: 'invoice',
+      linkPath: '/dashboard',
+    );
+
+    try {
+      await client.from('admin_logs').insert({
+        'actor_id': client.auth.currentUser!.id,
+        'action': 'إرسال رابط دفع للفاتورة: $invoiceId',
+        'target_type': 'invoice',
+        'target_id': invoiceId,
+      });
+    } catch (_) {}
+  }
+
 
   Future<void> createSupportTicket(Map<String, dynamic> ticket) async {
     final res = await client.from('support_tickets').insert(ticket).select().single();
@@ -924,16 +1078,39 @@ class AdminActions {
   }
 
   Future<void> updateEngineProgress(Map<String, dynamic> progress) async {
-    await client.from('engine_progress').upsert(
-      progress,
-      onConflict: 'project_id,engine',
+    final engineKey = progress['engine'] as String? ?? '';
+    final progressPercent = progress['progress_percent'] as int? ?? 0;
+    final projectId = progress['project_id'] as String? ?? '';
+
+    if (projectId.isEmpty || engineKey.isEmpty) return;
+
+    final status = progressPercent >= 80
+        ? 'healthy'
+        : progressPercent >= 50
+            ? 'in_progress'
+            : progressPercent > 0
+                ? 'needs_attention'
+                : 'pending';
+
+    // Write to growth_engines — the single source of truth for both web and mobile.
+    // Columns: engine_type (enum text), health_score (int 0-100)
+    await client.from('growth_engines').upsert(
+      {
+        'project_id': projectId,
+        'engine_type': engineKey,
+        'health_score': progressPercent,
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      onConflict: 'project_id,engine_type',
     );
+
     try {
       await client.from('admin_logs').insert({
         'actor_id': client.auth.currentUser!.id,
-        'action': 'تحديث محرك ${progress['engine']} للمشروع ${progress['project_id']}',
+        'action': 'تحديث محرك $engineKey للمشروع $projectId → $progressPercent%',
         'target_type': 'project',
-        'target_id': progress['project_id'],
+        'target_id': projectId,
       });
     } catch (_) {}
   }
@@ -1099,6 +1276,10 @@ class AdminActions {
         'target_type': 'contract',
       });
     } catch (_) {}
+  }
+
+  Future<void> updateJourneyStage(String stageId, Map<String, dynamic> updates) async {
+    await client.from('journey_stages').update(updates).eq('id', stageId);
   }
 }
 
@@ -1268,36 +1449,49 @@ final projectTicketsProvider = StreamProvider.family<List<Map<String, dynamic>>,
       .order('created_at', ascending: false);
 });
 
-final projectResultsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, pid) async {
+final projectResultsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  final data = await c.from('results').select().eq('project_id', pid).order('recorded_at', ascending: false);
-  return (data as List).cast<Map<String, dynamic>>();
+  return c.from('results')
+      .stream(primaryKey: ['id'])
+      .eq('project_id', pid)
+      .order('recorded_at', ascending: false);
 });
 
+// Reads from growth_engines — the single source of truth for both admin web and mobile app.
+// growth_engines has: engine_type (enum), health_score (0-100 int)
 final projectEnginesProvider = StreamProvider.family<Map<String, double>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('engine_progress')
+  return c
+      .from('growth_engines')
       .stream(primaryKey: ['id'])
       .eq('project_id', pid)
       .map((data) {
         final Map<String, double> result = {};
         for (var item in data) {
-          result[item['engine']] = (item['progress_percent'] as num).toDouble() / 100.0;
+          final engineType = item['engine_type'] as String?;
+          final healthScore = (item['health_score'] as num?)?.toDouble() ?? 0;
+          if (engineType != null) {
+            result[engineType] = healthScore / 100.0; // convert 0-100 → 0.0-1.0
+          }
         }
         return result;
       });
 });
 
-final projectInvoicesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, pid) async {
+final projectInvoicesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  final data = await c.from('invoices').select().eq('project_id', pid).order('created_at', ascending: false);
-  return (data as List).cast<Map<String, dynamic>>();
+  return c.from('invoices')
+      .stream(primaryKey: ['id'])
+      .eq('project_id', pid)
+      .order('created_at', ascending: false);
 });
 
-final projectReportsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, pid) async {
+final projectReportsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  final data = await c.from('reports').select().eq('project_id', pid).order('created_at', ascending: false);
-  return (data as List).cast<Map<String, dynamic>>();
+  return c.from('reports')
+      .stream(primaryKey: ['id'])
+      .eq('project_id', pid)
+      .order('created_at', ascending: false);
 });
 
 final projectCampaignsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
@@ -1314,4 +1508,21 @@ final projectFilesProvider = StreamProvider.family<List<Map<String, dynamic>>, S
       .stream(primaryKey: ['id'])
       .eq('project_id', pid)
       .order('created_at', ascending: false);
+});
+
+final adminProjectJourneyStagesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
+  final c = ref.watch(supabaseClientProvider);
+  return c.from('journey_stages')
+      .stream(primaryKey: ['id'])
+      .eq('project_id', pid)
+      .order('order_index', ascending: true);
+});
+
+final adminProjectDetailStream = StreamProvider.family<Map<String, dynamic>, String>((ref, projectId) {
+  final client = ref.watch(supabaseClientProvider);
+  return client
+      .from('projects')
+      .stream(primaryKey: ['id'])
+      .eq('id', projectId)
+      .map((event) => event.isEmpty ? {} : event.first);
 });

@@ -19,16 +19,9 @@ import '../widgets/manage_client/billing_tab.dart';
 import '../widgets/manage_client/support_tab.dart';
 import '../widgets/manage_client/rabhan_package_tab.dart';
 import '../widgets/manage_client/rabhan_metrics_tab.dart';
+import '../widgets/manage_client/journey_tab.dart';
 
-// ── Providers ──
-final adminProjectDetailStream = StreamProvider.family<Map<String, dynamic>, String>((ref, projectId) {
-  final client = ref.watch(supabaseClientProvider);
-  return client
-      .from('projects')
-      .stream(primaryKey: ['id'])
-      .eq('id', projectId)
-      .map((event) => event.isEmpty ? {} : event.first);
-});
+
 
 class AdminManageClient extends ConsumerWidget {
   final String projectId;
@@ -47,7 +40,7 @@ class AdminManageClient extends ConsumerWidget {
     final isAmRoute = location.startsWith('/am');
     final isMobile = MediaQuery.of(context).size.width < 800;
     final isRabhan = AppConfig.flavorName == 'rabhan';
-    final tabsCount = isRabhan ? 12 : 10;
+    final tabsCount = isRabhan ? 13 : 11;
 
     return DefaultTabController(
       length: tabsCount,
@@ -96,13 +89,14 @@ class AdminManageClient extends ConsumerWidget {
             unselectedLabelColor: Colors.grey,
             labelStyle: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600),
             tabs: [
-              Tab(icon: Icon(Icons.rocket_launch_outlined, size: isMobile ? 14 : 18), text: 'Strategy'),
+              Tab(icon: Icon(Icons.rocket_launch_outlined, size: isMobile ? 14 : 18), text: isRabhan ? 'Ecom Strategy' : 'Strategy'),
+              Tab(icon: Icon(Icons.map_outlined, size: isMobile ? 14 : 18), text: 'Journey'),
               Tab(icon: Icon(Icons.task_outlined, size: isMobile ? 14 : 18), text: 'Tasks'),
               if (isRabhan) ...[
                 Tab(icon: Icon(Icons.workspace_premium_outlined, size: isMobile ? 14 : 18), text: 'Package'),
                 Tab(icon: Icon(Icons.shopping_bag_outlined, size: isMobile ? 14 : 18), text: 'Ecom Metrics'),
               ],
-              Tab(icon: Icon(Icons.analytics_outlined, size: isMobile ? 14 : 18), text: 'Results'),
+              Tab(icon: Icon(Icons.analytics_outlined, size: isMobile ? 14 : 18), text: isRabhan ? 'Ecom Results' : 'Results'),
               Tab(icon: Icon(Icons.approval_outlined, size: isMobile ? 14 : 18), text: 'Approvals'),
               Tab(icon: Icon(Icons.description_outlined, size: isMobile ? 14 : 18), text: 'Reports'),
               Tab(icon: Icon(Icons.folder_outlined, size: isMobile ? 14 : 18), text: 'Files'),
@@ -116,6 +110,7 @@ class AdminManageClient extends ConsumerWidget {
         body: TabBarView(
           children: [
             EnginesTab(pid: projectId),
+            JourneyTab(pid: projectId),
             TasksTab(pid: projectId),
             if (isRabhan) ...[
               RabhanPackageTab(pid: projectId),

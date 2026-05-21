@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 
 class WebLoginScreen extends ConsumerStatefulWidget {
   const WebLoginScreen({super.key});
@@ -71,23 +72,23 @@ class _WebLoginScreenState extends ConsumerState<WebLoginScreen> {
               children: [
                 // Logo
                 Image.asset(
-                  'assets/logo.png',
+                  AppConfig.logoAsset,
                   height: 80,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'محرك',
-                  style: TextStyle(
+                Text(
+                  AppConfig.appName,
+                  style: const TextStyle(
                     color: AppTheme.primaryGreen,
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
                   ),
                 ),
-                const Text(
-                  'لوحة تحكم نمو الأعمال',
-                  style: TextStyle(
+                Text(
+                  AppConfig.flavorName == 'rabhan' ? 'منصة إدارة نمو الأعمال الرقمية' : 'لوحة تحكم نمو الأعمال',
+                  style: const TextStyle(
                     color: Color(0xFF94A3B8),
                     fontSize: 14,
                   ),

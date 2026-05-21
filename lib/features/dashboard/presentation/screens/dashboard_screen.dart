@@ -23,6 +23,8 @@ import 'package:moharek_app/features/dashboard/presentation/widgets/ai_chat_bott
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/widgets/ecom_kpi_section.dart';
+import 'package:moharek_app/features/rabhan/widgets/sales_trend_chart.dart';
+import 'package:moharek_app/features/rabhan/widgets/journey_mini_progress.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -175,30 +177,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        if (profile?.lastSeenAt != null)
-                          FadeInSlide(
-                            delay: const Duration(milliseconds: 200),
-                            child: WhatsNewBanner(
-                              updates: _calculateWhatsNew(
-                                profile!.lastSeenAt!,
-                                activityAsync.asData?.value ?? [],
-                                isAr,
+                        // WhatsNew & Contract alerts — not relevant for Rabhan e-commerce clients
+                        if (AppConfig.flavorName != 'rabhan') ...[
+                          if (profile?.lastSeenAt != null)
+                            FadeInSlide(
+                              delay: const Duration(milliseconds: 200),
+                              child: WhatsNewBanner(
+                                updates: _calculateWhatsNew(
+                                  profile!.lastSeenAt!,
+                                  activityAsync.asData?.value ?? [],
+                                  isAr,
+                                ),
                               ),
                             ),
-                          ),
 
-                        // Pending contract alert
-                        if (contractsAsync.hasValue) ...[
-                          if (contractsAsync.value!
-                              .where((c) => c.status == 'pending')
-                              .isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: FadeInSlide(
-                                delay: const Duration(milliseconds: 250),
-                                child: _buildContractAlert(context, l10n),
+                          // Pending contract alert
+                          if (contractsAsync.hasValue) ...[
+                            if (contractsAsync.value!
+                                .where((c) => c.status == 'pending')
+                                .isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: FadeInSlide(
+                                  delay: const Duration(milliseconds: 250),
+                                  child: _buildContractAlert(context, l10n),
+                                ),
                               ),
-                            ),
+                          ],
                         ],
 
                         // Approvals Alert
@@ -227,6 +232,83 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             delay: const Duration(milliseconds: 325),
                             child: EcomKpiSection(projectId: projectAsync.valueOrNull!.id),
                           ),
+                          const SizedBox(height: 16),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 328),
+                            child: SalesTrendChart(projectId: projectAsync.valueOrNull!.id),
+                          ),
+                          const SizedBox(height: 16),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 330),
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              color: AppTheme.cardColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: const BorderSide(color: Colors.white10),
+                              ),
+                              child: InkWell(
+                                onTap: () {
+                                  context.push('/dashboard/analytics');
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.analytics_outlined,
+                                          color: AppTheme.primaryGreen,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              isAr ? 'تقارير الأداء والتحليلات' : 'Performance Reports & Analytics',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              isAr
+                                                  ? 'تفقد مبيعات المتجر، أداء الحملات الإعلانية ومؤشرات النمو.'
+                                                  : 'Check store sales, campaign performance, and growth metrics.',
+                                              style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.white54,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 332),
+                            child: JourneyMiniProgress(projectId: projectAsync.valueOrNull!.id),
+                          ),
                           const SizedBox(height: 24),
                         ],
 
@@ -249,71 +331,74 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       ),
                                     ),
                                   ),
-                                if (isDesktop)
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: FadeInSlide(
-                                          delay: const Duration(milliseconds: 400),
-                                          child: _buildGrowthCard(
-                                            context,
-                                            _translateStage(
-                                              project?.currentStage ?? 'Audit',
-                                              l10n,
-                                            ),
-                                            journeyAsync,
-                                            l10n,
-                                            isAr,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 24),
-                                      Expanded(
-                                        flex: 1,
-                                        child: FadeInSlide(
-                                          delay: const Duration(milliseconds: 450),
-                                          child: HealthScoreGauge(
-                                            score: _calculateHealthScore(
+                                // GrowthCard & HealthScoreGauge — not for Rabhan (uses EcomKpiSection instead)
+                                if (AppConfig.flavorName != 'rabhan') ...[
+                                  if (isDesktop)
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: FadeInSlide(
+                                            delay: const Duration(milliseconds: 400),
+                                            child: _buildGrowthCard(
+                                              context,
+                                              _translateStage(
+                                                project?.currentStage ?? 'Audit',
+                                                l10n,
+                                              ),
                                               journeyAsync,
-                                              tasksAsync.asData?.value ?? [],
-                                              approvalsAsync.asData?.value ?? [],
-                                              engineProgressAsync.asData?.value ?? {},
+                                              l10n,
+                                              isAr,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  )
-                                else ...[
-                                  FadeInSlide(
-                                    delay: const Duration(milliseconds: 400),
-                                    child: _buildGrowthCard(
-                                      context,
-                                      _translateStage(
-                                        project?.currentStage ?? 'Audit',
-                                        l10n,
-                                      ),
-                                      journeyAsync,
-                                      l10n,
-                                      isAr,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  FadeInSlide(
-                                    delay: const Duration(milliseconds: 450),
-                                    child: HealthScoreGauge(
-                                      score: _calculateHealthScore(
+                                        const SizedBox(width: 24),
+                                        Expanded(
+                                          flex: 1,
+                                          child: FadeInSlide(
+                                            delay: const Duration(milliseconds: 450),
+                                            child: HealthScoreGauge(
+                                              score: _calculateHealthScore(
+                                                journeyAsync,
+                                                tasksAsync.asData?.value ?? [],
+                                                approvalsAsync.asData?.value ?? [],
+                                                engineProgressAsync.asData?.value ?? {},
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else ...[
+                                    FadeInSlide(
+                                      delay: const Duration(milliseconds: 400),
+                                      child: _buildGrowthCard(
+                                        context,
+                                        _translateStage(
+                                          project?.currentStage ?? 'Audit',
+                                          l10n,
+                                        ),
                                         journeyAsync,
-                                        tasksAsync.asData?.value ?? [],
-                                        approvalsAsync.asData?.value ?? [],
-                                        engineProgressAsync.asData?.value ?? {},
+                                        l10n,
+                                        isAr,
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 16),
+                                    FadeInSlide(
+                                      delay: const Duration(milliseconds: 450),
+                                      child: HealthScoreGauge(
+                                        score: _calculateHealthScore(
+                                          journeyAsync,
+                                          tasksAsync.asData?.value ?? [],
+                                          approvalsAsync.asData?.value ?? [],
+                                          engineProgressAsync.asData?.value ?? {},
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 24),
                                 ],
-                                const SizedBox(height: 24),
                               ],
                             );
                           },
@@ -321,77 +406,86 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           error: (_, __) => const SizedBox.shrink(),
                         ),
 
-                        // Journey Stages — inline on home
-                        journeyAsync.when(
-                          data: (stages) {
-                            if (stages.isEmpty) {
+                        // Journey Stages — inline on home (disabled for Rabhan since it has a dedicated mini progress tracker)
+                        if (AppConfig.flavorName != 'rabhan') ...[
+                          journeyAsync.when(
+                            data: (stages) {
+                              if (stages.isEmpty) {
+                                return FadeInSlide(
+                                  delay: const Duration(milliseconds: 525),
+                                  child: _buildEmptyJourneyPlaceholder(
+                                    l10n,
+                                    isAr,
+                                  ),
+                                );
+                              }
                               return FadeInSlide(
                                 delay: const Duration(milliseconds: 525),
-                                child: _buildEmptyJourneyPlaceholder(
-                                  l10n,
-                                  isAr,
-                                ),
+                                child: _buildJourneySection(stages, l10n, isAr),
                               );
-                            }
-                            return FadeInSlide(
-                              delay: const Duration(milliseconds: 525),
-                              child: _buildJourneySection(stages, l10n, isAr),
-                            );
-                          },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: 24),
+                            },
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
 
-                        // Milestones Feed
-                        milestonesAsync.when(
-                          data: (milestones) => Column(
-                            children: [
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 500),
-                                child: MilestonesFeed(milestones: milestones),
-                              ),
-                              const SizedBox(height: 24),
-                            ],
-                          ),
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 550),
-                          child: _buildStatsRow(
-                            tasks: tasksAsync.asData?.value ?? [],
-                            results: resultsAsync.asData?.value ?? [],
-                            l10n: l10n,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 600),
-                          child: _buildQuickActions(context, l10n),
-                        ),
-                        const SizedBox(height: 24),
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 650),
-                          child: _buildPerformanceSection(
-                            resultsAsync.asData?.value ?? [],
-                            l10n,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 675),
-                          child: engineProgressAsync.when(
-                            data: (progress) => EngineProgressCard(
-                              progress: progress,
-                              isAr: isAr,
+                        // Milestones Feed — not relevant for Rabhan e-commerce clients
+                        if (AppConfig.flavorName != 'rabhan')
+                          milestonesAsync.when(
+                            data: (milestones) => Column(
+                              children: [
+                                FadeInSlide(
+                                  delay: const Duration(milliseconds: 500),
+                                  child: MilestonesFeed(milestones: milestones),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
                             ),
                             loading: () => const SizedBox.shrink(),
                             error: (_, __) => const SizedBox.shrink(),
                           ),
+
+                        if (AppConfig.flavorName != 'rabhan') ...[
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 550),
+                            child: _buildStatsRow(
+                              tasks: tasksAsync.asData?.value ?? [],
+                              results: resultsAsync.asData?.value ?? [],
+                              l10n: l10n,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 600),
+                          child: AppConfig.flavorName == 'rabhan'
+                              ? _buildRabhanQuickActions(context, isAr)
+                              : _buildQuickActions(context, l10n),
                         ),
                         const SizedBox(height: 24),
+                        if (AppConfig.flavorName != 'rabhan') ...[
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 650),
+                            child: _buildPerformanceSection(
+                              resultsAsync.asData?.value ?? [],
+                              l10n,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 675),
+                            child: engineProgressAsync.when(
+                              data: (progress) => EngineProgressCard(
+                                progress: progress,
+                                isAr: isAr,
+                              ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                         FadeInSlide(
                           delay: const Duration(milliseconds: 700),
                           child: _buildActivityFeed(activityAsync, isAr),
@@ -1032,6 +1126,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRabhanQuickActions(BuildContext context, bool isAr) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isAr ? 'الوصول السريع' : 'Quick Access',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildQuickAction(
+              context,
+              Icons.chat_bubble_outline,
+              isAr ? 'المحادثة' : 'Chat',
+              '/chat',
+            ),
+            _buildQuickAction(
+              context,
+              Icons.analytics_outlined,
+              isAr ? 'الأداء' : 'Analytics',
+              '/dashboard/analytics',
+            ),
+            _buildQuickAction(
+              context,
+              Icons.rocket_launch_outlined,
+              isAr ? 'الاستراتيجية' : 'Strategy',
+              '/strategy',
+            ),
+            _buildQuickAction(
+              context,
+              Icons.task_outlined,
+              isAr ? 'المهام' : 'Tasks',
+              '/tasks',
+            ),
+          ],
+        ),
+      ],
     );
   }
 

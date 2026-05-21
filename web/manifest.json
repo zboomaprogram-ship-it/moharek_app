@@ -1,13 +1,15 @@
 {
-    "name": "moharek_app",
-    "short_name": "moharek_app",
+    "name": "ربحان - Rabhan",
+    "short_name": "ربحان",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#080B12",
+    "theme_color": "#2EE59D",
+    "description": "منصة ربحان لإدارة التجارة الإلكترونية المتكاملة",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "lang": "ar",
+    "dir": "rtl",
     "icons": [
         {
             "src": "icons/Icon-192.png",

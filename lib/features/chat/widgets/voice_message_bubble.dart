@@ -40,8 +40,12 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     
     try {
       final player = AudioPlayer();
-      _player = player;
-      await player.setUrl(widget.url);
+      String audioUrl = widget.url;
+      if (audioUrl.startsWith('http://')) {
+        audioUrl = audioUrl.replaceFirst('http://', 'https://');
+      }
+      
+      await player.setUrl(audioUrl);
       
       _stateSub = player.playerStateStream.listen((state) {
         if (mounted) {
@@ -62,8 +66,11 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       _durSub = player.durationStream.listen((dur) {
         if (mounted && dur != null) setState(() => _duration = dur);
       });
+      
+      _player = player;
     } catch (e) {
       debugPrint("Error loading audio: $e");
+      _player = null;
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

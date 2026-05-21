@@ -135,7 +135,33 @@ class _MainShellState extends ConsumerState<MainShell> {
         backgroundColor: AppTheme.background,
         indicatorColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
+        destinations: AppConfig.flavorName == 'rabhan' ? [
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home, color: AppTheme.primaryGreen),
+            label: isAr ? 'الرئيسية' : 'Home',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.checklist_outlined),
+            selectedIcon: const Icon(Icons.checklist, color: AppTheme.primaryGreen),
+            label: isAr ? 'العمل' : 'Work',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.chat_bubble_outline),
+            selectedIcon: const Icon(Icons.chat_bubble, color: AppTheme.primaryGreen),
+            label: isAr ? 'المحادثات' : 'Chat',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.notifications_none_outlined),
+            selectedIcon: const Icon(Icons.notifications, color: AppTheme.primaryGreen),
+            label: isAr ? 'الإشعارات' : 'Notifications',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.grid_view_outlined),
+            selectedIcon: const Icon(Icons.grid_view, color: AppTheme.primaryGreen),
+            label: isAr ? 'المزيد' : 'More',
+          ),
+        ] : [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home, color: AppTheme.primaryGreen),
@@ -168,43 +194,45 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   Widget _buildSidebar(BuildContext context, AppLocalizations l10n, int currentIndex) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isRabhan = AppConfig.flavorName == 'rabhan';
+
     return Container(
       width: 260,
       color: const Color(0xFF0F172A),
       child: Column(
         children: [
           const SizedBox(height: 32),
-          Image.asset('assets/logo.png', height: 60, fit: BoxFit.contain),
+          Image.asset(AppConfig.logoAsset, height: 60, fit: BoxFit.contain),
           const SizedBox(height: 12),
           Text(AppConfig.appName, style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 32),
           _SidebarItem(
             icon: Icons.home_outlined,
-            label: l10n.homeTab,
+            label: isRabhan ? (isAr ? 'الرئيسية' : 'Home') : l10n.homeTab,
             active: currentIndex == 0,
             onTap: () => _onTap(context, 0),
           ),
           _SidebarItem(
-            icon: Icons.task_alt_outlined,
-            label: l10n.tasksTab,
+            icon: isRabhan ? Icons.checklist_outlined : Icons.task_alt_outlined,
+            label: isRabhan ? (isAr ? 'العمل' : 'Work') : l10n.tasksTab,
             active: currentIndex == 1,
             onTap: () => _onTap(context, 1),
           ),
           _SidebarItem(
             icon: Icons.chat_bubble_outline,
-            label: l10n.chatTab,
+            label: isRabhan ? (isAr ? 'المحادثات' : 'Chat') : l10n.chatTab,
             active: currentIndex == 2,
             onTap: () => _onTap(context, 2),
           ),
           _SidebarItem(
-            icon: Icons.analytics_outlined,
-            label: l10n.resultsTab,
+            icon: isRabhan ? Icons.notifications_none_outlined : Icons.analytics_outlined,
+            label: isRabhan ? (isAr ? 'الإشعارات' : 'Notifications') : l10n.resultsTab,
             active: currentIndex == 3,
             onTap: () => _onTap(context, 3),
           ),
           _SidebarItem(
-            icon: Icons.description_outlined,
-            label: isAr ? 'التقارير' : 'Reports',
+            icon: isRabhan ? Icons.grid_view_outlined : Icons.description_outlined,
+            label: isRabhan ? (isAr ? 'المزيد' : 'More') : (isAr ? 'التقارير' : 'Reports'),
             active: currentIndex == 4,
             onTap: () => _onTap(context, 4),
           ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "524026992362",
+    "project_id": "rabhan-1ac1f",
+    "storage_bucket": "rabhan-1ac1f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:524026992362:android:6dabef5fb1972a94622993",
+        "android_client_info": {
+          "package_name": "com.zbooma.rabhan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDquuV0caCOitOeXazpf8Dmfdsnywsed6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

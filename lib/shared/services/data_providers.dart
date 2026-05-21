@@ -28,33 +28,49 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 final profileProvider = FutureProvider<Profile?>((ref) async {
   // Watch auth state - when it changes, this provider automatically re-runs
   ref.watch(authStateProvider);
-  
+
   final client = ref.watch(supabaseClientProvider);
   final user = client.auth.currentUser;
   if (user == null) return null;
-  
-  // Use maybeSingle to avoid crash if profile doesn't exist yet
-  final data = await client.from('profiles').select().eq('id', user.id).maybeSingle();
-  
+
+  // Use maybeSingle to avoid PGRST116 crash if profile doesn't exist yet
+  Map<String, dynamic>? data;
+  try {
+    data = await client.from('profiles').select().eq('id', user.id).maybeSingle();
+  } catch (_) {
+    data = null;
+  }
+
   if (data == null) {
-    // If no profile record, check auth metadata for a name
-    final metaName = user.userMetadata?['full_name']?.toString() ?? 
-                     user.userMetadata?['name']?.toString() ?? 
-                     '';
-                     
+    // Auto-create the profile row so push notifications can target this user
+    final metaName = user.userMetadata?['full_name']?.toString() ??
+                     user.userMetadata?['name']?.toString() ??
+                     user.email?.split('@').first ?? '';
+    try {
+      await client.from('profiles').insert({
+        'id': user.id,
+        'email': user.email,
+        'full_name': metaName,
+        'role': 'client',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {
+      // Row may already exist (race condition) — ignore
+    }
     return Profile(
       id: user.id,
       email: user.email,
       fullName: metaName,
-      createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+      createdAt: DateTime.now(),
       role: 'client',
     );
   }
-  
+
   final profile = Profile.fromJson(data);
   // Always ensure the email from auth is present
   return profile.copyWith(email: user.email);
 });
+
 
 // Current Project
 final currentProjectProvider = FutureProvider<Project?>((ref) async {
@@ -333,7 +349,7 @@ final milestonesProvider = FutureProvider.autoDispose<List<Milestone>>((ref) asy
   final data = await client
       .from('milestones')
       .select()
-      .order('achieved_at', ascending: false);
+      .order('created_at', ascending: false);
       
   return (data as List).map((json) => Milestone.fromJson(json)).toList();
 });
@@ -370,7 +386,7 @@ final campaignResultsProvider = StreamProvider.family.autoDispose<List<CampaignR
       .map((data) => data.map((json) => CampaignResult.fromJson(json)).toList());
 });
 
-// Engine Progress (Stream)
+// Engine Progress (Stream) — provides a map of engine_type → progress (0.0-1.0)
 final engineProgressMapProvider = StreamProvider.autoDispose<Map<String, double>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final projectAsync = ref.watch(currentProjectProvider);
@@ -385,9 +401,16 @@ final engineProgressMapProvider = StreamProvider.autoDispose<Map<String, double>
           .map((data) {
         final Map<String, double> result = {};
         for (var item in data) {
-          result[item['engine']] = (item['progress_percent'] as num).toDouble() / 100.0;
+          // Column is 'engine_type' not 'engine', and 'progress' (0-100) not 'progress_percent'
+          final engineType = item['engine_type'] as String? ?? item['engine'] as String? ?? '';
+          final progressRaw = (item['progress'] ?? item['progress_percent'] ?? 0) as num;
+          if (engineType.isNotEmpty) {
+            result[engineType] = progressRaw.toDouble() / 100.0;
+          }
         }
         return result;
+      }).handleError((e) {
+        // Non-fatal: return empty map on realtime errors
       });
     },
     loading: () => Stream.value({}),

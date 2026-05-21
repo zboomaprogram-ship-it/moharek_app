@@ -16,11 +16,21 @@ class OneSignalNotifications {
   void addPermissionObserver(void Function(dynamic event) listener) {}
 }
 
+class OSPushSubscription {
+  String? get id => null;
+}
+
+class OneSignalUser {
+  final pushSubscription = OSPushSubscription();
+}
+
 class OneSignal {
   // ignore: non_constant_identifier_names
   static final OneSignalDebug Debug = OneSignalDebug();
   // ignore: non_constant_identifier_names
   static final OneSignalNotifications Notifications = OneSignalNotifications();
+  // ignore: non_constant_identifier_names
+  static final OneSignalUser User = OneSignalUser();
 
   static void initialize(String appId) {}
   static Future<void> login(String externalId) async {}

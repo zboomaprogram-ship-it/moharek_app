@@ -1,0 +1,9 @@
+flutter_native_splash:
+  color: "#080B12"
+  image: assets/rabhan_logo.png
+  android_12:
+    image: assets/rabhan_logo.png
+    color: "#080B12"
+    icon_background_color: "#080B12"
+  web: true
+  fullscreen: false

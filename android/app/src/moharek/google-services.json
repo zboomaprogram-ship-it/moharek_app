@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "835240027261",
+    "project_id": "moharek-e353b",
+    "storage_bucket": "moharek-e353b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:835240027261:android:e6e316af9f636cfb1c7d14",
+        "android_client_info": {
+          "package_name": "com.zbooma.moharek"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUIUfeqUDEUhbVKkHTMRrUygK67MdhBTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

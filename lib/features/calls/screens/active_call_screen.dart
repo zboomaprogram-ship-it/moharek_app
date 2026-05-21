@@ -90,7 +90,16 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     if (p == null) return;
     try {
       final nextVideoState = !_isVideoOff;
-      await p.setCameraEnabled(nextVideoState);
+      if (nextVideoState) {
+        await p.setCameraEnabled(
+          true,
+          cameraCaptureOptions: const CameraCaptureOptions(
+            params: VideoParametersPresets.h720_169,
+          ),
+        );
+      } else {
+        await p.setCameraEnabled(false);
+      }
       if (mounted) {
         setState(() {
           _isVideoOff = nextVideoState;

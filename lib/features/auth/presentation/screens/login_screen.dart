@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -105,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo
                   Image.asset(
-                    'assets/logo.png',
+                    AppConfig.logoAsset,
                     height: 160,
                     fit: BoxFit.contain,
                   ),
@@ -113,7 +114,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Tagline
                   Text(
-                    AppLocalizations.of(context)!.loginTitle,
+                    AppLocalizations.of(context)!.localeName == 'ar'
+                        ? 'مرحباً بك في ${AppConfig.appName}'
+                        : 'Welcome to ${AppConfig.appName}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 28,
@@ -123,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    AppLocalizations.of(context)!.loginSubtitle,
+                    AppLocalizations.of(context)!.localeName == 'ar'
+                        ? 'سجل الدخول للوصول إلى بوابة العملاء'
+                        : 'Sign in to access your client portal',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),

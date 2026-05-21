@@ -58,7 +58,12 @@ class CallService {
       }
       if (isVideo) {
         try {
-          await room.localParticipant?.setCameraEnabled(true);
+          await room.localParticipant?.setCameraEnabled(
+            true,
+            cameraCaptureOptions: const CameraCaptureOptions(
+              params: VideoParametersPresets.h720_169,
+            ),
+          );
         } catch (e) {
           debugPrint('Warning: Failed to enable camera (possibly no camera device): $e');
         }

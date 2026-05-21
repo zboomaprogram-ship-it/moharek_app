@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/shared/models/message.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:postgrest/postgrest.dart';
 
 // ─── Background isolate parser ───────────────────────────────────────────────
 // Keeps all JSON parsing off the main thread — the root cause of the 97s ANR.
@@ -66,7 +67,17 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
           if (parsed.length < _limit) {
             _hasMore = false;
           }
-          state = AsyncData(parsed);
+          // Merge: keep any optimistic messages not yet confirmed by the server,
+          // then prepend the server list (which is the source of truth).
+          final optimistics = (state.valueOrNull ?? [])
+              .where((m) => m.id.startsWith('opt_'))
+              .toList();
+          final serverIds = parsed.map((m) => m.content).toSet();
+          // Only keep optimistics whose content hasn't appeared in server list yet
+          final pendingOptimistics = optimistics
+              .where((m) => !serverIds.contains(m.content))
+              .toList();
+          state = AsyncData([...pendingOptimistics, ...parsed]);
         }, onError: (e) {
           debugPrint('Real-time Stream Error: $e');
         });
@@ -110,6 +121,15 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
     }
   }
 
+  /// Instantly adds a message to local state (optimistic UI).
+  /// The Realtime stream will replace state with the confirmed DB row shortly after.
+  void addOptimistic(ChatMessage message) {
+    final current = state.valueOrNull ?? [];
+    // Avoid duplicates if stream fires before optimistic is shown
+    if (current.any((m) => m.id == message.id)) return;
+    state = AsyncData([message, ...current]);
+  }
+
   Future<void> loadMore() async {
     if (!_hasMore || _isFetching || state.isLoading) return;
     _isFetching = true;
@@ -145,31 +165,69 @@ class ChatNotifier extends AutoDisposeAsyncNotifier<void> {
       {String messageType = 'text'}) async {
     final client = ref.read(supabaseClientProvider);
     final user = client.auth.currentUser;
-    if (user == null || channelId.isEmpty) return;
+    if (user == null) {
+      debugPrint('❌ [Chat] sendMessage: user is null — not authenticated');
+      return;
+    }
+    if (channelId.isEmpty) {
+      debugPrint('❌ [Chat] sendMessage: channelId is empty — no channel found for this project');
+      return;
+    }
 
-    await client.from('messages').insert({
-      'channel_id': channelId,
-      'sender_id': user.id,
-      'content': content,
-      'message_type': messageType,
-    });
+    try {
+      await client.from('messages').insert({
+        'channel_id': channelId,
+        'sender_id': user.id,
+        'content': content,
+        'message_type': messageType,
+      });
+      debugPrint('✅ [Chat] Message sent successfully');
+    } on PostgrestException catch (e) {
+      debugPrint('❌ [Chat] PostgrestException sending message:');
+      debugPrint('   code   : ${e.code}');
+      debugPrint('   message: ${e.message}');
+      debugPrint('   details: ${e.details}');
+      debugPrint('   hint   : ${e.hint}');
+      rethrow;  // Let the UI catch and display it
+    } catch (e) {
+      debugPrint('❌ [Chat] Unexpected error sending message: $e');
+      rethrow;
+    }
   }
 }
 
 final chatNotifierProvider =
     AsyncNotifierProvider.autoDispose<ChatNotifier, void>(() => ChatNotifier());
 
-// ─── Channel lookup ───────────────────────────────────────────────────────────
+// ─── Channel lookup (auto-creates if missing) ─────────────────────────────────
 final chatChannelProvider = FutureProvider<String?>((ref) async {
   final client = ref.watch(supabaseClientProvider);
   final project = await ref.watch(currentProjectProvider.future);
-  if (project == null) return null;
+  if (project == null) {
+    debugPrint('❌ [Chat] chatChannelProvider: no project found');
+    return null;
+  }
 
-  final data = await client
-      .from('chat_channels')
-      .select('id')
-      .eq('project_id', project.id)
-      .maybeSingle();
+  try {
+    // Uses SECURITY DEFINER RPC that auto-creates the channel if missing
+    final result = await client
+        .rpc('get_or_create_chat_channel', params: {'p_project_id': project.id});
 
-  return data?['id'] as String?;
+    final channelId = result?.toString();
+    debugPrint('✅ [Chat] channel resolved: $channelId (project: ${project.id})');
+    return channelId;
+  } catch (e) {
+    debugPrint('❌ [Chat] chatChannelProvider error: $e');
+    // Fallback: try direct select
+    try {
+      final data = await client
+          .from('chat_channels')
+          .select('id')
+          .eq('project_id', project.id)
+          .maybeSingle();
+      return data?['id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 });

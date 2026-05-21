@@ -71,10 +71,13 @@ class RabhanMetricsTab extends ConsumerWidget {
                           Row(
                             children: [
                               _metricValue('مبيعات', '${m['total_sales']} ${m['currency'] ?? 'SAR'}'),
-                              const SizedBox(width: 24),
+                              const SizedBox(width: 16),
                               _metricValue('الطلبات', '${m['orders_count']}'),
-                              const SizedBox(width: 24),
+                              const SizedBox(width: 16),
                               _metricValue('ROAS', '${m['roas']}x'),
+                              const SizedBox(width: 16),
+                              if ((m['add_to_cart'] ?? 0) > 0)
+                                _metricValue('السلة', '${m['add_to_cart']}'),
                             ],
                           ),
                         ],
@@ -123,6 +126,7 @@ class RabhanMetricsTab extends ConsumerWidget {
     final spendCtrl = TextEditingController(text: m?['ad_spend']?.toString() ?? '');
     final impressionsCtrl = TextEditingController(text: m?['impressions']?.toString() ?? '');
     final clicksCtrl = TextEditingController(text: m?['clicks']?.toString() ?? '');
+    final cartCtrl = TextEditingController(text: m?['add_to_cart']?.toString() ?? '');
     
     DateTime start = m?['period_start'] != null ? DateTime.parse(m!['period_start']) : DateTime.now().subtract(const Duration(days: 30));
     DateTime end = m?['period_end'] != null ? DateTime.parse(m!['period_end']) : DateTime.now();
@@ -210,9 +214,15 @@ class RabhanMetricsTab extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: _field(impressionsCtrl, 'الظهور (Impressions)', TextInputType.number)),
+                    Expanded(child: _field(clicksCtrl, 'زيارات صفحة المنتج (Clicks)', TextInputType.number)),
                     const SizedBox(width: 8),
-                    Expanded(child: _field(clicksCtrl, 'النقرات (Clicks)', TextInputType.number)),
+                    Expanded(child: _field(cartCtrl, 'الإضافة للسلة (Add to Cart)', TextInputType.number)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: _field(impressionsCtrl, 'الظهور (Impressions)', TextInputType.number)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -249,6 +259,7 @@ class RabhanMetricsTab extends ConsumerWidget {
                     'ad_spend': double.tryParse(spendCtrl.text) ?? 0.0,
                     'impressions': int.tryParse(impressionsCtrl.text) ?? 0,
                     'clicks': int.tryParse(clicksCtrl.text) ?? 0,
+                    'add_to_cart': int.tryParse(cartCtrl.text) ?? 0,
                     'is_published': isPub,
                     'published_at': isPub ? DateTime.now().toIso8601String() : null,
                   };

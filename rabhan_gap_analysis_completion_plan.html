@@ -1,0 +1,574 @@
+
+<style>
+h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+*{box-sizing:border-box}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem}
+.tab-btn{padding:5px 14px;border-radius:20px;border:.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer;font-size:13px;font-family:inherit;transition:all .18s}
+.tab-btn:hover{background:var(--color-background-secondary)}
+.tab-btn.on{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.panel{display:none}.panel.on{display:block}
+.row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.row:last-child{border-bottom:none}
+.icon{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:13px}
+.done{background:var(--color-background-success);color:var(--color-text-success)}
+.missing{background:var(--color-background-danger);color:var(--color-text-danger)}
+.partial{background:var(--color-background-warning);color:var(--color-text-warning)}
+.meta{flex:1;min-width:0}
+.item-title{font-size:14px;color:var(--color-text-primary);font-weight:500;margin:0 0 2px}
+.item-desc{font-size:12px;color:var(--color-text-secondary);margin:0;line-height:1.5}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.b-done{background:var(--color-background-success);color:var(--color-text-success)}
+.b-miss{background:var(--color-background-danger);color:var(--color-text-danger)}
+.b-part{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-crit{background:var(--color-background-danger);color:var(--color-text-danger);font-weight:500}
+.section-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-tertiary);margin:16px 0 8px}
+.progress-wrap{background:var(--color-background-secondary);border-radius:4px;height:6px;overflow:hidden;margin:8px 0 4px}
+.progress-bar{height:100%;border-radius:4px;transition:width .4s}
+.score-row{display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-secondary);margin-bottom:1rem}
+.layer-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem;margin-bottom:8px;cursor:pointer;border:.5px solid var(--color-border-tertiary)}
+.layer-card:hover{border-color:var(--color-border-secondary)}
+.layer-header{display:flex;align-items:center;justify-content:space-between}
+.layer-name{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.layer-pct{font-size:13px;font-weight:500}
+.pct-hi{color:var(--color-text-success)}
+.pct-mid{color:var(--color-text-warning)}
+.pct-lo{color:var(--color-text-danger)}
+.order-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:500;flex-shrink:0;margin-right:8px}
+.o1{background:var(--color-background-danger);color:var(--color-text-danger)}
+.o2{background:var(--color-background-warning);color:var(--color-text-warning)}
+.o3{background:var(--color-background-info);color:var(--color-text-info)}
+.o4{background:var(--color-background-success);color:var(--color-text-success)}
+</style>
+
+<h2 class="sr-only">Rabhan flavor gap analysis — 6 layers scored by completion, with missing items listed by priority</h2>
+
+<div class="tabs">
+  <button class="tab-btn on" onclick="show('overview')">Overview</button>
+  <button class="tab-btn" onclick="show('scaffold')">① Flavor scaffold</button>
+  <button class="tab-btn" onclick="show('db')">② Database</button>
+  <button class="tab-btn" onclick="show('mobile')">③ Mobile UI</button>
+  <button class="tab-btn" onclick="show('admin')">④ Web dashboard</button>
+  <button class="tab-btn" onclick="show('notif')">⑤ Notifications</button>
+  <button class="tab-btn" onclick="show('qa')">⑥ QA</button>
+</div>
+
+<!-- OVERVIEW -->
+<div class="panel on" id="p-overview">
+  <div class="section-label">Completion by layer — click a card to jump to details</div>
+
+  <div class="layer-card" onclick="show('scaffold')">
+    <div class="layer-header">
+      <div><span class="order-badge o1">1</span><span class="layer-name">Flavor scaffold (Flutter)</span></div>
+      <span class="layer-pct pct-lo">15%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:15%;background:var(--color-border-danger)"></div></div>
+    <div class="item-desc">rabhan_config.dart, theme tokens, Cairo RTL, build targets, brand assets — almost entirely missing</div>
+  </div>
+
+  <div class="layer-card" onclick="show('db')">
+    <div class="layer-header">
+      <div><span class="order-badge o2">2</span><span class="layer-name">Database (Supabase)</span></div>
+      <span class="layer-pct pct-mid">65%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:65%;background:var(--color-border-warning)"></div></div>
+    <div class="item-desc">Core tables exist. Missing: tasks extension, DB functions, onesignal_player_id column, journey stage enum</div>
+  </div>
+
+  <div class="layer-card" onclick="show('mobile')">
+    <div class="layer-header">
+      <div><span class="order-badge o2">3</span><span class="layer-name">Client mobile UI</span></div>
+      <span class="layer-pct pct-mid">50%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:50%;background:var(--color-border-warning)"></div></div>
+    <div class="item-desc">Deep screens exist. Missing: dashboard KPI section, journey tracker, bottom nav labels, models & providers, flavor guard</div>
+  </div>
+
+  <div class="layer-card" onclick="show('admin')">
+    <div class="layer-header">
+      <div><span class="order-badge o2">4</span><span class="layer-name">Web dashboard (admin/AM)</span></div>
+      <span class="layer-pct pct-mid">40%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:40%;background:var(--color-border-warning)"></div></div>
+    <div class="item-desc">Tab panels built. Missing: AdminPackagesScreen, aggregate overview, SharedClientHub new tabs, AM client list columns</div>
+  </div>
+
+  <div class="layer-card" onclick="show('notif')">
+    <div class="layer-header">
+      <div><span class="order-badge o3">5</span><span class="layer-name">Notifications & automation</span></div>
+      <span class="layer-pct pct-hi">70%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:70%;background:var(--color-border-success)"></div></div>
+    <div class="item-desc">DB triggers done. Missing: Edge function deployments, approval notification, cron schedule wiring</div>
+  </div>
+
+  <div class="layer-card" onclick="show('qa')">
+    <div class="layer-header">
+      <div><span class="order-badge o3">6</span><span class="layer-name">QA & integration</span></div>
+      <span class="layer-pct pct-lo">0%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:2%;background:var(--color-border-danger)"></div></div>
+    <div class="item-desc">Not started — RTL audit, RLS tests, cross-flavor regression, performance checks</div>
+  </div>
+
+  <div class="section-label" style="margin-top:1.5rem">Build order — do these in this sequence</div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-danger);color:var(--color-text-danger);width:26px;height:26px;border-radius:50%;font-weight:500">1</div>
+    <div class="meta">
+      <div class="item-title">Flavor scaffold first <span class="badge b-crit">BLOCKS EVERYTHING</span></div>
+      <div class="item-desc">Without rabhan_config.dart, feature flags, and build targets, nothing can be tested as a real flavor — you're just running Moharek with renamed files.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-danger);color:var(--color-text-danger);width:26px;height:26px;border-radius:50%;font-weight:500">2</div>
+    <div class="meta">
+      <div class="item-title">DB gaps next <span class="badge b-crit">BLOCKS MOBILE UI</span></div>
+      <div class="item-desc">Tasks extension + DB functions needed before the dashboard KPI section and journey tracker can query real data.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-warning);color:var(--color-text-warning);width:26px;height:26px;border-radius:50%;font-weight:500">3</div>
+    <div class="meta">
+      <div class="item-title">Models & providers (mobile)</div>
+      <div class="item-desc">EcomMetrics, PackageModel, providers — the data layer that feeds all client screens. Do before UI widgets.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-warning);color:var(--color-text-warning);width:26px;height:26px;border-radius:50%;font-weight:500">4</div>
+    <div class="meta">
+      <div class="item-title">Dashboard KPI section + journey tracker</div>
+      <div class="item-desc">The most visible client-facing gap — the home screen currently shows nothing Rabhan-specific.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-info);color:var(--color-text-info);width:26px;height:26px;border-radius:50%;font-weight:500">5</div>
+    <div class="meta">
+      <div class="item-title">Admin packages screen + SharedClientHub tabs</div>
+      <div class="item-desc">Web dashboard control of packages and the 4 new hub tabs (metrics, engines, package, campaigns).</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon" style="background:var(--color-background-success);color:var(--color-text-success);width:26px;height:26px;border-radius:50%;font-weight:500">6</div>
+    <div class="meta">
+      <div class="item-title">Edge function deployments + cron wiring</div>
+      <div class="item-desc">Deploy send-metrics-update and send-package-expiry-alert as proper Supabase Edge Functions, not just DB triggers.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCAFFOLD -->
+<div class="panel" id="p-scaffold">
+  <div class="section-label">① Flavor scaffold — 15% done — MOST CRITICAL GAP</div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">rabhan_config.dart <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">The flavor config class with supabaseUrl, anon key, oneSignalAppId, flavorName = 'rabhan', and all feature flags. Without this, feature flag guards don't work and the app can't initialize with the right Supabase project.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">rabhan_theme.dart <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">ThemeData with background #080B12, primaryGreen #2EE59D, gold #D4A017, Cairo font, dark colorScheme. Currently the app renders with Moharek's theme.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">main_rabhan.dart entry point <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Separate main() that loads RabhanConfig, applies RabhanTheme, sets TextDirection.rtl, and calls the shared initializeApp(). Needed for <code>flutter run --flavor rabhan -t lib/main_rabhan.dart</code>.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Android productFlavors in build.gradle</div>
+      <div class="item-desc">rabhan flavor dimension, separate applicationId (com.yourcompany.rabhan), app name string. Without this, <code>--flavor rabhan</code> fails the Android build.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">iOS scheme "Rabhan" in Xcode</div>
+      <div class="item-desc">Duplicate Runner scheme, set bundle ID com.yourcompany.rabhan, point to RabhanIcon asset set.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Cairo font in pubspec.yaml + assets/rabhan/ folder</div>
+      <div class="item-desc">Font family Cairo (Regular/Medium/Bold weights) declared under flutter.fonts. assets/rabhan/ folder with logo.png, logo_dark.png, splash.png.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">RabhanFeature guard widget</div>
+      <div class="item-desc">A wrapper widget that reads flavorName from context and renders child only in the rabhan flavor. Needed to safely add Rabhan-only sections to shared screens without breaking Moharek.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">RTL Directionality wrapper at app root</div>
+      <div class="item-desc">Wrap MaterialApp.router with Directionality(textDirection: TextDirection.rtl) for the Rabhan flavor. Affects all padding, row direction, icon flip, and text alignment.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Feature flag constants <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">enableGrowthSystem, enableEcomMetrics, enablePackageTiers, enableAdCampaigns booleans in RabhanConfig. Used to conditionally show/hide entire feature areas.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DB -->
+<div class="panel" id="p-db">
+  <div class="section-label">② Database — 65% done</div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">packages table <span class="badge b-done">Done</span></div>
+      <div class="item-desc">package_name, package_tier, trial_ends_at, renews_at, requests_used/limit, services JSON.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">ecom_metrics table <span class="badge b-done">Done</span></div>
+      <div class="item-desc">All KPI columns including prev_* comparison columns and is_published flag.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">growth_engines + engine_progress tables <span class="badge b-done">Done</span></div>
+      <div class="item-desc">All 6 engine types, health_score, status, current_tasks JSON.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">ad_campaigns table <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Platform, budget, spend, ROAS, clicks, impressions, conversions columns.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">tasks table extension <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">ALTER TABLE tasks ADD COLUMN stage_type text, is_client_pending boolean, journey_order int. The journey stage tracker on the العمل screen queries these columns — without them it shows nothing.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">get_latest_metrics() DB function <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">RPC function returning the most recent published ecom_metrics row for a project. The dashboard KPI section calls this function — without it you need a client-side query with ordering.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">get_engine_health() DB function <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">RPC returning health summary of all 6 engines for a project. Used by the Growth System screen and the admin hub engines tab.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">profiles.onesignal_player_id column <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">ALTER TABLE profiles ADD COLUMN onesignal_player_id text. This column is what the edge functions use to target a specific client's device. Without it, push notifications cannot reach individual users.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon partial"><i class="ti ti-minus" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">RLS policies audit <span class="badge b-part">Verify</span></div>
+      <div class="item-desc">Confirm all 4 new tables have RLS enabled and that client JWT cannot read other projects' rows. Quick test: run a SELECT with a client token against a different project_id.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE -->
+<div class="panel" id="p-mobile">
+  <div class="section-label">③ Client mobile UI — 50% done</div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">rabhan_analytics_screen.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Store performance, products funnel, ad campaigns breakdown, analytics readiness tabs.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">growth_system_screen.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">6 engine drill-down with checklists.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">growth_pro_screen.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Package details, renewal date, request usage gauge.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">EcomKpiSection on DashboardScreen <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">The 4 KPI cards (المبيعات, الطلبات, ROAS, معدل التحويل) with delta % badges at the top of the home screen. This is what clients see first — currently they see Moharek's generic dashboard. Reads from get_latest_metrics() RPC.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Sales line chart on DashboardScreen <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Net profit trend chart (last 30 days) below the KPI cards. Reuses existing LineChartWidget with ecom_metrics data source.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">JourneyStageTracker on TasksScreen (العمل) <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Horizontal scrollable stage pills at the top of the tasks screen: البحث → العرض → الإنتاج الإبداعي → موافقة العميل → الإطلاق → التحسين → التوسع. Shows completed / active / pending states. Queries tasks with stage_type column.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Bottom nav Arabic labels <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Rename 5 tabs in Rabhan flavor: الرئيسية / العمل / المحادثات / الإشعارات / المزيد. Currently shows Moharek's English or untranslated labels.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">EcomMetrics model + latestMetricsProvider <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Dart class with fromJson(), delta computation getters, and a Riverpod FutureProvider.family. The entire dashboard KPI section depends on this data layer.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">PackageModel + packageProvider + accountManagerProvider <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Even though growth_pro_screen.dart exists, it needs the actual provider to fetch from the packages table and the join to profiles for the AM card.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">GrowthEngineModel + enginesProvider <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Model with arabicName getter and provider querying growth_engines by project_id.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Unified الإشعارات screen <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Notifications tab with 4 sub-tabs (الكل / موافقات / تحديثات / تنبيهات) and AM chat preview. Seen clearly in the Rabhan app screenshots.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Journey mini-progress on dashboard <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Small "أين نحن الآن؟" progress indicator at the bottom of the dashboard showing current journey stage. Links to /tasks.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="panel" id="p-admin">
+  <div class="section-label">④ Web dashboard — 40% done</div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">rabhan_metrics_tab.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">AM/admin form to insert/edit monthly e-commerce metrics and publish to client.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">rabhan_package_tab.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Package level, trial status, and request count management per project.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">campaigns_tab.dart + engines_tab.dart <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Ad campaigns and engine health score management tabs.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AdminPackagesScreen (/admin/packages) <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Top-level admin screen showing ALL client packages in a sortable/filterable table. Columns: client name, package tier badge, status, renewal date, requests used/limit, days remaining warning. Filter: All / نشطة / تنتهي خلال 7 أيام. This is the package control center.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AdminOverviewScreen — e-commerce KPIs <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Replace Moharek's generic admin overview KPI cards with Rabhan aggregates: total GMV this month, average ROAS across portfolio, active vs trial clients, pending approvals count, AM performance leaderboard.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">SharedClientHubScreen — 4 new tabs <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Inside RabhanFeature, add: المقاييس (ecom_metrics history), محركات النمو (engine health cards), الباقة (package card + edit), الحملات (ad_campaigns table). These tabs are what the AM sees when viewing a specific client.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AdminClientsScreen — Rabhan columns <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">In the clients list table, add columns: Package tier badge, latest ROAS value, renewal days remaining (red if < 7), pending approvals count badge.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AmClientsScreen — Rabhan columns <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Same additions for the AM view: package tier badge, last ROAS, renewal warning, journey stage progress indicator per project row.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AdminMetricsScreen (/admin/metrics) <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Aggregate view of all published metrics across all projects. Sortable by AM, client, ROAS, date. Admin-only. Useful for portfolio-level performance review.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon partial"><i class="ti ti-minus" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">AmMetricsInputScreen — publish button wiring <span class="badge b-part">Verify</span></div>
+      <div class="item-desc">Confirm the "نشر للعميل" button sets is_published = true and triggers the notification. The DB tab exists but the publish action may not be wired to the edge function call.</div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF -->
+<div class="panel" id="p-notif">
+  <div class="section-label">⑤ Notifications & automation — 70% done</div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">trigger_metrics_published DB trigger <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Fires when is_published = true on ecom_metrics. Sends Arabic + English notification.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon done"><i class="ti ti-check" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">check_expiring_packages() function <span class="badge b-done">Done</span></div>
+      <div class="item-desc">Checks active packages due to renew in 3 days and sends alert.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">send-metrics-update Edge Function deployment <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">The DB trigger needs to call an Edge Function to reach OneSignal. Confirm supabase/functions/send-metrics-update/index.ts is deployed with <code>supabase functions deploy send-metrics-update</code>. The DB trigger alone cannot call OneSignal directly.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">send-package-expiry-alert Edge Function + cron <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">Deploy the edge function and wire the cron schedule in supabase/config.toml: <code>schedule = "0 9 * * *"</code>. Without the cron, check_expiring_packages() is never actually called daily.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">profiles.onesignal_player_id registration <span class="badge b-crit">CRITICAL</span></div>
+      <div class="item-desc">On client login in the Flutter app, register the device with OneSignal and UPSERT the player ID into profiles.onesignal_player_id. Without this step, the edge functions have no device target to send notifications to.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">send-approval-request notification <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">DB trigger on approvals INSERT → edge function → OneSignal push to client. "موافقة مطلوبة: [title] — بانتظار موافقتك". Seen as the first notification type in the app screenshots.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">ONESIGNAL_REST_API_KEY env variable set in Supabase <span class="badge b-miss">Missing</span></div>
+      <div class="item-desc">Confirm ONESIGNAL_REST_API_KEY and ONESIGNAL_APP_ID are set as Supabase secrets via <code>supabase secrets set</code>. Edge functions will silently fail without these.</div>
+    </div>
+  </div>
+</div>
+
+<!-- QA -->
+<div class="panel" id="p-qa">
+  <div class="section-label">⑥ QA & integration — 0% done — do last</div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Cross-flavor build test</div>
+      <div class="item-desc"><code>flutter build apk --flavor moharek</code> AND <code>flutter build apk --flavor rabhan</code> must both succeed. Moharek must show zero Rabhan content.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">RTL layout audit on all new screens</div>
+      <div class="item-desc">Check: padding direction, row direction, chevron icon flip, chart axis side, text alignment in all cards. Run on a physical Arabic-locale device or simulator.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">RLS security test (client JWT)</div>
+      <div class="item-desc">Use a test client's JWT to confirm: cannot SELECT other projects' packages, ecom_metrics, engines, campaigns. Cannot INSERT/UPDATE ecom_metrics. Cannot see unpublished metrics (is_published = false).</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">End-to-end data flow test</div>
+      <div class="item-desc">AM publishes metrics on web → client sees KPI cards update within 10 seconds on mobile (real-time subscription). Admin assigns package → Growth Pro screen shows updated tier immediately.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Push notification end-to-end test</div>
+      <div class="item-desc">AM publishes metrics → client receives OneSignal notification on real device within 5 seconds. Tap notification → app opens to /dashboard. Package near expiry → client receives alert 3 days before renews_at.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Growth Pro screen visual QA</div>
+      <div class="item-desc">Gold border renders, status badges correct colors (active=green, trial=gold, expired=red), progress bar color changes at 70%/90% thresholds, AM avatar loads, all 4 quick links navigate correctly.</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="icon missing"><i class="ti ti-x" aria-hidden="true"></i></div>
+    <div class="meta">
+      <div class="item-title">Performance check</div>
+      <div class="item-desc">Dashboard with KPI section < 3s on 4G. Growth Pro screen < 2s. No loading flicker on screens with cached providers. No memory leaks from real-time subscriptions on screen dispose.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  const map={overview:0,scaffold:1,db:2,mobile:3,admin:4,notif:5,qa:6};
+  document.querySelectorAll('.tab-btn')[map[id]].classList.add('on');
+}
+</script>

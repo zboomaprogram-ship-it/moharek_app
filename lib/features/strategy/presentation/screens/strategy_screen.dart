@@ -6,12 +6,19 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/engine_progress.dart';
 import 'package:moharek_app/shared/models/project.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/rabhan/screens/rabhan_strategy_screen.dart';
 
 class StrategyScreen extends ConsumerWidget {
   const StrategyScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rabhan flavor has its own dedicated e-commerce strategy screen
+    if (AppConfig.flavorName == 'rabhan') {
+      return const RabhanStrategyScreen();
+    }
+
     final projectAsync = ref.watch(currentProjectProvider);
     final enginesAsync = ref.watch(engineProgressListProvider);
     final l10n = AppLocalizations.of(context)!;
@@ -87,45 +94,17 @@ class StrategyScreen extends ConsumerWidget {
                     color: AppTheme.primaryGreen,
                   ),
                   error: (err, _) => Text('Error: $err'),
-                  data: (engines) => Column(
-                    children: [
-                      _buildEngineCard(
-                        'content',
-                        isAr ? 'محرك المحتوى' : 'Content Engine',
-                        engines,
-                        Icons.edit_note,
-                        Colors.orange,
-                      ),
-                      _buildEngineCard(
-                        'seo',
-                        isAr ? 'محرك SEO' : 'SEO Engine',
-                        engines,
-                        Icons.search,
-                        Colors.blue,
-                      ),
-                      _buildEngineCard(
-                        'ai_visibility',
-                        isAr ? 'محرك الظهور في AI' : 'AI Visibility Engine',
-                        engines,
-                        Icons.smart_toy,
-                        Colors.purple,
-                      ),
-                      _buildEngineCard(
-                        'trust',
-                        isAr ? 'محرك الثقة' : 'Trust Engine',
-                        engines,
-                        Icons.star_outline,
-                        Colors.amber,
-                      ),
-                      _buildEngineCard(
-                        'conversion',
-                        isAr ? 'محرك التحويل' : 'Conversion Engine',
-                        engines,
-                        Icons.shopping_cart_outlined,
-                        Colors.green,
-                      ),
-                    ],
-                  ),
+                  data: (engines) {
+                    return Column(
+                      children: [
+                        _buildEngineCard('content', isAr ? 'محرك المحتوى' : 'Content Engine', engines, Icons.edit_note, Colors.orange),
+                        _buildEngineCard('seo', isAr ? 'محرك SEO' : 'SEO Engine', engines, Icons.search, Colors.blue),
+                        _buildEngineCard('ai_visibility', isAr ? 'محرك الظهور في AI' : 'AI Visibility Engine', engines, Icons.smart_toy, Colors.purple),
+                        _buildEngineCard('trust', isAr ? 'محرك الثقة' : 'Trust Engine', engines, Icons.star_outline, Colors.amber),
+                        _buildEngineCard('conversion', isAr ? 'محرك التحويل' : 'Conversion Engine', engines, Icons.shopping_cart_outlined, Colors.green),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 40),
               ],

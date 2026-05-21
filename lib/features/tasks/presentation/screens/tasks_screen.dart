@@ -8,6 +8,8 @@ import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/shared/widgets/empty_state.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:moharek_app/features/tasks/presentation/widgets/client_request_sheet.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/rabhan/widgets/journey_stage_tracker.dart';
 
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
@@ -16,11 +18,16 @@ class TasksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksProvider);
 
+    final isRabhan = AppConfig.flavorName == 'rabhan';
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(AppLocalizations.of(context)!.tasksTitle),
+          title: Text(isRabhan 
+              ? (isAr ? 'العمل' : 'Work') 
+              : AppLocalizations.of(context)!.tasksTitle),
           bottom: TabBar(
             isScrollable: true,
             indicatorColor: AppTheme.primaryGreen,
@@ -37,14 +44,26 @@ class TasksScreen extends ConsumerWidget {
         body: tasksAsync.when(
           loading: () => const ShimmerList(itemCount: 5, itemHeight: 100),
           error: (err, stack) => Center(child: Text(AppLocalizations.of(context)!.errorOccurred(err.toString()), style: const TextStyle(color: Colors.white))),
-          data: (tasks) => TabBarView(
-            children: [
-              _buildTaskList(context, ref, tasks, 'all'),
-              _buildTaskList(context, ref, tasks, 'in_progress'),
-              _buildTaskList(context, ref, tasks, 'waiting_client'),
-              _buildTaskList(context, ref, tasks, 'completed'),
-            ],
-          ),
+          data: (tasks) {
+            final view = TabBarView(
+              children: [
+                _buildTaskList(context, ref, tasks, 'all'),
+                _buildTaskList(context, ref, tasks, 'in_progress'),
+                _buildTaskList(context, ref, tasks, 'waiting_client'),
+                _buildTaskList(context, ref, tasks, 'completed'),
+              ],
+            );
+
+            if (isRabhan) {
+              return Column(
+                children: [
+                  JourneyStageTracker(tasks: tasks),
+                  Expanded(child: view),
+                ],
+              );
+            }
+            return view;
+          },
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () {
@@ -68,7 +87,9 @@ class TasksScreen extends ConsumerWidget {
   }
 
   Widget _buildTaskList(BuildContext context, WidgetRef ref, List<ProjectTask> tasks, String filter) {
+    final selectedStage = AppConfig.flavorName == 'rabhan' ? ref.watch(selectedJourneyStageProvider) : null;
     final filteredTasks = tasks.where((task) {
+      if (selectedStage != null && task.stageType != selectedStage) return false;
       if (filter == 'all') return true;
       return task.status == filter;
     }).toList();
@@ -76,8 +97,6 @@ class TasksScreen extends ConsumerWidget {
     if (filteredTasks.isEmpty) {
       return EmptyState.tasks(context);
     }
-
-    final l10n = AppLocalizations.of(context)!;
 
     return RefreshIndicator(
       color: AppTheme.primaryGreen,

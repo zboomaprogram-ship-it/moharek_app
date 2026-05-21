@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/widgets/admin_activity_feed.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 
@@ -58,32 +59,43 @@ class AdminShell extends StatelessWidget {
 class AdminSidebar extends ConsumerWidget {
   const AdminSidebar({super.key});
 
-  static const _items = [
-    (
-      icon: Icons.dashboard_outlined,
-      label: 'النظرة العامة',
-      path: '/admin/overview',
-    ),
-    (icon: Icons.people_alt_outlined, label: 'فريق العمل', path: '/admin/team'),
-    (
-      icon: Icons.business_center_outlined,
-      label: 'العملاء',
-      path: '/admin/clients',
-    ),
-    (icon: Icons.bar_chart_outlined, label: 'التقارير', path: '/admin/reports'),
-    (icon: Icons.payments_outlined, label: 'المالية', path: '/admin/billing'),
-    (icon: Icons.support_agent_outlined, label: 'مركز الدعم', path: '/admin/support'),
-    (icon: Icons.history_outlined, label: 'سجل العمليات', path: '/admin/logs'),
-    (
-      icon: Icons.settings_outlined,
-      label: 'الإعدادات',
-      path: '/admin/settings',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final String current = GoRouterState.of(context).matchedLocation;
+    final isRabhan = AppConfig.flavorName == 'rabhan';
+
+    final items = [
+      (
+        icon: Icons.dashboard_outlined,
+        label: 'النظرة العامة',
+        path: '/admin/overview',
+      ),
+      (icon: Icons.people_alt_outlined, label: 'فريق العمل', path: '/admin/team'),
+      (
+        icon: Icons.business_center_outlined,
+        label: 'العملاء',
+        path: '/admin/clients',
+      ),
+      if (isRabhan)
+        (
+          icon: Icons.inventory_2_outlined,
+          label: 'الباقات',
+          path: '/admin/packages',
+        ),
+      (
+        icon: Icons.bar_chart_outlined,
+        label: isRabhan ? 'تقارير الأداء' : 'التقارير',
+        path: '/admin/reports',
+      ),
+      (icon: Icons.payments_outlined, label: 'المالية', path: '/admin/billing'),
+      (icon: Icons.support_agent_outlined, label: 'مركز الدعم', path: '/admin/support'),
+      (icon: Icons.history_outlined, label: 'سجل العمليات', path: '/admin/logs'),
+      (
+        icon: Icons.settings_outlined,
+        label: 'الإعدادات',
+        path: '/admin/settings',
+      ),
+    ];
 
     return Container(
       width: 260,
@@ -96,13 +108,13 @@ class AdminSidebar extends ConsumerWidget {
             child: Row(
               children: [
                 Image.asset(
-                  'assets/logo.png',
+                  AppConfig.logoAsset,
                   height: 32,
                   fit: BoxFit.contain,
                 ),
                 SizedBox(width: 12),
                 Text(
-                  'محرك',
+                  AppConfig.appName,
                   style: TextStyle(
                     color: AppTheme.primaryGreen,
                     fontSize: 22,
@@ -122,7 +134,7 @@ class AdminSidebar extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-              children: _items.map((item) {
+              children: items.map((item) {
                 final active = current.startsWith(item.path);
                 return _SidebarItem(
                   icon: item.icon,
