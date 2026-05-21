@@ -117,10 +117,9 @@ CREATE POLICY "chat_channels_team_all" ON public.chat_channels FOR ALL USING (
 
 
 -- ── 4. Sync missing profile rows for any existing auth users ──
-INSERT INTO public.profiles (id, email, full_name, role, created_at)
+INSERT INTO public.profiles (id, full_name, role, created_at)
 SELECT 
   id, 
-  email, 
   COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
   'client',
   created_at
