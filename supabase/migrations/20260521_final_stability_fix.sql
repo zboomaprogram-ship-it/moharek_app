@@ -3,6 +3,17 @@
 -- Run this in the Supabase SQL Editor
 -- ================================================================
 
+-- ── 0. Ensure all missing profiles columns exist ──
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS client_goal TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'en';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notification_preferences JSONB DEFAULT '{"reports":true,"tasks":true,"messages":true,"milestones":true,"meetings":true}'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onesignal_player_id TEXT;
+
+-- Create index for faster player ID lookups
+CREATE INDEX IF NOT EXISTS idx_profiles_onesignal_player_id ON public.profiles(onesignal_player_id);
+
 -- ── 1. Create SECURITY DEFINER role helper (bypasses RLS recursion) ──
 CREATE OR REPLACE FUNCTION public.get_my_role()
 RETURNS TEXT LANGUAGE sql SECURITY DEFINER STABLE AS $$
