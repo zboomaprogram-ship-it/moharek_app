@@ -368,7 +368,7 @@ class CampaignsTab extends ConsumerWidget {
                       'budget': double.tryParse(budgetCtrl.text) ?? 0,
                       'channel': platform,
                       'status': status,
-                      'currency': 'AED',
+                      'currency': 'SAR',
                     };
                     if (isEditing) {
                       await actions.updateCampaign((campaign as ProjectCampaign).id, data);

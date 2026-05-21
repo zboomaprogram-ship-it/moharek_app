@@ -45,7 +45,7 @@ class ChatMessage {
       convertedToTask: json['converted_to_task'] == true,
       linkedTaskId: json['linked_task_id']?.toString(),
       createdAt: json['created_at'] != null 
-          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()).toLocal()
           : DateTime.now(),
     );
   }

@@ -161,7 +161,7 @@ class AdminInvoicesScreen extends ConsumerWidget {
                               const SizedBox(height: 12),
                               _buildStat('مدفوعة', '$totalPaid', AppTheme.primaryGreen, true),
                               const SizedBox(height: 12),
-                              _buildStat('مستحقة', 'AED ${totalAmount.toStringAsFixed(0)}', AppTheme.primaryBlue, true),
+                              _buildStat('مستحقة', 'SAR ${totalAmount.toStringAsFixed(0)}', AppTheme.primaryBlue, true),
                             ],
                           )
                         else
@@ -171,7 +171,7 @@ class AdminInvoicesScreen extends ConsumerWidget {
                               const SizedBox(width: 12),
                               _buildStat('مدفوعة', '$totalPaid', AppTheme.primaryGreen, false),
                               const SizedBox(width: 12),
-                              _buildStat('مستحقة', 'AED ${totalAmount.toStringAsFixed(0)}', AppTheme.primaryBlue, false),
+                              _buildStat('مستحقة', 'SAR ${totalAmount.toStringAsFixed(0)}', AppTheme.primaryBlue, false),
                             ],
                           ),
                         const SizedBox(height: 24),
@@ -290,7 +290,7 @@ class AdminInvoicesScreen extends ConsumerWidget {
                 Text('${invoices.length} فواتير', style: const TextStyle(color: Colors.grey, fontSize: 11)),
                 const Spacer(),
                 Text(
-                  'AED ${paid.toStringAsFixed(0)} / ${total.toStringAsFixed(0)}',
+                  'SAR ${paid.toStringAsFixed(0)} / ${total.toStringAsFixed(0)}',
                   style: TextStyle(color: allPaid ? AppTheme.primaryGreen : Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -311,7 +311,7 @@ class AdminInvoicesScreen extends ConsumerWidget {
     final clientName = profile?['company_name'] as String? ?? profile?['full_name'] as String? ?? 'غير معروف';
     final status = invoice['status'] as String? ?? 'pending';
     final amount = (invoice['amount'] as num?)?.toDouble() ?? 0;
-    final currency = invoice['currency'] as String? ?? 'AED';
+    final currency = invoice['currency'] as String? ?? 'SAR';
     final dueDate = invoice['due_date'] as String?;
     final desc = invoice['description'] as String? ?? '';
 
@@ -441,7 +441,7 @@ class AdminInvoicesScreen extends ConsumerWidget {
     final batchCtrl = TextEditingController();
     String? selectedProjectId;
     DateTime? dueDate;
-    String currency = 'AED';
+    String currency = 'SAR';
     int installments = 1;
 
     showModalBottomSheet(

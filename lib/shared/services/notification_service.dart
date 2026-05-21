@@ -44,9 +44,16 @@ class NotificationService {
     // ── Notification click handler ─────────────────────────────────────────
     OneSignal.Notifications.addClickListener((event) {
       final data = event.notification.additionalData;
-      debugPrint('🔔 [OneSignal] Notification clicked: ${event.notification.title} data=$data');
+      final actionId = event.result.actionId;
+      debugPrint('🔔 [OneSignal] Notification clicked: ${event.notification.title} data=$data actionId=$actionId');
       if (data != null && data['type'] == 'call') {
-        CallNotificationService.handleIncomingCallPush(data);
+        if (actionId == 'accept') {
+          CallNotificationService.handleAcceptButtonPush(data);
+        } else if (actionId == 'reject') {
+          CallNotificationService.handleDeclineButtonPush(data);
+        } else {
+          CallNotificationService.handleIncomingCallPush(data);
+        }
       }
     });
 

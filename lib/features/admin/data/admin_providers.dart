@@ -692,7 +692,7 @@ class AdminActions {
 
     if (invoices.isNotEmpty && invoices.first['project_id'] != null) {
       final amount = invoices.first['amount'];
-      final currency = invoices.first['currency'] ?? 'AED';
+      final currency = invoices.first['currency'] ?? 'SAR';
       await _notify(
         projectId: invoices.first['project_id'],
         titleAr: '💰 فاتورة جديدة',
@@ -757,7 +757,7 @@ class AdminActions {
     required String paymentLink,
     String? description,
     double? amount,
-    String currency = 'AED',
+    String currency = 'SAR',
   }) async {
     // 1. Save payment_link on the invoice row
     await client

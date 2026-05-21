@@ -96,4 +96,16 @@ class CallNotificationService {
   static Future<void> _handleDeclineCall(String uuid) async {
     await _signalService.declineCall(uuid);
   }
+
+  static Future<void> handleAcceptButtonPush(Map<String, dynamic> data) async {
+    final signalId = data['id'] as String?;
+    if (signalId == null) return;
+    await _handleAcceptCall(signalId);
+  }
+
+  static Future<void> handleDeclineButtonPush(Map<String, dynamic> data) async {
+    final signalId = data['id'] as String?;
+    if (signalId == null) return;
+    await _handleDeclineCall(signalId);
+  }
 }

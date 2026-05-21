@@ -99,13 +99,19 @@ class CallService {
         sub?.cancel();
         try {
           final room = await joinCall('moharek-$projectId', callerName, identity);
-          completer.complete(room);
+          if (!completer.isCompleted) {
+            completer.complete(room);
+          }
         } catch (e) {
-          completer.completeError(e);
+          if (!completer.isCompleted) {
+            completer.completeError(e);
+          }
         }
       } else if (status == 'declined' || status == 'timeout') {
         sub?.cancel();
-        completer.completeError(status ?? 'unknown');
+        if (!completer.isCompleted) {
+          completer.completeError(status ?? 'unknown');
+        }
       }
     });
 

@@ -44,11 +44,21 @@ function buildTemplate(
     call_signals: {
       ar: {
         title: record?.call_type === 'video' ? '📹 مكالمة فيديو واردة' : '📞 مكالمة صوتية واردة',
-        body:  `${senderName || 'فريق ربحان'} يتصل بك. اقبل للانضمام.`,
+        body:  `${record?.caller_name ?? senderName ?? 'فريق ربحان'} يتصل بك. اقبل للانضمام.`,
       },
       en: {
         title: record?.call_type === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call',
-        body:  `${senderName || 'Team'} is calling you. Tap to join.`,
+        body:  `${record?.caller_name ?? senderName ?? 'Team'} is calling you. Tap to join.`,
+      },
+    },
+    call_signals_missed: {
+      ar: {
+        title: record?.call_type === 'video' ? '📹 مكالمة فيديو فائتة' : '📞 مكالمة صوتية فائتة',
+        body:  `لديك مكالمة فائتة من ${record?.caller_name ?? senderName ?? 'فريق ربحان'}.`,
+      },
+      en: {
+        title: record?.call_type === 'video' ? '📹 Missed Video Call' : '📞 Missed Voice Call',
+        body:  `You have a missed call from ${record?.caller_name ?? senderName ?? 'Team'}.`,
       },
     },
     tasks: {
@@ -68,8 +78,8 @@ function buildTemplate(
       en: { title: '📄 New Report',      body: `Report: ${record?.title || ''}` },
     },
     invoices: {
-      ar: { title: '💰 فاتورة جديدة', body: `مبلغ ${record?.amount || ''} ${record?.currency || 'AED'}` },
-      en: { title: '💰 New Invoice',   body: `Amount: ${record?.amount || ''} ${record?.currency || 'AED'}` },
+      ar: { title: '💰 فاتورة جديدة', body: `مبلغ ${record?.amount || ''} ${record?.currency || 'SAR'}` },
+      en: { title: '💰 New Invoice',   body: `Amount: ${record?.amount || ''} ${record?.currency || 'SAR'}` },
     },
     support_tickets: {
       ar: { title: '🎫 تذكرة دعم', body: `${record?.title || ''}` },
@@ -179,10 +189,14 @@ serve(async (req) => {
     if (isCall) {
       sharedPayload.priority = 10
       sharedPayload.ttl = 30
-      sharedPayload.android_channel_id = 'moharek_calls'
-      sharedPayload.ios_interruption_level = 'time-sensitive'
-      sharedPayload.ios_relevance_score = 1.0
       sharedPayload.content_available = true
+      sharedPayload.buttons = lang === 'ar' ? [
+        { id: 'accept', text: 'قبول' },
+        { id: 'reject', text: 'رفض' }
+      ] : [
+        { id: 'accept', text: 'Accept' },
+        { id: 'reject', text: 'Reject' }
+      ];
     } else {
       sharedPayload.priority = 7
     }
@@ -205,24 +219,24 @@ serve(async (req) => {
 
       const playerResults = await Promise.all(sends)
       results.push(...playerResults)
-    }
+    } else {
+      // ── Strategy B: Target by External User ID (fallback) ──────────────────
+      const externalTargeting = {
+        include_external_user_ids: [targetId],
+        channel_for_external_user_ids: 'push',
+      }
 
-    // ── Strategy B: Target by External User ID (fallback) ──────────────────
-    const externalTargeting = {
-      include_external_user_ids: [targetId],
-      channel_for_external_user_ids: 'push',
-    }
+      const extSends = []
+      if (MOHAREK_ONESIGNAL_APP_ID && MOHAREK_ONESIGNAL_API_KEY) {
+        extSends.push(sendToOneSignal(MOHAREK_ONESIGNAL_APP_ID, MOHAREK_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
+      }
+      if (RABHAN_ONESIGNAL_APP_ID && RABHAN_ONESIGNAL_API_KEY) {
+        extSends.push(sendToOneSignal(RABHAN_ONESIGNAL_APP_ID, RABHAN_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
+      }
 
-    const extSends = []
-    if (MOHAREK_ONESIGNAL_APP_ID && MOHAREK_ONESIGNAL_API_KEY) {
-      extSends.push(sendToOneSignal(MOHAREK_ONESIGNAL_APP_ID, MOHAREK_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
+      const extResults = await Promise.all(extSends)
+      results.push(...extResults)
     }
-    if (RABHAN_ONESIGNAL_APP_ID && RABHAN_ONESIGNAL_API_KEY) {
-      extSends.push(sendToOneSignal(RABHAN_ONESIGNAL_APP_ID, RABHAN_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
-    }
-
-    const extResults = await Promise.all(extSends)
-    results.push(...extResults)
 
     const anySuccess = results.some(r => r.success)
     return new Response(

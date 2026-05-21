@@ -27,7 +27,7 @@ class Invoice {
       projectId: json['project_id'],
       invoiceNumber: json['invoice_number'],
       amount: (json['amount'] as num).toDouble(),
-      currency: json['currency'] ?? 'AED',
+      currency: json['currency'] ?? 'SAR',
       status: json['status'] ?? 'unpaid',
       dueDate: json['due_date'] != null ? DateTime.parse(json['due_date']) : null,
       paymentLink: json['payment_link'],

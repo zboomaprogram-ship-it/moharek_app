@@ -1033,7 +1033,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               _buildPerformanceCard(
                 l10n.adSpend,
-                spend.isNotEmpty && spend != '—' ? 'AED $spend' : '—',
+                spend.isNotEmpty && spend != '—' ? 'SAR $spend' : '—',
                 Icons.monetization_on_outlined,
               ),
               _buildPerformanceCard(l10n.keywords, keywords, Icons.bar_chart),

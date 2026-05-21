@@ -72,7 +72,7 @@ class BillingTab extends ConsumerWidget {
             ),
             title: Text('فاتورة #${inv['id'].toString().substring(0, 8)}',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text('${(inv['created_at'] as String).split('T')[0]} • ${inv['currency'] ?? 'AED'}',
+            subtitle: Text('${(inv['created_at'] as String).split('T')[0]} • ${inv['currency'] ?? 'SAR'}',
                 style: const TextStyle(color: Colors.grey, fontSize: 12)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -225,7 +225,7 @@ class BillingTab extends ConsumerWidget {
                       await ref.read(adminActionsProvider).createInvoices([{
                         'project_id': pid,
                         'amount': double.tryParse(amountCtrl.text),
-                        'currency': 'AED',
+                        'currency': 'SAR',
                         'status': 'pending',
                         'description': descCtrl.text.trim(),
                         if (linkCtrl.text.trim().isNotEmpty)
@@ -271,7 +271,7 @@ class BillingTab extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'المبلغ: ${inv['currency'] ?? 'AED'} ${inv['amount'] ?? 0}',
+                'المبلغ: ${inv['currency'] ?? 'SAR'} ${inv['amount'] ?? 0}',
                 style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
               ),
               const SizedBox(height: 16),
@@ -322,7 +322,7 @@ class BillingTab extends ConsumerWidget {
                     paymentLink: link,
                     description: inv['description'] as String?,
                     amount: (inv['amount'] as num?)?.toDouble(),
-                    currency: inv['currency'] as String? ?? 'AED',
+                    currency: inv['currency'] as String? ?? 'SAR',
                   );
                   ref.invalidate(projectInvoicesProvider(pid));
                   if (ctx.mounted) Navigator.pop(ctx);

@@ -279,7 +279,7 @@ class AdminBillingScreen extends ConsumerWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              isCurrency ? '${formatter.format(value)} AED' : formatter.format(value),
+              isCurrency ? '${formatter.format(value)} SAR' : formatter.format(value),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: isMobile ? 20 : 24,
@@ -453,7 +453,7 @@ class AdminBillingScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _buildInput(numberCtrl, 'رقم الفاتورة (مثال: INV-1001)', Icons.numbers),
                 const SizedBox(height: 16),
-                _buildInput(amountCtrl, 'المبلغ (AED)', Icons.attach_money, keyboardType: TextInputType.number),
+                _buildInput(amountCtrl, 'المبلغ (SAR)', Icons.attach_money, keyboardType: TextInputType.number),
                 const SizedBox(height: 16),
                 _buildInput(descCtrl, 'وصف الفاتورة (اختياري)', Icons.description),
                 const SizedBox(height: 16),
@@ -540,7 +540,7 @@ class AdminBillingScreen extends ConsumerWidget {
                             'project_id': selectedProjectId,
                             'invoice_number': numberCtrl.text.trim(),
                             'amount': double.parse(amountCtrl.text.trim()),
-                            'currency': 'AED',
+                            'currency': 'SAR',
                             'description': descCtrl.text.trim(),
                             'status': 'pending',
                             'file_url': fileUrl,
