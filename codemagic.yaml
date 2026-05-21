@@ -1,0 +1,115 @@
+workflows:
+  # ─── Rabhan iOS App Store Release ────────────────────────────────────────────
+  rabhan-ios-release:
+    name: Rabhan iOS Release (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.zbooma.rabhan
+      vars:
+        FLUTTER_FLAVOR: rabhan
+        FLUTTER_TARGET: lib/main_rabhan.dart
+        BUNDLE_ID: com.zbooma.rabhan
+        APP_VERSION: 1.0.0
+        BUILD_NUMBER: $BUILD_NUMBER
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Initialize keychain
+        script: keychain initialize
+
+      - name: Fetch App Store signing files
+        script: |
+          app-store-connect fetch-signing-files $BUNDLE_ID \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Add signing certificates
+        script: keychain add-certificates
+
+      - name: Apply Xcode provisioning profiles
+        script: xcode-project use-profiles
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Install CocoaPods
+        script: find . -name "Podfile" -execdir pod install \;
+
+      - name: Build iOS IPA (rabhan flavor)
+        script: |
+          flutter build ipa \
+            --flavor $FLUTTER_FLAVOR \
+            --target $FLUTTER_TARGET \
+            --release \
+            --build-name=$APP_VERSION \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist /Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false   # change to true when ready for production
+
+  # ─── Rabhan Android App Bundle (Google Play) ────────────────────────────────
+  rabhan-android-release:
+    name: Rabhan Android Release (Play Store)
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      flutter: stable
+      android_signing:
+        - rabhan_keystore    # name of the code signing identity in Codemagic
+      vars:
+        FLUTTER_FLAVOR: rabhan
+        FLUTTER_TARGET: lib/main_rabhan.dart
+        APP_VERSION: 1.0.0
+        BUILD_NUMBER: $BUILD_NUMBER
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build Android App Bundle (rabhan flavor)
+        script: |
+          flutter build appbundle \
+            --flavor $FLUTTER_FLAVOR \
+            --target $FLUTTER_TARGET \
+            --release \
+            --build-name=$APP_VERSION \
+            --build-number=$BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/bundle/rabhanRelease/app-rabhan-release.aab
+      - build/app/outputs/mapping/rabhanRelease/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal   # start with internal testing
+        submit_as_draft: true
