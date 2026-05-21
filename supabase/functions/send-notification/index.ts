@@ -112,11 +112,26 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
+    console.log('[send-notification] Received webhook payload:', JSON.stringify(body))
+
     const { table, record } = body
-    const targetId: string | null = body.target_user_id ?? body.client_id ?? null
-    const senderName: string | undefined = body.sender_name
+
+    // ── Target User Resolution ──────────────────────────────────────────────
+    // Resolve targetId from various possible formats:
+    // 1. Direct body keys (manual trigger)
+    // 2. Webhook record keys (e.g. from notifications table insert)
+    // 3. Webhook on other tables
+    const targetId: string | null = 
+      body.target_user_id ?? 
+      body.client_id ?? 
+      record?.user_id ?? 
+      record?.client_id ?? 
+      null
+
+    const senderName: string | undefined = body.sender_name ?? record?.data?.sender_name
 
     if (!targetId) {
+      console.error('[send-notification] Error: No target user ID found in payload')
       return new Response(JSON.stringify({ error: 'No target user ID provided' }), { status: 400 })
     }
 
@@ -138,22 +153,26 @@ serve(async (req) => {
 
     const lang: 'ar' | 'en' = userData.preferred_language === 'en' ? 'en' : 'ar'
     const firstName = userData.full_name?.split(' ')[0] || (lang === 'ar' ? 'عزيزي' : 'there')
-    const isCall = table === 'call_signals'
+    
+    // Determine the source table
+    // If webhook is from notifications table, we might want to look at the nested table type
+    const sourceTable = table === 'notifications' ? (record?.type || 'notifications') : table
+    const isCall = sourceTable === 'call_signals'
 
-    const { title, body: pushBody } = buildTemplate(table, record, lang, firstName, senderName)
+    const { title, body: pushBody } = buildTemplate(sourceTable, record, lang, firstName, senderName)
 
     // ── Shared notification payload (no app_id or targeting yet) ──
     const sharedPayload: Record<string, any> = {
       headings: { ar: title, en: title },
       contents: { ar: pushBody, en: pushBody },
       data: {
-        table,
+        table: sourceTable,
         id: record?.id,
-        type: isCall ? 'call' : table,
-        call_type: record?.call_type,
-        caller_name: record?.caller_name,
-        link_path: record?.link_path,
-        channel_id: record?.channel_id,
+        type: isCall ? 'call' : sourceTable,
+        call_type: record?.call_type ?? record?.data?.call_type,
+        caller_name: record?.caller_name ?? record?.data?.caller_name,
+        link_path: record?.link_path ?? record?.data?.link_path,
+        channel_id: record?.channel_id ?? record?.data?.channel_id,
       },
     }
 
@@ -169,15 +188,11 @@ serve(async (req) => {
       sharedPayload.android_channel_id = 'moharek_general'
     }
 
-    console.log(`[send-notification] → ${table} → ${targetId} | player_id: ${userData.onesignal_player_id ?? 'none'} | ${title}`)
+    console.log(`[send-notification] → ${sourceTable} → ${targetId} | player_id: ${userData.onesignal_player_id ?? 'none'} | ${title}`)
 
     const results: any[] = []
 
     // ── Strategy A: Target by stored Player ID (most reliable) ─────────────
-    // When we have a stored player ID, we send directly to that specific device
-    // subscription. Player IDs are unique to a OneSignal app, so we must also
-    // send to the matching app_id.
-    // Since we don't store which flavor registered the player, we try BOTH apps.
     if (userData.onesignal_player_id) {
       const playerTargeting = { include_player_ids: [userData.onesignal_player_id] }
 
@@ -194,8 +209,6 @@ serve(async (req) => {
     }
 
     // ── Strategy B: Target by External User ID (fallback) ──────────────────
-    // external_user_id = the Supabase user UUID set via OneSignal.login()
-    // This works even if player_id is not stored yet (e.g. first login)
     const externalTargeting = {
       include_external_user_ids: [targetId],
       channel_for_external_user_ids: 'push',
