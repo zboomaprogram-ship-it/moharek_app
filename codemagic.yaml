@@ -5,7 +5,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: rabhan
+      app_store_connect: Rabhan
 
     environment:
       flutter: stable
@@ -68,7 +68,7 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        submit_to_app_store: false   # change to true when ready for production
+        submit_to_app_store: false # change to true when ready for production
 
   # ─── Rabhan Android App Bundle (Google Play) ────────────────────────────────
   rabhan-android-release:
@@ -79,7 +79,7 @@ workflows:
     environment:
       flutter: stable
       android_signing:
-        - rabhan_keystore    # name of the code signing identity in Codemagic
+        - rabhan_keystore # name of the code signing identity in Codemagic
       vars:
         FLUTTER_FLAVOR: rabhan
         FLUTTER_TARGET: lib/main_rabhan.dart
@@ -113,5 +113,5 @@ workflows:
     publishing:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal   # start with internal testing
+        track: internal # start with internal testing
         submit_as_draft: true
