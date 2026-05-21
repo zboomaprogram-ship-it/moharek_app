@@ -185,7 +185,6 @@ serve(async (req) => {
       sharedPayload.content_available = true
     } else {
       sharedPayload.priority = 7
-      sharedPayload.android_channel_id = 'moharek_general'
     }
 
     console.log(`[send-notification] → ${sourceTable} → ${targetId} | player_id: ${userData.onesignal_player_id ?? 'none'} | ${title}`)
