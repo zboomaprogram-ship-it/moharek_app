@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/ai_assistant/data/ai_assistant_provider.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
@@ -135,7 +136,9 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               ),
               const SizedBox(height: 32),
               Text(
-                isAr ? 'أهلاً بك في محرك الذكي' : 'Welcome to Moharek AI',
+                isAr 
+                    ? 'أهلاً بك في ${AppConfig.appName} الذكي' 
+                    : 'Welcome to ${AppConfig.flavorName == 'rabhan' ? 'Rabhan' : 'Moharek'} AI',
                 style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
