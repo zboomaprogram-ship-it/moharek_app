@@ -9,7 +9,7 @@ import java.io.File
 import java.io.IOException
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.zbooma.moharek/voice_recorder"
+    private val CHANNEL = "com.zbooma.app/voice_recorder"
     private var recorder: MediaRecorder? = null
     private var lastFilePath: String? = null
 

@@ -12,7 +12,7 @@ import AVFoundation
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-    let channel = FlutterMethodChannel(name: "com.zbooma.moharek/voice_recorder",
+    let channel = FlutterMethodChannel(name: "com.zbooma.app/voice_recorder",
                                       binaryMessenger: controller.binaryMessenger)
     
     channel.setMethodCallHandler({

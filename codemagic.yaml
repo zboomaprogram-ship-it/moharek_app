@@ -38,6 +38,11 @@ workflows:
       - name: Install CocoaPods
         script: find . -name "Podfile" -execdir pod install \;
 
+      - name: Copy flavor-specific GoogleService-Info.plist
+        script: |
+          cp ios/config/$FLUTTER_FLAVOR/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+          echo "Copied GoogleService-Info.plist for flavor: $FLUTTER_FLAVOR"
+
       - name: Build iOS IPA (rabhan flavor)
         script: |
           flutter build ipa \
@@ -57,6 +62,66 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false # change to true when ready for production
+
+  # ─── Moharek iOS App Store Release ──────────────────────────────────────────
+  moharek-ios-release:
+    name: Moharek iOS Release (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Rabhan  # TODO: Create a separate "Moharek" integration if needed
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.zbooma.moharek
+      vars:
+        FLUTTER_FLAVOR: moharek
+        FLUTTER_TARGET: lib/main_moharek.dart
+        BUNDLE_ID: com.zbooma.moharek
+        APP_VERSION: 1.0.0
+        BUILD_NUMBER: $BUILD_NUMBER
+
+    triggering:
+      events: []  # Manual trigger only — don't auto-build on push
+
+    scripts:
+      - name: Apply Xcode provisioning profiles
+        script: xcode-project use-profiles
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Install CocoaPods
+        script: find . -name "Podfile" -execdir pod install \;
+
+      - name: Copy flavor-specific GoogleService-Info.plist
+        script: |
+          cp ios/config/$FLUTTER_FLAVOR/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+          echo "Copied GoogleService-Info.plist for flavor: $FLUTTER_FLAVOR"
+
+      - name: Build iOS IPA (moharek flavor)
+        script: |
+          flutter build ipa \
+            --flavor $FLUTTER_FLAVOR \
+            --target $FLUTTER_TARGET \
+            --release \
+            --build-name=$APP_VERSION \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist /Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
 
   # ─── Rabhan Android App Bundle (Google Play) ────────────────────────────────
   rabhan-android-release:
@@ -102,4 +167,46 @@ workflows:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal # start with internal testing
+        submit_as_draft: true
+
+  # ─── Moharek Android App Bundle (Google Play) ──────────────────────────────
+  moharek-android-release:
+    name: Moharek Android Release (Play Store)
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      flutter: stable
+      android_signing:
+        - moharek_keystore # name of the code signing identity in Codemagic
+      vars:
+        FLUTTER_FLAVOR: moharek
+        FLUTTER_TARGET: lib/main_moharek.dart
+        APP_VERSION: 1.0.0
+        BUILD_NUMBER: $BUILD_NUMBER
+
+    triggering:
+      events: []  # Manual trigger only
+
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Build Android App Bundle (moharek flavor)
+        script: |
+          flutter build appbundle \
+            --flavor $FLUTTER_FLAVOR \
+            --target $FLUTTER_TARGET \
+            --release \
+            --build-name=$APP_VERSION \
+            --build-number=$BUILD_NUMBER
+
+    artifacts:
+      - build/app/outputs/bundle/moharekRelease/app-moharek-release.aab
+      - build/app/outputs/mapping/moharekRelease/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
         submit_as_draft: true

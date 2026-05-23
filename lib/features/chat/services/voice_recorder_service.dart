@@ -8,7 +8,7 @@ import 'package:moharek_app/features/chat/services/file_io_native.dart' if (dart
 
 /// Truly Native voice recorder service using Platform Channels for Mobile.
 class VoiceRecorderService {
-  static const _channel = MethodChannel('com.zbooma.moharek/voice_recorder');
+  static const _channel = MethodChannel('com.zbooma.app/voice_recorder');
   
   // Web remains using browser's MediaRecorder via 'record' package
   rec.AudioRecorder? _webRecorder;

@@ -11,7 +11,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/theme/rabhan_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/core/config/moharek_config.dart';
-import 'package:moharek_app/core/config/rabhan_config.dart';
+
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
 import 'package:moharek_app/core/providers/locale_provider.dart';
@@ -86,7 +86,7 @@ void main() async {
   try {
     AppConfig.instance;
   } catch (_) {
-    AppConfig.setInstance(const RabhanConfig());
+    AppConfig.setInstance(const MoharekConfig());
   }
 
   WidgetsFlutterBinding.ensureInitialized();
