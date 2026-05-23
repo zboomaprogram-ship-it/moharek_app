@@ -18,6 +18,8 @@ class OneSignalNotifications {
 
 class OSPushSubscription {
   String? get id => null;
+  void addObserver(dynamic observer) {}
+  void removeObserver(dynamic observer) {}
 }
 
 class OneSignalUser {
