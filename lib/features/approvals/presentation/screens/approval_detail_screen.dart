@@ -4,8 +4,10 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/models/approval.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/widgets/pdf_viewer_screen.dart';
+import 'package:moharek_app/shared/widgets/image_viewer_screen.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ApprovalDetailScreen extends ConsumerWidget {
   final ApprovalRequest approval;
@@ -18,18 +20,37 @@ class ApprovalDetailScreen extends ConsumerWidget {
     String status, {
     String? notes,
   }) async {
-    final client = ref.read(supabaseClientProvider);
-    await client
-        .from('approvals')
-        .update({
-          'status': status,
-          'client_notes': notes,
-          'responded_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', approval.id);
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+    );
 
-    ref.invalidate(approvalsProvider);
-    if (context.mounted) Navigator.pop(context);
+    try {
+      final client = ref.read(supabaseClientProvider);
+      await client
+          .from('approvals')
+          .update({
+            'status': status,
+            'client_notes': notes,
+            'responded_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', approval.id);
+
+      ref.invalidate(approvalsProvider);
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+        Navigator.of(context).pop(); // Close detail screen
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء حفظ الموافقة: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -144,22 +165,55 @@ class ApprovalDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildFileCard(BuildContext context, AppLocalizations l10n) {
-    final isImage = approval.fileUrl!.toLowerCase().endsWith('.png') || 
-                    approval.fileUrl!.toLowerCase().endsWith('.jpg') || 
-                    approval.fileUrl!.toLowerCase().endsWith('.jpeg');
+    final fileUrl = approval.fileUrl!;
+    final lowerUrl = fileUrl.toLowerCase();
+    final isImage = lowerUrl.endsWith('.png') || 
+                    lowerUrl.endsWith('.jpg') || 
+                    lowerUrl.endsWith('.jpeg') ||
+                    lowerUrl.endsWith('.gif') ||
+                    lowerUrl.endsWith('.webp');
+    final isPdf = lowerUrl.endsWith('.pdf');
 
     return GestureDetector(
-      onTap: () {
-        if (approval.fileUrl != null) {
+      onTap: () async {
+        if (isImage) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PdfViewerScreen(
-                url: approval.fileUrl!,
+              builder: (context) => ImageViewerScreen(
+                url: fileUrl,
                 title: approval.title,
               ),
             ),
           );
+        } else if (isPdf) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PdfViewerScreen(
+                url: fileUrl,
+                title: approval.title,
+              ),
+            ),
+          );
+        } else {
+          final uri = Uri.tryParse(fileUrl);
+          if (uri != null) {
+            try {
+              final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (!launched && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Could not open file URL: $fileUrl')),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error opening file: $e')),
+                );
+              }
+            }
+          }
         }
       },
       child: Container(
@@ -178,7 +232,7 @@ class ApprovalDetailScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined,
+                isImage ? Icons.image_outlined : (isPdf ? Icons.picture_as_pdf_outlined : Icons.insert_drive_file_outlined),
                 color: AppTheme.primaryGreen,
               ),
             ),

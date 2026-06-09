@@ -1,23 +1,27 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/chat/services/voice_recorder_service.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
+import 'package:moharek_app/shared/services/haptic_service.dart';
 
 class VoiceRecordButton extends StatefulWidget {
   final VoiceRecorderService recorderService;
   final Function(VoiceRecordingResult) onRecordingComplete;
-  final Function(bool) onRecordingToggle;
   final bool isRtl;
+  final Widget child;
+  final bool isTyping;
+  final VoidCallback onSendTap;
 
   const VoiceRecordButton({
     super.key,
     required this.recorderService,
     required this.onRecordingComplete,
-    required this.onRecordingToggle,
     required this.isRtl,
+    required this.child,
+    required this.isTyping,
+    required this.onSendTap,
   });
 
   @override
@@ -27,6 +31,7 @@ class VoiceRecordButton extends StatefulWidget {
 class _VoiceRecordButtonState extends State<VoiceRecordButton>
     with SingleTickerProviderStateMixin {
   bool _isRecording = false;
+  bool _isLocked = false;
   bool _isCancelling = false;
   double _dragOffset = 0;
   late AnimationController _pulseController;
@@ -35,10 +40,8 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
   int _seconds = 0;
   Timer? _timer;
   
-  // Custom Waveform data
-  final List<double> _bars = [];
-  static const int _maxBars = 30;
-  static const double _cancelThreshold = 100;
+  static const double _cancelThreshold = 80;
+  static const double _lockThreshold = 80;
 
   @override
   void initState() {
@@ -47,7 +50,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.25).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -60,15 +63,14 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
     try {
       await widget.recorderService.startRecording();
       if (!mounted) return;
-      if (!kIsWeb) HapticFeedback.mediumImpact();
+      if (!kIsWeb) HapticService.medium();
       
-      widget.onRecordingToggle(true);
       _safeState(() {
         _isRecording = true;
+        _isLocked = false;
         _isCancelling = false;
         _dragOffset = 0;
         _seconds = 0;
-        _bars.clear();
       });
 
       int ticks = 0;
@@ -84,12 +86,8 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
         }
         
         ticks++;
-        final newSample = widget.recorderService.lastAmplitude;
-
         _safeState(() {
           if (ticks % 10 == 0) _seconds++;
-          if (_bars.length >= _maxBars) _bars.removeAt(0);
-          _bars.add(newSample);
         });
       });
     } catch (e) {
@@ -102,45 +100,63 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
     }
   }
 
-  Future<void> _stopRecording() async {
+  Future<void> _stopRecording({required bool send}) async {
     if (!_isRecording) return;
 
     _timer?.cancel();
     _timer = null;
-    widget.onRecordingToggle(false);
 
-    if (_isCancelling) {
+    if (!send) {
       await widget.recorderService.cancelRecording();
-      if (!kIsWeb) HapticFeedback.lightImpact();
+      if (!kIsWeb) HapticService.light();
       _safeState(() {
         _isRecording = false;
+        _isLocked = false;
         _isCancelling = false;
         _dragOffset = 0;
-        _bars.clear();
       });
     } else {
       final result = await widget.recorderService.stopRecording();
       _safeState(() {
         _isRecording = false;
+        _isLocked = false;
         _isCancelling = false;
         _dragOffset = 0;
-        _bars.clear();
       });
       if (result != null) {
-        if (!kIsWeb) HapticFeedback.lightImpact();
+        if (!kIsWeb) HapticService.light();
         widget.onRecordingComplete(result);
       }
     }
   }
 
-  void _onDragUpdate(DragUpdateDetails details) {
-    if (!_isRecording) return;
+  void _onDragUpdate(Offset offsetFromOrigin) {
+    if (!_isRecording || _isLocked) return;
+    
+    final dx = offsetFromOrigin.dx;
+    final dy = offsetFromOrigin.dy;
+
+    // Drag left to cancel (dx is negative)
+    if (dx < -_cancelThreshold) {
+      _stopRecording(send: false);
+      return;
+    }
+    
+    // Drag up to lock (dy is negative)
+    if (dy < -_lockThreshold) {
+      HapticService.medium();
+      _safeState(() {
+        _isLocked = true;
+        _dragOffset = 0;
+        _isCancelling = false;
+      });
+      return;
+    }
+    
     _safeState(() {
-      final delta = widget.isRtl ? details.delta.dx : -details.delta.dx;
-      _dragOffset = (_dragOffset + delta).clamp(0, double.infinity);
-      _isCancelling = _dragOffset > _cancelThreshold;
+      _dragOffset = dx.abs();
+      _isCancelling = dx < -20;
     });
-    if (_isCancelling && !kIsWeb) HapticFeedback.selectionClick();
   }
 
   String get _durationLabel {
@@ -151,141 +167,237 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
 
   @override
   Widget build(BuildContext context) {
+    final isAr = widget.isRtl;
     final l10n = AppLocalizations.of(context)!;
 
-    return GestureDetector(
-      onLongPressStart: (_) => _startRecording(),
-      onLongPressEnd: (_) => _stopRecording(),
-      onLongPressMoveUpdate: (details) => _onDragUpdate(
-        DragUpdateDetails(
-          globalPosition: details.globalPosition,
-          delta: details.offsetFromOrigin,
-          localPosition: details.localPosition,
-        ),
-      ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: _isRecording ? _buildRecordingState(l10n) : _buildIdleState(),
-      ),
-    );
-  }
-
-  Widget _buildIdleState() {
-    return Container(
-      key: const ValueKey('idle'),
-      width: 48, height: 48,
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E293B),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.mic, color: Color(0xFF4CAF50), size: 24),
-    );
-  }
-
-  Widget _buildRecordingState(AppLocalizations l10n) {
-    return Container(
-      key: const ValueKey('recording'),
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          ScaleTransition(
-            scale: _pulseAnimation,
-            child: Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: _isCancelling ? Colors.red : const Color(0xFF4CAF50),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.mic, color: Colors.white, size: 18),
-            ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: _isRecording ? const Color(0xFF1E293B) : Colors.transparent,
+            borderRadius: BorderRadius.circular(28),
           ),
-          const SizedBox(width: 8),
-          Text(
-            _durationLabel,
-            style: const TextStyle(
-              color: Colors.white, fontSize: 13, fontFamily: 'monospace',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _isCancelling
-                ? Text(
-                    l10n.recordingCancelled,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                  )
-                : _buildWaveform(),
-          ),
-          const SizedBox(width: 8),
-          if (!_isCancelling)
-            Expanded(
-              child: Stack(
-                alignment: widget.isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                children: [
-                  Opacity(
-                    opacity: (1 - (_dragOffset / _cancelThreshold)).clamp(0.0, 1.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          widget.isRtl ? Icons.chevron_right : Icons.chevron_left,
-                          color: Colors.grey, size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.swipeToCancel,
-                          style: const TextStyle(color: Colors.grey, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Progress indicator of the slide
-                  Positioned(
-                    left: widget.isRtl ? _dragOffset : null,
-                    right: !widget.isRtl ? _dragOffset : null,
-                    child: Container(
-                      width: 4,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(2),
+          padding: EdgeInsets.symmetric(horizontal: _isRecording ? 12 : 0),
+          child: Row(
+            children: [
+              // Left & Middle panel
+              Expanded(
+                child: Stack(
+                  alignment: isAr ? Alignment.centerRight : Alignment.centerLeft,
+                  children: [
+                    // The text field child (visible when not recording)
+                    Opacity(
+                      opacity: _isRecording ? 0.0 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: _isRecording,
+                        child: widget.child,
                       ),
                     ),
-                  ),
-                ],
+                    
+                    // Recording Overlay status
+                    if (_isRecording)
+                      Positioned.fill(
+                        child: _buildRecordingOverlay(l10n, isAr),
+                      ),
+                  ],
+                ),
+              ),
+              
+              // Right side Send / Mic Button
+              _buildRightActionButton(l10n),
+            ],
+          ),
+        ),
+        
+        // Floating Lock Indicator when holding
+        if (_isRecording && !_isLocked) _buildFloatingLockIndicator(),
+      ],
+    );
+  }
+
+  Widget _buildRightActionButton(AppLocalizations l10n) {
+    if (widget.isTyping && !_isRecording) {
+      // Normal typing state: Send button
+      return GestureDetector(
+        onTap: widget.onSendTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: const BoxDecoration(
+            color: AppTheme.primaryGreen,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.send, color: Colors.black, size: 24),
+        ),
+      );
+    }
+
+    if (_isRecording && _isLocked) {
+      // Locked recording state: Send button
+      return GestureDetector(
+        onTap: () => _stopRecording(send: true),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: const BoxDecoration(
+            color: AppTheme.primaryGreen,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.send, color: Colors.black, size: 24),
+        ),
+      );
+    }
+
+    // Default: Mic button (idle or long pressing)
+    return GestureDetector(
+      onLongPressStart: (_) => _startRecording(),
+      onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
+      onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),
+      child: _buildMicButton(),
+    );
+  }
+
+  Widget _buildMicButton() {
+    return ScaleTransition(
+      scale: _isRecording ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: _isRecording ? Colors.redAccent : const Color(0xFF1E293B),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.mic,
+          color: _isRecording ? Colors.white : AppTheme.primaryGreen,
+          size: 24,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecordingOverlay(AppLocalizations l10n, bool isAr) {
+    final widgets = <Widget>[];
+
+    if (_isLocked) {
+      // Locked Mode: Red Trash bin button on the left (or right if RTL)
+      widgets.add(
+        GestureDetector(
+          onTap: () => _stopRecording(send: false),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+          ),
+        ),
+      );
+      widgets.add(const Spacer());
+      
+      // Timer in the middle
+      widgets.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildBlinkingDot(),
+            const SizedBox(width: 8),
+            Text(
+              _durationLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
               ),
             ),
+          ],
+        ),
+      );
+      widgets.add(const Spacer());
+    } else {
+      // Holding Mode: red dot + timer on left, cancel slider in middle
+      widgets.add(_buildBlinkingDot());
+      widgets.add(const SizedBox(width: 8));
+      widgets.add(
+        Text(
+          _durationLabel,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
+      );
+      widgets.add(const SizedBox(width: 24));
+      widgets.add(
+        Expanded(
+          child: _buildCancelSlider(l10n, isAr),
+        ),
+      );
+    }
+
+    return Row(
+      children: isAr ? widgets.reversed.toList() : widgets,
+    );
+  }
+
+  Widget _buildBlinkingDot() {
+    return _BlinkingDot();
+  }
+
+  Widget _buildCancelSlider(AppLocalizations l10n, bool isAr) {
+    return Transform.translate(
+      offset: Offset(-_dragOffset, 0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isAr ? Icons.chevron_right : Icons.chevron_left,
+            color: Colors.grey,
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.swipeToCancel,
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildWaveform() {
-    return LayoutBuilder(builder: (ctx, constraints) {
-      final width = constraints.maxWidth;
-      final barWidth = (width / _maxBars).clamp(2.0, 6.0);
-
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: List.generate(_bars.length, (i) {
-          final height = (_bars[i] * 30).clamp(4.0, 30.0);
-          return Container(
-            width: barWidth - 1,
-            height: height,
-            margin: const EdgeInsets.symmetric(horizontal: 0.5),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
-              borderRadius: BorderRadius.circular(2),
+  Widget _buildFloatingLockIndicator() {
+    return Positioned(
+      bottom: 64,
+      right: widget.isRtl ? null : 15,
+      left: widget.isRtl ? 15 : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline, color: Colors.white70, size: 18),
+          const SizedBox(height: 4),
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, -_pulseController.value * 8),
+                child: child,
+              );
+            },
+            child: const Icon(
+              Icons.keyboard_arrow_up,
+              color: Colors.white54,
+              size: 14,
             ),
-          );
-        }),
-      );
-    });
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -293,5 +405,44 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
     _timer?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+}
+
+class _BlinkingDot extends StatefulWidget {
+  @override
+  State<_BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
   }
 }

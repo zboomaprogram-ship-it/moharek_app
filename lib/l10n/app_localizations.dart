@@ -2081,13 +2081,13 @@ abstract class AppLocalizations {
   /// No description provided for @viewDesign.
   ///
   /// In ar, this message translates to:
-  /// **'عرض التصميم'**
+  /// **'عرض المرفق'**
   String get viewDesign;
 
   /// No description provided for @viewDocument.
   ///
   /// In ar, this message translates to:
-  /// **'عرض المستند'**
+  /// **'عرض المرفق'**
   String get viewDocument;
 
   /// No description provided for @rejected.

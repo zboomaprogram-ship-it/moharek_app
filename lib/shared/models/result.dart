@@ -12,6 +12,7 @@ class ResultMetric {
   final double? changeFromLast;
   final String? trendDirection;
   final DateTime recordedAt;
+  final String? fileUrl;
 
   ResultMetric({
     required this.id,
@@ -27,6 +28,7 @@ class ResultMetric {
     this.changeFromLast,
     this.trendDirection,
     required this.recordedAt,
+    this.fileUrl,
   });
 
   factory ResultMetric.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class ResultMetric {
       changeFromLast: (json['change_from_last'] as num?)?.toDouble(),
       trendDirection: json['trend_direction'],
       recordedAt: DateTime.parse(json['recorded_at'] ?? DateTime.now().toIso8601String()),
+      fileUrl: json['file_url'],
     );
   }
 }

@@ -22,16 +22,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 function buildTemplate(
   table: string,
   record: any,
-  lang: 'ar' | 'en',
   firstName: string,
   senderName?: string,
-) {
-  const sender = senderName || (lang === 'ar' ? 'فريقك' : 'Your team')
+): Record<'ar' | 'en', { title: string; body: string }> {
+  const senderAr = senderName || 'فريقك'
+  const senderEn = senderName || 'Your team'
 
   const t: Record<string, Record<'ar' | 'en', { title: string; body: string }>> = {
     messages: {
-      ar: { title: '💬 رسالة جديدة', body: `${sender}: ${record?.content ? String(record.content).substring(0, 80) : 'راجع المحادثة'}` },
-      en: { title: '💬 New Message',  body: `${sender}: ${record?.content ? String(record.content).substring(0, 80) : 'Check the chat'}` },
+      ar: { title: '💬 رسالة جديدة', body: `${senderAr}: ${record?.content ? String(record.content).substring(0, 80) : 'راجع المحادثة'}` },
+      en: { title: '💬 New Message',  body: `${senderEn}: ${record?.content ? String(record.content).substring(0, 80) : 'Check the chat'}` },
     },
     notifications: {
       ar: { title: record?.title_ar || '🔔 تنبيه جديد',         body: record?.body_ar || 'لديك تحديث جديد في لوحة التحكم.' },
@@ -87,8 +87,9 @@ function buildTemplate(
     },
   }
 
-  return (t[table] || t.notifications)[lang]
+  return t[table] || t.notifications
 }
+
 
 // ── Send to ONE OneSignal app ─────────────────────────────────────────────────
 async function sendToOneSignal(
@@ -165,16 +166,22 @@ serve(async (req) => {
     const firstName = userData.full_name?.split(' ')[0] || (lang === 'ar' ? 'عزيزي' : 'there')
     
     // Determine the source table
-    // If webhook is from notifications table, we might want to look at the nested table type
-    const sourceTable = table === 'notifications' ? (record?.type || 'notifications') : table
+    // For in-app notification records, we always use the notifications template
+    // which extracts title_ar/body_ar/title_en/body_en from the notification row.
+    const sourceTable = table === 'notifications' ? 'notifications' : table
     const isCall = sourceTable === 'call_signals'
 
-    const { title, body: pushBody } = buildTemplate(sourceTable, record, lang, firstName, senderName)
+    // Get bilingual templates
+    const template = buildTemplate(sourceTable, record, firstName, senderName)
+    
+    // Ensure we always have non-empty strings for both languages to satisfy OneSignal validation
+    const titleAr = template.ar.title || '🔔 تنبيه جديد'
+    const bodyAr = template.ar.body || 'لديك تحديث جديد في لوحة التحكم.'
 
     // ── Shared notification payload (no app_id or targeting yet) ──
     const sharedPayload: Record<string, any> = {
-      headings: { ar: title, en: title },
-      contents: { ar: pushBody, en: pushBody },
+      headings: { ar: titleAr, en: titleAr }, // Always Arabic
+      contents: { ar: bodyAr, en: bodyAr },   // Always Arabic
       data: {
         table: sourceTable,
         id: record?.id,
@@ -201,7 +208,7 @@ serve(async (req) => {
       sharedPayload.priority = 7
     }
 
-    console.log(`[send-notification] → ${sourceTable} → ${targetId} | player_id: ${userData.onesignal_player_id ?? 'none'} | ${title}`)
+    console.log(`[send-notification] → ${sourceTable} → ${targetId} | player_id: ${userData.onesignal_player_id ?? 'none'} | ${titleAr}`)
 
     const results: any[] = []
 

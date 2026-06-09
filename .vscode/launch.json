@@ -2,16 +2,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Rabhan App",
-      "request": "launch",
-      "type": "dart",
-      "program": "lib/main_rabhan.dart",
-      "args": [
-        "--flavor",
-        "rabhan"
-      ]
-    },
-    {
       "name": "Moharek App",
       "request": "launch",
       "type": "dart",
@@ -19,6 +9,16 @@
       "args": [
         "--flavor",
         "moharek"
+      ]
+    },
+    {
+      "name": "Rabhan App",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_rabhan.dart",
+      "args": [
+        "--flavor",
+        "rabhan"
       ]
     }
   ]

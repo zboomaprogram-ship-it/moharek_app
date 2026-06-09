@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 
 class AdminClientsScreen extends ConsumerWidget {
@@ -123,8 +124,12 @@ class AdminClientsScreen extends ConsumerWidget {
                     );
                   }
 
+                  final unreadMap = ref.watch(
+                    unreadNotificationsByProjectProvider,
+                  );
+
                   if (isMobile) {
-                    return _buildClientCards(context, projects);
+                    return _buildClientCards(context, projects, unreadMap);
                   }
 
                   return Container(
@@ -136,7 +141,7 @@ class AdminClientsScreen extends ConsumerWidget {
                         width: 1,
                       ),
                     ),
-                    child: _buildClientTable(context, projects),
+                    child: _buildClientTable(context, projects, unreadMap),
                   );
                 },
               ),
@@ -150,6 +155,7 @@ class AdminClientsScreen extends ConsumerWidget {
   Widget _buildClientCards(
     BuildContext context,
     List<Map<String, dynamic>> projects,
+    Map<String, int> unreadMap,
   ) {
     return ListView.separated(
       itemCount: projects.length,
@@ -160,6 +166,7 @@ class AdminClientsScreen extends ConsumerWidget {
         final name = client?['full_name'] ?? '—';
         final company = client?['company_name'] ?? '—';
         final health = (p['health_score'] ?? 0).toDouble();
+        final hasUnread = (unreadMap[p['id']] ?? 0) > 0;
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -175,18 +182,42 @@ class AdminClientsScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppTheme.primaryBlue.withValues(
-                        alpha: 0.1,
-                      ),
-                      child: Text(
-                        name.isNotEmpty ? name[0] : '?',
-                        style: const TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.bold,
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppTheme.primaryBlue.withValues(
+                            alpha: 0.1,
+                          ),
+                          child: Text(
+                            name.isNotEmpty ? name[0] : '?',
+                            style: const TextStyle(
+                              color: AppTheme.primaryBlue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (hasUnread)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.redAccent,
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -270,6 +301,7 @@ class AdminClientsScreen extends ConsumerWidget {
   Widget _buildClientTable(
     BuildContext context,
     List<Map<String, dynamic>> projects,
+    Map<String, int> unreadMap,
   ) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -351,35 +383,62 @@ class AdminClientsScreen extends ConsumerWidget {
             final name = client?['full_name'] ?? '—';
             final company = client?['company_name'] ?? '—';
             final health = (p['health_score'] ?? 0).toDouble();
+            final hasUnread = (unreadMap[p['id']] ?? 0) > 0;
 
             return DataRow(
               cells: [
                 DataCell(
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppTheme.primaryBlue.withValues(
-                            alpha: 0.1,
-                          ),
-                          child: Text(
-                            name.isNotEmpty ? name[0] : '?',
-                            style: const TextStyle(
-                              color: AppTheme.primaryBlue,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                      Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppTheme.primaryBlue.withValues(
+                                  alpha: 0.2,
+                                ),
+                                width: 1,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: AppTheme.primaryBlue.withValues(
+                                alpha: 0.1,
+                              ),
+                              child: Text(
+                                name.isNotEmpty ? name[0] : '?',
+                                style: const TextStyle(
+                                  color: AppTheme.primaryBlue,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          if (hasUnread)
+                            Positioned(
+                              top: 0,
+                              right: 0,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.redAccent,
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(width: 12),
                       Text(

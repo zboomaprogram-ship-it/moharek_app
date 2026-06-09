@@ -6,6 +6,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/chat/presentation/screens/chat_screen.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 /// Fetches channels — and for Rabhan auto-creates the channel if missing via RPC.
 final projectChannelsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
@@ -214,7 +215,39 @@ class ChannelsScreen extends ConsumerWidget {
                         : (isRabhan ? 'With Rabhan team' : 'With Moharek team'),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                  trailing: Consumer(
+                    builder: (context, ref, _) {
+                      final unreadCount = ref.watch(
+                        unreadChatNotificationsByChannelProvider(channel['id']?.toString() ?? ''),
+                      );
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (unreadCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          if (unreadCount > 0) const SizedBox(width: 8),
+                          Icon(
+                            isAr ? Icons.chevron_left : Icons.chevron_right,
+                            color: Colors.white24,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               );
             },

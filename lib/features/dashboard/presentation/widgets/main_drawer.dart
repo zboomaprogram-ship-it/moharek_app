@@ -45,7 +45,7 @@ class MainDrawer extends ConsumerWidget {
               children: [
                 _buildItem(
                   context,
-                  leading: Image.asset(AppConfig.logoAsset, height: 22, width: 22, fit: BoxFit.contain),
+                  leading: Image.asset(AppConfig.logoAsset, height: 50, width: 50, fit: BoxFit.contain, color: Colors.white),
                   title: AppConfig.flavorName == 'rabhan'
                       ? (isAr ? 'نظام النمو' : 'Growth System')
                       : (isAr ? 'الاستراتيجية' : 'Strategy'),
@@ -92,15 +92,13 @@ class MainDrawer extends ConsumerWidget {
                   onTap: () => context.push('/profile/support'),
                 ),
                 const Divider(color: Colors.white10),
-                if (AppConfig.flavorName == 'rabhan') ...[
-                  _buildItem(
-                    context,
-                    leading: const Icon(Icons.workspace_premium_outlined, color: Colors.amber, size: 22),
-                    title: isAr ? 'الحساب والباقة' : 'Growth Pro',
-                    onTap: () => context.push('/dashboard/package'),
-                  ),
-                  const Divider(color: Colors.white10),
-                ],
+                _buildItem(
+                  context,
+                  leading: const Icon(Icons.workspace_premium_outlined, color: Colors.amber, size: 22),
+                  title: isAr ? 'الحساب والباقة' : (AppConfig.flavorName == 'rabhan' ? 'Growth Pro' : 'Subscription & Package'),
+                  onTap: () => context.push('/dashboard/package'),
+                ),
+                const Divider(color: Colors.white10),
                 _buildItem(
                   context,
                   leading: const Icon(Icons.person_outline, color: Colors.white70, size: 22),

@@ -105,6 +105,7 @@ create table messages (
   message_type text default 'text', -- text, image, file, voice
   file_url text,
   is_read boolean default false,
+  payload jsonb,
   created_at timestamptz default now()
 );
 

@@ -6,6 +6,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class FilesTab extends ConsumerWidget {
   final String pid;
@@ -13,6 +14,11 @@ class FilesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.markProjectNotificationsAsRead(pid, 'info');
+      ref.invalidate(notificationsProvider);
+    });
+
     final filesAsync = ref.watch(projectFilesProvider(pid));
     return Scaffold(
       backgroundColor: Colors.transparent,

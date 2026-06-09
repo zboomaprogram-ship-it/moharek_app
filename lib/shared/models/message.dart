@@ -11,6 +11,9 @@ class ChatMessage {
   final bool convertedToTask;
   final String? linkedTaskId;
   final DateTime createdAt;
+  final String? replyToId;
+  final String? replyToContent;
+  final String? replyToSenderName;
 
   ChatMessage({
     required this.id,
@@ -25,9 +28,13 @@ class ChatMessage {
     this.convertedToTask = false,
     this.linkedTaskId,
     required this.createdAt,
+    this.replyToId,
+    this.replyToContent,
+    this.replyToSenderName,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final payloadJson = json['payload'] is Map<String, dynamic> ? json['payload'] as Map<String, dynamic> : null;
     return ChatMessage(
       id: json['id']?.toString() ?? '',
       channelId: json['channel_id']?.toString() ?? '',
@@ -47,6 +54,9 @@ class ChatMessage {
       createdAt: json['created_at'] != null 
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()).toLocal()
           : DateTime.now(),
+      replyToId: payloadJson?['reply_to_id']?.toString(),
+      replyToContent: payloadJson?['reply_to_content']?.toString(),
+      replyToSenderName: payloadJson?['reply_to_sender_name']?.toString(),
     );
   }
 
@@ -62,6 +72,11 @@ class ChatMessage {
       'is_read': isRead,
       'converted_to_task': convertedToTask,
       'linked_task_id': linkedTaskId,
+      'payload': replyToId != null ? {
+        'reply_to_id': replyToId,
+        'reply_to_content': replyToContent,
+        'reply_to_sender_name': replyToSenderName,
+      } : null,
     };
   }
 }

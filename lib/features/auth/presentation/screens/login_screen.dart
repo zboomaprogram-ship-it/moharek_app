@@ -107,8 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Logo
                   Image.asset(
                     AppConfig.logoAsset,
-                    height: 160,
+                    height: 240,
                     fit: BoxFit.contain,
+                    color: Colors.white,
                   ),
                   const SizedBox(height: 24),
 

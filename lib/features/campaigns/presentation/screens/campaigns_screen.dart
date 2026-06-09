@@ -2,22 +2,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/campaign.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/widgets/empty_state.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
+import 'package:moharek_app/features/rabhan/models/ad_campaign.dart';
+import 'package:moharek_app/features/rabhan/providers/ad_campaign_provider.dart';
 
 class CampaignsScreen extends ConsumerWidget {
   const CampaignsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final campaignsAsync = ref.watch(campaignsProvider);
+    final isRabhan = AppConfig.flavorName == 'rabhan';
     final l10n = AppLocalizations.of(context)!;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
+    if (isRabhan) {
+      final projectAsync = ref.watch(currentProjectProvider);
+      return projectAsync.when(
+        loading: () => const Scaffold(
+          body: Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+        ),
+        error: (err, _) => Scaffold(
+          appBar: AppBar(title: Text(l10n.campaigns)),
+          body: Center(child: Text(l10n.errorOccurred(err.toString()))),
+        ),
+        data: (project) {
+          if (project == null) {
+            return Scaffold(
+              appBar: AppBar(title: Text(l10n.campaigns)),
+              body: EmptyState.campaigns(context),
+            );
+          }
+          final adCampaignsAsync = ref.watch(adCampaignsProvider(project.id));
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.campaigns)),
+            body: adCampaignsAsync.when(
+              loading: () => const ShimmerList(itemCount: 4, itemHeight: 120),
+              error: (err, _) => Center(child: Text(l10n.errorOccurred(err.toString()))),
+              data: (adCampaigns) {
+                if (adCampaigns.isEmpty) {
+                  return EmptyState.campaigns(context);
+                }
+                return RefreshIndicator(
+                  color: AppTheme.primaryGreen,
+                  onRefresh: () async {
+                    ref.invalidate(currentProjectProvider);
+                    ref.invalidate(adCampaignsProvider(project.id));
+                    HapticService.light();
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: adCampaigns.length,
+                    itemBuilder: (context, index) {
+                      final campaign = adCampaigns[index];
+                      return _buildAdCampaignCard(context, campaign, isAr, l10n);
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    }
+
+    // Default Moharek path
+    final campaignsAsync = ref.watch(campaignsProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.campaigns)),
       body: campaignsAsync.when(
@@ -119,6 +175,65 @@ class CampaignsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAdCampaignCard(BuildContext context, AdCampaign campaign, bool isAr, AppLocalizations l10n) {
+    final statusColor = _getStatusColor(campaign.status);
+    final name = campaign.campaignName;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildChannelBadge(campaign.platform, isAr, l10n),
+              _buildStatusBadge(campaign.status, statusColor),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            name,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.budget, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    '${campaign.budget.toStringAsFixed(0)} ${campaign.currency}',
+                    style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              if (campaign.startDate != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(l10n.duration, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(
+                      _formatDateRange(campaign.startDate, campaign.endDate),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

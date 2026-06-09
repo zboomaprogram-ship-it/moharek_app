@@ -73,8 +73,9 @@ class _WebLoginScreenState extends ConsumerState<WebLoginScreen> {
                 // Logo
                 Image.asset(
                   AppConfig.logoAsset,
-                  height: 80,
+                  height: 140,
                   fit: BoxFit.contain,
+                  color: Colors.white,
                 ),
                 const SizedBox(height: 16),
                 Text(

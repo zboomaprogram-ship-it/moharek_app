@@ -11,6 +11,7 @@ class AdminAmDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(amDetailProvider(amId));
+    final isMobile = MediaQuery.of(context).size.width < 800;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -21,18 +22,27 @@ class AdminAmDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text('تفاصيل مدير الحساب', style: TextStyle(color: Colors.white)),
+        title: const Text('تفاصيل أداء مدير الحساب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: detail.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (data) {
           final profile = data['profile'] as Map<String, dynamic>;
           final projects = data['projects'] as List;
           final avgHealth = data['avg_health'] as double;
+          final tasksCreated = data['tasks_created'] as int? ?? 0;
+          final tasksCompleted = data['tasks_completed'] as int? ?? 0;
+          final reportsCount = data['reports_count'] as int? ?? 0;
+          final approvalsCount = data['approvals_count'] as int? ?? 0;
+          final approvalsPending = data['approvals_pending'] as int? ?? 0;
+          final meetingsCount = data['meetings_count'] as int? ?? 0;
+          final performanceHistory = data['performance_history'] as List<dynamic>? ?? [];
+
+          final taskCompletionRate = tasksCreated > 0 ? (tasksCompleted / tasksCreated) * 100 : 0.0;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isMobile ? 16 : 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -40,8 +50,65 @@ class AdminAmDetailScreen extends ConsumerWidget {
                 _buildProfileHeader(profile, avgHealth),
                 const SizedBox(height: 32),
 
+                // Live Performance KPI Dashboard Title
                 const Text(
-                  'المشاريع المسندة',
+                  'مؤشرات الأداء الحالية (مباشر)',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // Grid of KPI Cards
+                GridView.count(
+                  crossAxisCount: isMobile ? 1 : 4,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: isMobile ? 2.5 : 1.3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildKpiCard(
+                      icon: Icons.business_outlined,
+                      title: 'المشاريع المسندة',
+                      value: '${projects.length}',
+                      subtitle: 'متوسط مؤشر الصحة: ${avgHealth.toStringAsFixed(0)}%',
+                      color: AppTheme.primaryGreen,
+                    ),
+                    _buildKpiCard(
+                      icon: Icons.checklist_outlined,
+                      title: 'معدل إنجاز المهام',
+                      value: '${taskCompletionRate.toStringAsFixed(0)}%',
+                      subtitle: '$tasksCompleted من $tasksCreated مهام منجزة',
+                      color: Colors.blueAccent,
+                    ),
+                    _buildKpiCard(
+                      icon: Icons.rate_review_outlined,
+                      title: 'موافقات العملاء',
+                      value: '$approvalsCount',
+                      subtitle: '$approvalsPending موافقات قيد الانتظار',
+                      color: Colors.orangeAccent,
+                    ),
+                    _buildKpiCard(
+                      icon: Icons.analytics_outlined,
+                      title: 'التقارير والاجتماعات',
+                      value: '$reportsCount / $meetingsCount',
+                      subtitle: 'تقارير مرفوعة / اجتماعات مجدولة',
+                      color: Colors.purpleAccent,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // Monthly Performance Reports History
+                const Text(
+                  'تقارير الأداء الشهرية الموثقة',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _buildPerformanceHistoryTable(performanceHistory, isMobile),
+                const SizedBox(height: 32),
+
+                const Text(
+                  'المشاريع المسندة حالياً',
                   style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -56,7 +123,7 @@ class AdminAmDetailScreen extends ConsumerWidget {
                   child: projects.isEmpty 
                     ? const Padding(
                         padding: EdgeInsets.all(40.0),
-                        child: Center(child: Text('لا توجد مشاريع مسندة', style: TextStyle(color: Color(0xFF64748B)))),
+                        child: Center(child: Text('لا توجد مشاريع مسندة حالياً', style: TextStyle(color: Color(0xFF64748B)))),
                       )
                     : ListView.separated(
                         shrinkWrap: true,
@@ -156,6 +223,167 @@ class AdminAmDetailScreen extends ConsumerWidget {
           Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
         ],
       ),
+    );
+  }
+
+  Widget _buildKpiCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPerformanceHistoryTable(List<dynamic> history, bool isMobile) {
+    if (history.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF334155)),
+        ),
+        child: const Center(
+          child: Text(
+            'لا توجد تقارير أداء تاريخية مسجلة بعد لهذا المدير. سيتم إدراج التقارير الشهرية تلقائياً.',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    if (isMobile) {
+      // Mobile friendly cards list instead of Table
+      return Column(
+        children: history.map((h) {
+          final monthStr = h['period_month']?.toString() ?? '';
+          final parts = monthStr.split('-');
+          final displayMonth = parts.length >= 2 ? '${parts[1]} / ${parts[0]}' : monthStr;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('التقرير الشهري: $displayMonth', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('رضا العملاء: ${h['client_satisfaction_avg'] ?? '—'} ⭐', style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 12)),
+                  ],
+                ),
+                const Divider(color: Colors.white10, height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _mobileStatCol('العملاء النشطين', '${h['active_clients'] ?? 0} / ${h['total_clients'] ?? 0}'),
+                    _mobileStatCol('متوسط الصحة', '${(h['avg_client_health_score'] ?? 0.0).toStringAsFixed(0)}%'),
+                    _mobileStatCol('المهام المنجزة', '${h['tasks_completed'] ?? 0} / ${h['tasks_created'] ?? 0}'),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(const Color(0xFF0F172A)),
+          dataRowColor: MaterialStateProperty.all(const Color(0xFF1E293B)),
+          columns: const [
+            DataColumn(label: Text('الشهر', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('إجمالي العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('العملاء النشطين', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('متوسط الصحة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('المهام المنجزة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('تقارير مرفوعة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('موافقات منشأة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('رضا العملاء', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+          ],
+          rows: history.map((h) {
+            final monthStr = h['period_month']?.toString() ?? '';
+            final parts = monthStr.split('-');
+            final displayMonth = parts.length >= 2 ? '${parts[1]} / ${parts[0]}' : monthStr;
+
+            return DataRow(
+              cells: [
+                DataCell(Text(displayMonth, style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['total_clients'] ?? 0}', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['active_clients'] ?? 0}', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${(h['avg_client_health_score'] ?? 0.0).toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['tasks_completed'] ?? 0} / ${h['tasks_created'] ?? 0}', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['reports_uploaded'] ?? 0}', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['approvals_created'] ?? 0}', style: const TextStyle(color: Colors.white))),
+                DataCell(Text('${h['client_satisfaction_avg'] ?? '—'} ⭐', style: const TextStyle(color: Colors.white))),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileStatCol(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

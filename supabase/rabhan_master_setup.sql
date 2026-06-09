@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   file_size int,
   duration_seconds int,
   waveform_data jsonb,
+  payload jsonb,
   created_at timestamptz DEFAULT now()
 );
 

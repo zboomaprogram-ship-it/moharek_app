@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class AdminShell extends StatelessWidget {
   final Widget child;
@@ -64,36 +65,74 @@ class AdminSidebar extends ConsumerWidget {
     final String current = GoRouterState.of(context).matchedLocation;
     final isRabhan = AppConfig.flavorName == 'rabhan';
 
+    // Watch category unread counts to display red dot indicators
+    final unreadReports = ref.watch(unreadReportNotificationsCountProvider);
+    final unreadBilling = ref.watch(unreadBillingNotificationsCountProvider);
+    final unreadSupport = ref.watch(unreadSupportNotificationsCountProvider);
+
+    // Aggregate other client related activities for the Clients tab
+    final unreadChat = ref.watch(unreadChatNotificationsCountProvider);
+    final unreadTasks = ref.watch(unreadTaskNotificationsCountProvider);
+    final unreadApprovals = ref.watch(unreadApprovalNotificationsCountProvider);
+    final unreadMeetings = ref.watch(unreadMeetingNotificationsCountProvider);
+    final unreadClients =
+        unreadChat + unreadTasks + unreadApprovals + unreadMeetings;
+
     final items = [
       (
         icon: Icons.dashboard_outlined,
         label: 'النظرة العامة',
         path: '/admin/overview',
+        showDot: false,
       ),
-      (icon: Icons.people_alt_outlined, label: 'فريق العمل', path: '/admin/team'),
+      (
+        icon: Icons.people_alt_outlined,
+        label: 'فريق العمل',
+        path: '/admin/team',
+        showDot: false,
+      ),
       (
         icon: Icons.business_center_outlined,
         label: 'العملاء',
         path: '/admin/clients',
+        showDot: unreadClients > 0,
       ),
       if (isRabhan)
         (
           icon: Icons.inventory_2_outlined,
           label: 'الباقات',
           path: '/admin/packages',
+          showDot: false,
         ),
       (
         icon: Icons.bar_chart_outlined,
         label: isRabhan ? 'تقارير الأداء' : 'التقارير',
         path: '/admin/reports',
+        showDot: unreadReports > 0,
       ),
-      (icon: Icons.payments_outlined, label: 'المالية', path: '/admin/billing'),
-      (icon: Icons.support_agent_outlined, label: 'مركز الدعم', path: '/admin/support'),
-      (icon: Icons.history_outlined, label: 'سجل العمليات', path: '/admin/logs'),
+      (
+        icon: Icons.payments_outlined,
+        label: 'المالية',
+        path: '/admin/billing',
+        showDot: unreadBilling > 0,
+      ),
+      (
+        icon: Icons.support_agent_outlined,
+        label: 'مركز الدعم',
+        path: '/admin/support',
+        showDot: unreadSupport > 0,
+      ),
+      (
+        icon: Icons.history_outlined,
+        label: 'سجل العمليات',
+        path: '/admin/logs',
+        showDot: false,
+      ),
       (
         icon: Icons.settings_outlined,
         label: 'الإعدادات',
         path: '/admin/settings',
+        showDot: false,
       ),
     ];
 
@@ -109,8 +148,9 @@ class AdminSidebar extends ConsumerWidget {
               children: [
                 Image.asset(
                   AppConfig.logoAsset,
-                  height: 32,
+                  height: 64,
                   fit: BoxFit.contain,
+                  color: Colors.white,
                 ),
                 SizedBox(width: 12),
                 Text(
@@ -141,6 +181,7 @@ class AdminSidebar extends ConsumerWidget {
                   label: item.label,
                   path: item.path,
                   active: active,
+                  showDot: item.showDot,
                 );
               }).toList(),
             ),
@@ -154,6 +195,7 @@ class AdminSidebar extends ConsumerWidget {
               label: 'تسجيل الخروج',
               path: '',
               active: false,
+              showDot: false,
               onTap: () async {
                 // 1. Invalidate first
                 ref.invalidate(profileProvider);
@@ -167,7 +209,7 @@ class AdminSidebar extends ConsumerWidget {
                 } catch (e) {
                   // Ignore
                 }
-                
+
                 if (context.mounted) context.go('/login');
               },
             ),
@@ -184,6 +226,7 @@ class _SidebarItem extends StatelessWidget {
   final String path;
   final bool active;
   final VoidCallback? onTap;
+  final bool showDot;
 
   const _SidebarItem({
     required this.icon,
@@ -191,6 +234,7 @@ class _SidebarItem extends StatelessWidget {
     required this.path,
     required this.active,
     this.onTap,
+    this.showDot = false,
   });
 
   @override
@@ -226,14 +270,34 @@ class _SidebarItem extends StatelessWidget {
               color: active ? AppTheme.primaryGreen : const Color(0xFF64748B),
             ),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? AppTheme.primaryGreen : const Color(0xFF94A3B8),
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: active
+                      ? AppTheme.primaryGreen
+                      : const Color(0xFF94A3B8),
+                  fontSize: 14,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                ),
               ),
             ),
+            if (showDot)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.redAccent,
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -245,15 +309,12 @@ class AdminTopBar extends ConsumerWidget {
   final VoidCallback? onMenuPressed;
   final bool isMobile;
 
-  const AdminTopBar({
-    super.key,
-    this.onMenuPressed,
-    this.isMobile = false,
-  });
+  const AdminTopBar({super.key, this.onMenuPressed, this.isMobile = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
+    final unreadTotal = ref.watch(unreadNotificationsCountProvider);
 
     return Container(
       height: 70,
@@ -270,12 +331,42 @@ class AdminTopBar extends ConsumerWidget {
               onPressed: onMenuPressed,
             ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Color(0xFF64748B),
-            ),
-            onPressed: () => _showNotifications(context, ref),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.notifications_none,
+                  color: Color(0xFF64748B),
+                ),
+                onPressed: () => _showNotifications(context, ref),
+              ),
+              if (unreadTotal > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '$unreadTotal',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 16),
           const VerticalDivider(
@@ -311,7 +402,10 @@ class AdminTopBar extends ConsumerWidget {
                       ),
                       const Text(
                         'مدير النظام',
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -384,7 +478,7 @@ class AdminTopBar extends ConsumerWidget {
                         } catch (e) {
                           // Ignore
                         }
-                        
+
                         if (context.mounted) context.go('/login');
                       },
                     ),

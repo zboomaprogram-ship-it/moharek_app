@@ -122,14 +122,24 @@ class SupabaseAuthListenable extends ChangeNotifier {
 // Cache for user role to avoid redundant DB calls on every redirect
 String? _cachedRole;
 bool? _cachedIsActive;
+bool? _cachedOnboardingCompleted;
 String? _cachedUserId;
+
+void clearAppRouterCache() {
+  _cachedRole = null;
+  _cachedIsActive = null;
+  _cachedOnboardingCompleted = null;
+  _cachedUserId = null;
+}
 
 String? _processRedirect(
   String path,
   String role,
   bool isActive,
+  bool onboardingCompleted,
   bool isLoginPage,
   bool isRoot,
+  Uri stateUri,
 ) {
   // Status Gate: Check if user is active
   if (!isActive) {
@@ -140,6 +150,24 @@ String? _processRedirect(
 
   final bool isAdmin = role == 'admin';
   final bool isAM = role == 'account_manager';
+  final bool isClient = !isAdmin && !isAM;
+
+  // Onboarding Gate: Redirect clients who have not completed onboarding
+  if (isClient) {
+    if (!onboardingCompleted) {
+      if (path != '/onboarding') {
+        return '/onboarding';
+      }
+    } else {
+      // If completed onboarding, only allow /onboarding if edit=true query parameter is set
+      if (path == '/onboarding') {
+        final editMode = stateUri.queryParameters['edit'] == 'true';
+        if (!editMode) {
+          return '/dashboard';
+        }
+      }
+    }
+  }
 
   // Mobile Web-Only Gate: Redirect admin/AM to dedicated web-only warning on native platforms
   if (!kIsWeb && (isAdmin || isAM)) {
@@ -148,7 +176,7 @@ String? _processRedirect(
   }
 
   // Prevent clients from manually visiting /web-only on mobile
-  if (path == '/web-only' && (kIsWeb || (!isAdmin && !isAM))) {
+  if (path == '/web-only' && (kIsWeb || isClient)) {
     return '/dashboard';
   }
 
@@ -156,6 +184,7 @@ String? _processRedirect(
   if (isLoginPage || isRoot) {
     if (isAdmin) return '/admin/overview';
     if (isAM) return '/am/clients';
+    if (!onboardingCompleted) return '/onboarding';
     return '/dashboard';
   }
 
@@ -203,9 +232,10 @@ late final appRouter = GoRouter(
       if (_cachedUserId != null) {
         _cachedRole = null;
         _cachedIsActive = null;
+        _cachedOnboardingCompleted = null;
         _cachedUserId = null;
       }
-      if (isRoot || isForgotPass || isLoginPage) return null;
+      if (isRoot || isForgotPass || isLoginPage || path == '/onboarding') return null;
       return '/login';
     }
 
@@ -215,8 +245,10 @@ late final appRouter = GoRouter(
         path,
         _cachedRole!,
         _cachedIsActive ?? true,
+        _cachedOnboardingCompleted ?? false,
         isLoginPage,
         isRoot,
+        state.uri,
       );
     }
 
@@ -224,7 +256,7 @@ late final appRouter = GoRouter(
     try {
       final profile = await client
           .from('profiles')
-          .select('role, is_active')
+          .select('role, is_active, onboarding_completed')
           .eq('id', session.user.id)
           .maybeSingle();
 
@@ -244,17 +276,22 @@ late final appRouter = GoRouter(
         }
       }
 
+      final onboardingCompleted = profile['onboarding_completed'] as bool? ?? false;
+
       // Update cache
       _cachedUserId = session.user.id;
       _cachedRole = (profile['role'] as String? ?? 'client').toLowerCase();
       _cachedIsActive = active;
+      _cachedOnboardingCompleted = onboardingCompleted;
 
       return _processRedirect(
         path,
         _cachedRole!,
         _cachedIsActive!,
+        _cachedOnboardingCompleted!,
         isLoginPage,
         isRoot,
+        state.uri,
       );
     } catch (e) {
       debugPrint('Security Gate Error: $e');
@@ -386,6 +423,7 @@ late final appRouter = GoRouter(
                   builder: (c, s) => ChatScreen(
                     channelId: s.pathParameters['channelId']!,
                     channelName: s.uri.queryParameters['name'] ?? 'Chat',
+                    prefilledMessage: s.uri.queryParameters['prefilled'],
                   ),
                 ),
               ],
@@ -573,3 +611,30 @@ late final appRouter = GoRouter(
     ),
   ],
 );
+
+String resolveNotificationPath(String route) {
+  if (route == '/meetings' || route == '/dashboard/meetings') {
+    return '/dashboard/meetings';
+  } else if (route == '/approvals' || route == '/dashboard/approvals') {
+    return '/dashboard/approvals';
+  } else if (route == '/files' || route == '/dashboard/files') {
+    return '/dashboard/files';
+  } else if (route == '/contracts' || route == '/dashboard/contracts') {
+    return '/dashboard/contracts';
+  } else if (route == '/billing' || route == '/dashboard/billing') {
+    return '/dashboard/billing';
+  } else if (route == '/campaigns' || route == '/dashboard/campaigns') {
+    return '/dashboard/campaigns';
+  } else if (route == '/growth-story' || route == '/dashboard/growth-story') {
+    return '/dashboard/growth-story';
+  } else if (route == '/notifications' || route == '/dashboard/notifications') {
+    return '/dashboard/notifications';
+  } else if (route == '/package' || route == '/dashboard/package') {
+    return '/dashboard/package';
+  } else if (route == '/growth-system' || route == '/dashboard/growth-system') {
+    return '/dashboard/growth-system';
+  } else if (route == '/analytics' || route == '/dashboard/analytics') {
+    return '/dashboard/analytics';
+  }
+  return route;
+}

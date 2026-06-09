@@ -20,6 +20,7 @@ class Project {
   final String? ga4PropertyId;
   final String? gbpLocationId;
   final String? companyId;
+  final Map<String, dynamic>? clientBrief;
 
   Project({
     required this.id,
@@ -42,6 +43,7 @@ class Project {
     this.ga4PropertyId,
     this.gbpLocationId,
     this.companyId,
+    this.clientBrief,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -74,6 +76,7 @@ class Project {
       ga4PropertyId: json['ga4_property_id']?.toString(),
       gbpLocationId: json['gbp_location_id']?.toString(),
       companyId: json['company_id']?.toString(),
+      clientBrief: json['client_brief'] as Map<String, dynamic>?,
     );
   }
 }

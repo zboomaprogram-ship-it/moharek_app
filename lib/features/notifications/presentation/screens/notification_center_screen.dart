@@ -6,6 +6,7 @@ import 'package:moharek_app/features/notifications/data/notifications_provider.d
 import 'package:moharek_app/shared/models/notification.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:go_router/go_router.dart';
+import 'package:moharek_app/core/router/app_router.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
@@ -305,7 +306,8 @@ class _NotificationCenterScreenState extends ConsumerState<NotificationCenterScr
       onTap: () {
         NotificationService.markAsRead(n.id);
         if (n.linkPath != null && n.linkPath!.isNotEmpty) {
-          context.push(n.linkPath!);
+          final resolved = resolveNotificationPath(n.linkPath!);
+          context.push(resolved);
         }
       },
       borderRadius: BorderRadius.circular(16),

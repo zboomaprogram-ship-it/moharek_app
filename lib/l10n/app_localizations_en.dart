@@ -1053,10 +1053,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yourFeedback => 'Your Feedback';
 
   @override
-  String get viewDesign => 'View Design';
+  String get viewDesign => 'View Attachment';
 
   @override
-  String get viewDocument => 'View Document';
+  String get viewDocument => 'View Attachment';
 
   @override
   String get rejected => 'Rejected';

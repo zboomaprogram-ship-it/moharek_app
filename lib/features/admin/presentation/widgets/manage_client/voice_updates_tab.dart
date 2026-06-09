@@ -8,11 +8,15 @@ import 'package:moharek_app/features/admin/widgets/admin_voice_recorder.dart';
 final _voiceUpdatesForProject =
     StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
       final c = ref.watch(supabaseClientProvider);
-      return c
-          .from('voice_updates')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', pid)
-          .order('created_at', ascending: false);
+      return robustQueryStream<Map<String, dynamic>>(
+        client: c,
+        table: 'voice_updates',
+        filterColumn: 'project_id',
+        filterValue: pid,
+        fromJson: (json) => json,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     });
 
 class VoiceUpdatesTab extends ConsumerWidget {

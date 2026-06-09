@@ -1047,10 +1047,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get yourFeedback => 'ملاحظاتك';
 
   @override
-  String get viewDesign => 'عرض التصميم';
+  String get viewDesign => 'عرض المرفق';
 
   @override
-  String get viewDocument => 'عرض المستند';
+  String get viewDocument => 'عرض المرفق';
 
   @override
   String get rejected => 'مرفوض';

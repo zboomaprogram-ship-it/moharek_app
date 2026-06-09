@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/widgets/fade_in_slide.dart';
+import 'package:moharek_app/features/admin/presentation/widgets/manage_client/brief_tab.dart';
 
 class CompanyProfileScreen extends ConsumerWidget {
   const CompanyProfileScreen({super.key});
@@ -29,6 +30,36 @@ class CompanyProfileScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(project),
+                const SizedBox(height: 16),
+                // Brief Editor Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            backgroundColor: AppTheme.background,
+                            appBar: AppBar(
+                              title: const Text('بريف المشروع'),
+                              backgroundColor: AppTheme.cardColor,
+                            ),
+                            body: BriefTab(pid: project.id),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_note, size: 20),
+                    label: const Text('تعديل بريف المشروع / Brief', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('أهداف المشروع'),
                 const SizedBox(height: 12),

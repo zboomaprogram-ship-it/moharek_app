@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class SupportTab extends ConsumerWidget {
   final String pid;
@@ -10,6 +11,11 @@ class SupportTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.markProjectNotificationsAsRead(pid, 'support');
+      ref.invalidate(notificationsProvider);
+    });
+
     final ticketsAsync = ref.watch(projectTicketsProvider(pid));
     
     return Scaffold(

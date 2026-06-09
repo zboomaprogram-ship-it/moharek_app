@@ -11,6 +11,8 @@ import 'package:moharek_app/features/tasks/presentation/widgets/client_request_s
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/widgets/journey_stage_tracker.dart';
 
+import 'package:moharek_app/features/tasks/presentation/widgets/task_detail_bottom_sheet.dart';
+
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
 
@@ -144,121 +146,132 @@ class TasksScreen extends ConsumerWidget {
     final int completedSubtasks = task.subtasks.where((s) => s['completed'] == true).length;
     final double progress = totalSubtasks > 0 ? completedSubtasks / totalSubtasks : 0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isUrgent ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white10,
+    return GestureDetector(
+      onTap: () {
+        HapticService.light();
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => TaskDetailBottomSheet(task: task),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isUrgent ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white10,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  task.category ?? l10n.general,
-                  style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (task.deadline != null)
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: Colors.grey, size: 12),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${task.deadline!.day}/${task.deadline!.month}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            task.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (task.description != null && task.description!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              task.description!,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          if (totalSubtasks > 0) ...[
-            const SizedBox(height: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withValues(alpha: 0.05),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        progress == 1.0 ? AppTheme.primaryGreen : AppTheme.primaryBlue,
-                      ),
-                      minHeight: 4,
-                    ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    task.category ?? l10n.general,
+                    style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '$completedSubtasks/$totalSubtasks',
-                  style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                if (task.deadline != null)
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, color: Colors.grey, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${task.deadline!.day}/${task.deadline!.month}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              task.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (task.description != null && task.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                task.description!,
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (totalSubtasks > 0) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          progress == 1.0 ? AppTheme.primaryGreen : AppTheme.primaryBlue,
+                        ),
+                        minHeight: 4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '$completedSubtasks/$totalSubtasks',
+                    style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      statusText,
+                      style: TextStyle(color: statusColor, fontSize: 12),
+                    ),
+                    if (task.status == 'completed') ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.check_circle_outline, color: AppTheme.primaryGreen, size: 14),
+                    ],
+                  ],
                 ),
+                if (totalSubtasks > 0)
+                  const Icon(Icons.list_alt, color: Colors.white24, size: 16)
+                else
+                  const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    statusText,
-                    style: TextStyle(color: statusColor, fontSize: 12),
-                  ),
-                  if (task.status == 'completed') ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.check_circle_outline, color: AppTheme.primaryGreen, size: 14),
-                  ],
-                ],
-              ),
-              if (totalSubtasks > 0)
-                const Icon(Icons.list_alt, color: Colors.white24, size: 16)
-              else
-                const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

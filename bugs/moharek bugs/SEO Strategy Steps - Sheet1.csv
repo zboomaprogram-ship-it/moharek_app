@@ -1,0 +1,40 @@
+Engine,Purpose,Step
+Content Engine,"Optimize content for relevance, quality, and search visibility.","Keyword Research: Target primary, secondary & LSI keywords."
+,,"Optimize On-Page Elements: Title, Meta Description, H1–H6, URL."
+,,"Content Quality: Original, in-depth, useful, and intent-focused content."
+,,Semantic SEO: Add related terms & entities (Entity SEO / Knowledge Graph).
+,,"Readability: Short paragraphs, bullet points, scannable structure."
+,,"Media Optimization: Compress images, use descriptive filenames & Alt Text."
+,,Internal Linking: Link relevant pages with keyword-rich anchor text.
+,,Content Freshness: Update content regularly to maintain rankings.
+,,
+SEO Engine,Improve technical SEO settings to increase crawlability and rankings.,"Technical Audit: Fix crawl errors, redirects, and broken links."
+,,"URL Structure: Clean, short, keyword-optimized, canonicalized URLs."
+,,"Site Speed: Optimize Core Web Vitals (LCP, INP, CLS) and page speed."
+,,Mobile Optimization: Ensure mobile-first design & responsiveness.
+,,Robots.txt & Sitemap.xml: Submit and keep updated in Google Search Console.
+,,Structured Data (Schema): Implement relevant schema markup.
+,,Indexation: Check index coverage and fix indexing issues.
+,,Monitoring: Track performance in Google Search Console.
+,,
+AI Visibility,Enhance content visibility across AI-powered search platforms.,"Create High-Quality, E-E-A-T Driven Content: Experience, Expertise, Authoritativeness, Trust."
+,,FAQ & Q&A Optimization: Answer user questions clearly and concisely.
+,,"Content Structure: Use headings, bullets, and tables for AI readability."
+,,Mentions & Citations: Get mentioned on reputable sites and platforms.
+,,"Optimize for AI Overviews: Provide clear, direct, and factual answers."
+,,"Monitor Brand Presence: Track visibility in AI responses and platforms (ChatGPT, Gemini, Perplexity)."
+,,
+Trust Engine,Build trust signals to increase user confidence and search authority.,Secure Website: Enable HTTPS with a valid SSL certificate.
+,,"Trust Signals: Add About Us, Contact, Privacy Policy, and Terms pages."
+,,"Reviews & Ratings: Showcase customer reviews, testimonials & ratings."
+,,Author & Publisher Info: Add author bios and company credentials.
+,,"Transparent Policies: Clear return, shipping, and refund policies."
+,,Security & Compliance: Ensure GDPR/CCPA compliance and data protection.
+,,
+Conversion Engine,Optimize UX and conversion elements to increase sales and revenue.,Landing Page Optimization: Clear value proposition and strong CTA.
+,,"Product Pages: Unique descriptions, high-quality images, specs, and FAQs."
+,,"User Experience (UX): Easy navigation, search, filters, and site structure."
+,,Add-to-Cart & Checkout: Simplify steps and reduce friction.
+,,"Offer Optimization: Discounts, bundles, upsells, and free shipping thresholds."
+,,"A/B Testing: Test headlines, CTAs, layouts, and offers."
+,,"Analytics & Tracking: Implement GA4, conversion tracking, and event tracking."

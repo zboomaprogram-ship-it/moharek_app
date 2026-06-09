@@ -41,9 +41,9 @@ class ProjectCampaign {
       budget: (json['budget'] as num?)?.toDouble(),
       currency: json['currency'] ?? 'EGP',
       status: json['status'] ?? 'planned',
-      startDate: json['start_date'] != null ? DateTime.parse(json['start_date']) : null,
-      endDate: json['end_date'] != null ? DateTime.parse(json['end_date']) : null,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
+      startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date']) : null,
+      endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
+      createdAt: json['created_at'] != null ? (DateTime.tryParse(json['created_at']) ?? DateTime.now()) : DateTime.now(),
     );
   }
 }
@@ -67,12 +67,12 @@ class CampaignResult {
 
   factory CampaignResult.fromJson(Map<String, dynamic> json) {
     return CampaignResult(
-      id: json['id'],
-      campaignId: json['campaign_id'],
-      metricLabel: json['metric_label'],
+      id: json['id'] ?? '',
+      campaignId: json['campaign_id'] ?? '',
+      metricLabel: json['metric_label'] ?? '',
       metricValue: (json['metric_value'] as num?)?.toDouble() ?? 0.0,
       metricUnit: json['metric_unit'] ?? '',
-      recordedAt: DateTime.parse(json['recorded_at']),
+      recordedAt: json['recorded_at'] != null ? (DateTime.tryParse(json['recorded_at']) ?? DateTime.now()) : DateTime.now(),
     );
   }
 }

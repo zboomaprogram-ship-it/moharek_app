@@ -12,6 +12,7 @@ class ProjectTask {
   final List<Map<String, dynamic>> subtasks;
   final List<String> attachmentUrls;
   final DateTime createdAt;
+  final DateTime? startDate;
   final bool isClientRequest;
   final String? requestType;
   final DateTime? clientProposedDeadline;
@@ -28,6 +29,7 @@ class ProjectTask {
     required this.status,
     this.assignedTo,
     this.deadline,
+    this.startDate,
     required this.priority,
     this.category,
     this.stageName,
@@ -51,6 +53,7 @@ class ProjectTask {
       status: json['status'] ?? 'todo',
       assignedTo: json['assigned_to'],
       deadline: json['deadline'] != null ? DateTime.parse(json['deadline']) : null,
+      startDate: json['start_date'] != null ? DateTime.parse(json['start_date']) : null,
       priority: json['priority'] ?? 'normal',
       category: json['category'],
       stageName: json['stage_name'],

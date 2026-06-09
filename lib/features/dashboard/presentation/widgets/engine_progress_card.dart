@@ -1,55 +1,67 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/utils/arabic_formatter.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/shared/models/engine_progress.dart';
+import 'package:moharek_app/features/strategy/presentation/screens/strategy_screen.dart';
+import 'package:moharek_app/features/admin/data/admin_providers.dart';
+import 'package:moharek_app/shared/services/data_providers.dart';
 
-class EngineProgressCard extends StatefulWidget {
-  final Map<String, double> progress;
+class EngineProgressCard extends ConsumerStatefulWidget {
+  final List<EngineProgress> engineProgressList;
   final bool isAr;
+  final String userRole;
+  final String projectId;
 
   const EngineProgressCard({
     super.key,
-    required this.progress,
+    required this.engineProgressList,
     required this.isAr,
+    required this.userRole,
+    required this.projectId,
   });
 
   @override
-  State<EngineProgressCard> createState() => _EngineProgressCardState();
+  ConsumerState<EngineProgressCard> createState() => _EngineProgressCardState();
 }
 
-class _EngineProgressCardState extends State<EngineProgressCard> {
+class _EngineProgressCardState extends ConsumerState<EngineProgressCard> {
   String? _expandedEngine;
+  bool _isUpdating = false;
 
   final Map<String, List<String>> _subItemsAr = {
     // Moharek
-    'SEO': ['SEO التقني', 'SEO داخل الصفحة', 'الكلمات المفتاحية', 'المدونة'],
-    'Content': ['مقالات', 'صفحات الخدمات', 'فيديوهات قصيرة', 'محتوى يدعم البحث'],
-    'AI Visibility': ['الظهور في ChatGPT', 'Gemini', 'Perplexity', 'تحسين إجابات الذكاء'],
-    'Trust Engine': ['التقييمات', 'Google Business', 'السمعة', 'الدلائل'],
-    'Conversion': ['تحسين صفحات الهبوط', 'CTA', 'تتبع WhatsApp', 'نماذج الليدز'],
+    'seo': ['SEO التقني', 'SEO داخل الصفحة', 'الكلمات المفتاحية', 'المدونة'],
+    'content': ['مقالات', 'صفحات الخدمات', 'فيديوهات قصيرة', 'محتوى يدعم البحث'],
+    'ai_visibility': ['الظهور في ChatGPT', 'Gemini', 'Perplexity', 'تحسين إجابات الذكاء'],
+    'trust': ['التقييمات', 'Google Business', 'السمعة', 'الدلائل'],
+    'conversion': ['تحسين صفحات الهبوط', 'CTA', 'تتبع WhatsApp', 'نماذج الليدز'],
     // Rabhan
-    'Store': ['هوية المتجر', 'تصميم واجهة المستخدم', 'سرعة التصفح', 'تجربة الدفع Checkout'],
-    'Product': ['صور المنتجات', 'كتابة الوصف الإقناعي', 'التسعير والهامش', 'حزم المنتجات Bundles'],
-    'Ads': ['حملات Meta', 'حملات Google', 'إعلانات TikTok', 'إعلانات Snapchat'],
-    'Sales Page': ['هيكلة صفحة الهبوط', 'العروض الخاصة', 'عناصر الإقناع الاجتماعي', 'سلاسة الطلب السريع'],
-    'Operations': ['شركات الشحن', 'بوابات الدفع', 'إدارة المخزون', 'خدمة العملاء'],
-    'Analytics': ['تتبع السلة المهجورة', 'بكسل التتبع Pixel', 'معدل LTV للعملاء', 'تقارير أداء المنتجات'],
+    'store': ['هوية المتجر', 'تصميم واجهة المستخدم', 'سرعة التصفح', 'تجربة الدفع Checkout'],
+    'product': ['صور المنتجات', 'كتابة الوصف الإقناعي', 'التسعير والهامش', 'حزم المنتجات Bundles'],
+    'ads': ['حملات Meta', 'حملات Google', 'إعلانات TikTok', 'إعلانات Snapchat'],
+    'sales_page': ['هيكلة صفحة الهبوط', 'العروض الخاصة', 'عناصر الإقناع الاجتماعي', 'سلاسة الطلب السريع'],
+    'operations': ['شركات الشحن', 'بوابات الدفع', 'إدارة المخزون', 'خدمة العملاء'],
+    'analytics': ['تتبع السلة المهجورة', 'بكسل التتبع Pixel', 'معدل LTV للعملاء', 'تقارير أداء المنتجات'],
   };
 
   final Map<String, List<String>> _subItemsEn = {
     // Moharek
-    'SEO': ['Technical SEO', 'On-Page SEO', 'Keywords Strategy', 'Blog'],
-    'Content': ['Articles', 'Service Pages', 'Short Videos', 'Search Content'],
-    'AI Visibility': ['ChatGPT Presence', 'Gemini Presence', 'Perplexity', 'AI Optimization'],
-    'Trust Engine': ['Reviews', 'Google Business', 'Reputation', 'Directories'],
-    'Conversion': ['Landing Page Opt', 'CTA Strategy', 'WhatsApp Tracking', 'Lead Forms'],
+    'seo': ['Technical SEO', 'On-Page SEO', 'Keywords Strategy', 'Blog'],
+    'content': ['Articles', 'Service Pages', 'Short Videos', 'Search Content'],
+    'ai_visibility': ['ChatGPT Presence', 'Gemini Presence', 'Perplexity', 'AI Optimization'],
+    'trust': ['Reviews', 'Google Business', 'Reputation', 'Directories'],
+    'conversion': ['Landing Page Opt', 'CTA Strategy', 'WhatsApp Tracking', 'Lead Forms'],
     // Rabhan
-    'Store': ['Brand Identity', 'UI/UX Design', 'Page Speed', 'Checkout UX'],
-    'Product': ['Product Images', 'Copywriting Description', 'Pricing & Margin', 'Product Bundles'],
-    'Ads': ['Meta Campaigns', 'Google Ads', 'TikTok Ads', 'Snapchat Ads'],
-    'Sales Page': ['Landing Page Structure', 'Special Offers', 'Social Proof', 'Express Checkout Flow'],
-    'Operations': ['Shipping Carriers', 'Payment Gateways', 'Inventory Management', 'Customer Support'],
-    'Analytics': ['Abandoned Cart Tracking', 'Tracking Pixels', 'Customer LTV', 'Product Analytics Reports'],
+    'store': ['Brand Identity', 'UI/UX Design', 'Page Speed', 'Checkout UX'],
+    'product': ['Product Images', 'Copywriting Description', 'Pricing & Margin', 'Product Bundles'],
+    'ads': ['Meta Campaigns', 'Google Ads', 'TikTok Ads', 'Snapchat Ads'],
+    'sales_page': ['Landing Page Structure', 'Special Offers', 'Social Proof', 'Express Checkout Flow'],
+    'operations': ['Shipping Carriers', 'Payment Gateways', 'Inventory Management', 'Customer Support'],
+    'analytics': ['Abandoned Cart Tracking', 'Tracking Pixels', 'Customer LTV', 'Product Analytics Reports'],
   };
 
   @override
@@ -78,27 +90,58 @@ class _EngineProgressCardState extends State<EngineProgressCard> {
           ),
           const SizedBox(height: 20),
           if (isRabhan) ...[
-            _buildEngineItem(widget.isAr ? 'المتجر' : 'Store', 'Store', widget.progress['store'] ?? 0.0, AppTheme.primaryGreen),
-            _buildEngineItem(widget.isAr ? 'المنتجات' : 'Product', 'Product', widget.progress['product'] ?? 0.0, Colors.purpleAccent),
-            _buildEngineItem(widget.isAr ? 'الإعلانات' : 'Ads', 'Ads', widget.progress['ads'] ?? 0.0, AppTheme.primaryBlue),
-            _buildEngineItem(widget.isAr ? 'صفحات البيع' : 'Sales Page', 'Sales Page', widget.progress['sales_page'] ?? 0.0, Colors.amber),
-            _buildEngineItem(widget.isAr ? 'العمليات' : 'Operations', 'Operations', widget.progress['operations'] ?? 0.0, Colors.orangeAccent),
-            _buildEngineItem(widget.isAr ? 'التحليلات' : 'Analytics', 'Analytics', widget.progress['analytics'] ?? 0.0, Colors.pinkAccent),
+            _buildEngineItem(widget.isAr ? 'المتجر' : 'Store', 'store', AppTheme.primaryGreen),
+            _buildEngineItem(widget.isAr ? 'المنتجات' : 'Product', 'product', Colors.purpleAccent),
+            _buildEngineItem(widget.isAr ? 'الإعلانات' : 'Ads', 'ads', AppTheme.primaryBlue),
+            _buildEngineItem(widget.isAr ? 'صفحات البيع' : 'Sales Page', 'sales_page', Colors.amber),
+            _buildEngineItem(widget.isAr ? 'العمليات' : 'Operations', 'operations', Colors.orangeAccent),
+            _buildEngineItem(widget.isAr ? 'التحليلات' : 'Analytics', 'analytics', Colors.pinkAccent),
           ] else ...[
-            _buildEngineItem('SEO', 'SEO', widget.progress['seo'] ?? 0.0, AppTheme.primaryGreen),
-            _buildEngineItem(widget.isAr ? 'المحتوى' : 'Content', 'Content', widget.progress['content'] ?? 0.0, Colors.purpleAccent),
-            _buildEngineItem(widget.isAr ? 'الظهور AI' : 'AI Visibility', 'AI Visibility', widget.progress['ai_visibility'] ?? 0.0, AppTheme.primaryBlue),
-            _buildEngineItem(widget.isAr ? 'الثقة والتقييمات' : 'Trust Engine', 'Trust Engine', widget.progress['trust'] ?? 0.0, Colors.amber),
-            _buildEngineItem(widget.isAr ? 'تحسين التحويل' : 'Conversion', 'Conversion', widget.progress['conversion'] ?? 0.0, Colors.pinkAccent),
+            _buildEngineItem('SEO', 'seo', AppTheme.primaryGreen),
+            _buildEngineItem(widget.isAr ? 'المحتوى' : 'Content', 'content', Colors.purpleAccent),
+            _buildEngineItem(widget.isAr ? 'الظهور AI' : 'AI Visibility', 'ai_visibility', AppTheme.primaryBlue),
+            _buildEngineItem(widget.isAr ? 'الثقة والتقييمات' : 'Trust Engine', 'trust', Colors.amber),
+            _buildEngineItem(widget.isAr ? 'تحسين التحويل' : 'Conversion', 'conversion', Colors.pinkAccent),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildEngineItem(String label, String key, double value, Color color) {
+  Widget _buildEngineItem(String label, String key, Color color) {
     final isExpanded = _expandedEngine == key;
-    final subItems = widget.isAr ? _subItemsAr[key] : _subItemsEn[key];
+    
+    // Find matching EngineProgress model from list
+    final engine = widget.engineProgressList.firstWhere(
+      (e) => e.engine == key,
+      orElse: () => EngineProgress(
+        id: '',
+        projectId: widget.projectId,
+        engine: key,
+        progressPercent: 0,
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    // Decode checked steps
+    List<String> checkedSteps = [];
+    if (engine.statusNotes != null && engine.statusNotes!.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(engine.statusNotes!);
+        if (decoded is List) {
+          checkedSteps = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+    }
+
+    final steps = StrategyScreen.engineSteps[key] ?? [];
+    final totalSteps = steps.length;
+    
+    // Calculate progress based on checklist
+    final double value = totalSteps > 0 ? (checkedSteps.length / totalSteps) : 0.0;
+    final progressPercent = (value * 100).toInt();
+
+    final isEditable = widget.userRole == 'admin' || widget.userRole == 'account_manager';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -136,7 +179,7 @@ class _EngineProgressCardState extends State<EngineProgressCard> {
                   Row(
                     children: [
                       Text(
-                        '${ArabicFormatter.number((value * 100).toInt(), isAr: widget.isAr)}%',
+                        '${ArabicFormatter.number(progressPercent, isAr: widget.isAr)}%',
                         style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 8),
@@ -151,23 +194,136 @@ class _EngineProgressCardState extends State<EngineProgressCard> {
               ),
               const SizedBox(height: 10),
               _buildProgressBar(value, color),
-              if (isExpanded && subItems != null) ...[
+              if (isExpanded) ...[
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: subItems.map((item) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      item,
-                      style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
-                    ),
-                  )).toList(),
-                ),
+                const Divider(color: Colors.white10, height: 1),
+                const SizedBox(height: 12),
+                if (_isUpdating)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(color: AppTheme.primaryGreen, minHeight: 2),
+                  ),
+                if (steps.isNotEmpty)
+                  Column(
+                    children: steps.map((step) {
+                      final enText = step['en']!;
+                      final arText = step['ar']!;
+                      final displayText = widget.isAr ? arText : enText;
+                      final isChecked = checkedSteps.contains(enText);
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            if (isEditable)
+                              Checkbox(
+                                value: isChecked,
+                                activeColor: color,
+                                checkColor: Colors.black,
+                                side: const BorderSide(color: Colors.white30),
+                                onChanged: _isUpdating
+                                    ? null
+                                    : (val) async {
+                                        setState(() {
+                                          _isUpdating = true;
+                                        });
+
+                                        final newChecked = List<String>.from(checkedSteps);
+                                        if (val == true) {
+                                          newChecked.add(enText);
+                                        } else {
+                                          newChecked.remove(enText);
+                                        }
+
+                                        final newPercent = ((newChecked.length / totalSteps) * 100).toInt();
+                                        final client = Supabase.instance.client;
+
+                                        try {
+                                          if (engine.id.isNotEmpty) {
+                                            await client.from('engine_progress').update({
+                                              'progress_percent': newPercent,
+                                              'status_notes': jsonEncode(newChecked),
+                                              'updated_at': DateTime.now().toIso8601String(),
+                                            }).eq('id', engine.id);
+                                          } else {
+                                            await client.from('engine_progress').insert({
+                                              'project_id': widget.projectId,
+                                              'engine': key,
+                                              'progress_percent': newPercent,
+                                              'status_notes': jsonEncode(newChecked),
+                                              'updated_at': DateTime.now().toIso8601String(),
+                                            });
+                                          }
+
+                                          // Sync main growth engine health if action provider exists
+                                          try {
+                                            final actions = ref.read(adminActionsProvider);
+                                            await actions.updateEngineProgress({
+                                              'project_id': widget.projectId,
+                                              'engine': key,
+                                              'progress_percent': newPercent,
+                                            });
+                                          } catch (_) {}
+
+                                          ref.invalidate(engineProgressListProvider);
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.redAccent),
+                                            );
+                                          }
+                                        } finally {
+                                          if (mounted) {
+                                            setState(() {
+                                              _isUpdating = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                                child: Icon(
+                                  isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+                                  color: isChecked ? color : Colors.white30,
+                                  size: 20,
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                displayText,
+                                style: TextStyle(
+                                  color: isChecked ? Colors.white70 : Colors.white,
+                                  fontSize: 13,
+                                  decoration: isChecked ? TextDecoration.lineThrough : null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  )
+                else ...[
+                  // Fallback to static chips if steps list is empty
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ((widget.isAr ? _subItemsAr[key] : _subItemsEn[key]) ?? []).map((item) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        item,
+                        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
+                      ),
+                    )).toList(),
+                  ),
+                ],
               ],
             ],
           ),

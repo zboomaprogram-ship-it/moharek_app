@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
@@ -281,10 +282,13 @@ final amPerformanceListProvider = FutureProvider<List<AmPerformance>>((
 
 final allTicketsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final client = ref.watch(supabaseClientProvider);
-  return client
-      .from('support_tickets')
-      .stream(primaryKey: ['id'])
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: client,
+    table: 'support_tickets',
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final teamListProvider = FutureProvider<List<Map<String, dynamic>>>((
@@ -471,6 +475,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (task['project_id'] != null) {
       await _notify(
         projectId: task['project_id'],
@@ -480,6 +486,7 @@ class AdminActions {
         linkPath: '/tasks',
       );
     }
+    */
   }
 
   Future<void> updateTaskStatus(String taskId, String status, {String? projectId}) async {
@@ -527,6 +534,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (approval['project_id'] != null) {
       await _notify(
         projectId: approval['project_id'],
@@ -536,6 +545,7 @@ class AdminActions {
         linkPath: '/approvals',
       );
     }
+    */
   }
 
   Future<void> deleteApproval(String approvalId, String title) async {
@@ -690,6 +700,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (invoices.isNotEmpty && invoices.first['project_id'] != null) {
       final amount = invoices.first['amount'];
       final currency = invoices.first['currency'] ?? 'SAR';
@@ -701,6 +713,7 @@ class AdminActions {
         linkPath: '/dashboard',
       );
     }
+    */
   }
 
   Future<void> updateInvoiceStatus(String invoiceId, String status) async {
@@ -818,6 +831,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (ticket['project_id'] != null) {
       await _notify(
         projectId: ticket['project_id'],
@@ -827,6 +842,7 @@ class AdminActions {
         linkPath: '/support',
       );
     }
+    */
   }
 
   Future<void> sendChatMessage(Map<String, dynamic> message) async {
@@ -848,6 +864,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (meeting['project_id'] != null) {
       await _notify(
         projectId: meeting['project_id'],
@@ -857,6 +875,7 @@ class AdminActions {
         linkPath: '/meetings',
       );
     }
+    */
   }
 
   Future<void> deleteMeeting(String meetingId, String title) async {
@@ -881,6 +900,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (result['project_id'] != null) {
       await _notify(
         projectId: result['project_id'],
@@ -890,6 +911,7 @@ class AdminActions {
         linkPath: '/results',
       );
     }
+    */
   }
 
   Future<void> deleteResult(String resultId, String name) async {
@@ -914,6 +936,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (report['project_id'] != null) {
       await _notify(
         projectId: report['project_id'],
@@ -923,6 +947,7 @@ class AdminActions {
         linkPath: '/reports',
       );
     }
+    */
   }
 
   Future<void> deleteReport(String reportId, String title) async {
@@ -947,6 +972,8 @@ class AdminActions {
       });
     } catch (_) {}
 
+    // Handled by database trigger to avoid duplicates
+    /*
     if (file['project_id'] != null) {
       await _notify(
         projectId: file['project_id'],
@@ -956,6 +983,7 @@ class AdminActions {
         linkPath: '/files',
       );
     }
+    */
   }
 
   Future<void> deleteFile(String fileId, String name) async {
@@ -1311,20 +1339,89 @@ final amDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((
       .from('projects')
       .select()
       .eq('account_manager_id', amId);
-
-  // 3. Fetch performance metrics (aggregated for now)
-  double totalHealth = 0;
   final projectsList = projects as List;
+
+  // 3. Aggregate metrics
+  double totalHealth = 0;
   for (var p in projectsList) {
     totalHealth += (p['health_score'] ?? 0).toDouble();
+  }
+  final avgHealth = projectsList.isNotEmpty ? totalHealth / projectsList.length : 0.0;
+
+  final projectIds = projectsList.map((p) => p['id'] as String).toList();
+  int tasksCreated = 0;
+  int tasksCompleted = 0;
+  int reportsCount = 0;
+  int approvalsCount = 0;
+  int approvalsPending = 0;
+  int meetingsCount = 0;
+  List<Map<String, dynamic>> performanceHistory = [];
+
+  if (projectIds.isNotEmpty) {
+    try {
+      // Fetch tasks
+      final tasks = await client
+          .from('tasks')
+          .select('status')
+          .inFilter('project_id', projectIds);
+      final tasksList = tasks as List;
+      tasksCreated = tasksList.length;
+      tasksCompleted = tasksList.where((t) => t['status'] == 'completed').length;
+    } catch (_) {}
+
+    try {
+      // Fetch reports
+      final reports = await client
+          .from('reports')
+          .select('id')
+          .inFilter('project_id', projectIds);
+      reportsCount = (reports as List).length;
+    } catch (_) {}
+
+    try {
+      // Fetch approvals
+      final approvals = await client
+          .from('approvals')
+          .select('status')
+          .inFilter('project_id', projectIds);
+      final approvalsList = approvals as List;
+      approvalsCount = approvalsList.length;
+      approvalsPending = approvalsList.where((a) => a['status'] == 'pending').length;
+    } catch (_) {}
+
+    try {
+      // Fetch meetings
+      final meetings = await client
+          .from('meetings')
+          .select('id')
+          .inFilter('project_id', projectIds);
+      meetingsCount = (meetings as List).length;
+    } catch (_) {}
+  }
+
+  // 4. Fetch performance history logs
+  try {
+    final history = await client
+        .from('am_performance')
+        .select()
+        .eq('am_id', amId)
+        .order('period_month', ascending: false);
+    performanceHistory = List<Map<String, dynamic>>.from(history);
+  } catch (e) {
+    print('Error fetching am_performance history: $e');
   }
 
   return {
     'profile': profile,
     'projects': projectsList,
-    'avg_health': projectsList.isNotEmpty
-        ? totalHealth / projectsList.length
-        : 0,
+    'avg_health': avgHealth,
+    'tasks_created': tasksCreated,
+    'tasks_completed': tasksCompleted,
+    'reports_count': reportsCount,
+    'approvals_count': approvalsCount,
+    'approvals_pending': approvalsPending,
+    'meetings_count': meetingsCount,
+    'performance_history': performanceHistory,
   };
 });
 
@@ -1427,102 +1524,184 @@ final criticalAlertsProvider = FutureProvider<List<Map<String, dynamic>>>((
 
 final projectTasksProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('tasks')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'tasks',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final projectMeetingsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('meetings')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('scheduled_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'meetings',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'scheduled_at',
+    ascending: false,
+  );
 });
 
 final projectTicketsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('support_tickets')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'support_tickets',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final projectResultsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('results')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('recorded_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'results',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'recorded_at',
+    ascending: false,
+  );
 });
 
 // Reads from growth_engines — the single source of truth for both admin web and mobile app.
 // growth_engines has: engine_type (enum), health_score (0-100 int)
 final projectEnginesProvider = StreamProvider.family<Map<String, double>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c
-      .from('growth_engines')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .map((data) {
-        final Map<String, double> result = {};
-        for (var item in data) {
-          final engineType = item['engine_type'] as String?;
-          final healthScore = (item['health_score'] as num?)?.toDouble() ?? 0;
-          if (engineType != null) {
-            result[engineType] = healthScore / 100.0; // convert 0-100 → 0.0-1.0
-          }
-        }
-        return result;
-      });
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'growth_engines',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+  ).map((data) {
+    final Map<String, double> result = {};
+    for (var item in data) {
+      final engineType = item['engine_type'] as String?;
+      final healthScore = (item['health_score'] as num?)?.toDouble() ?? 0;
+      if (engineType != null) {
+        result[engineType] = healthScore / 100.0; // convert 0-100 → 0.0-1.0
+      }
+    }
+    return result;
+  });
 });
 
 final projectInvoicesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('invoices')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'invoices',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final projectReportsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('reports')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'reports',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final projectCampaignsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('campaigns')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'campaigns',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final projectFilesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('files')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'files',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 final adminProjectJourneyStagesProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('journey_stages')
-      .stream(primaryKey: ['id'])
-      .eq('project_id', pid)
-      .order('order_index', ascending: true);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'journey_stages',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'order_index',
+    ascending: true,
+  );
 });
 
 final adminProjectDetailStream = StreamProvider.family<Map<String, dynamic>, String>((ref, projectId) {
   final client = ref.watch(supabaseClientProvider);
-  return client
-      .from('projects')
-      .stream(primaryKey: ['id'])
-      .eq('id', projectId)
-      .map((event) => event.isEmpty ? {} : event.first);
+  final controller = StreamController<Map<String, dynamic>>.broadcast();
+
+  Future<void> fetch() async {
+    try {
+      final res = await client
+          .from('projects')
+          .select('*, profiles:profiles!projects_client_id_fkey(full_name, company_name)')
+          .eq('id', projectId)
+          .maybeSingle();
+      if (!controller.isClosed) {
+        controller.add(res ?? {});
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
+  }
+
+  fetch();
+  final timer = Timer.periodic(const Duration(seconds: 15), (_) => fetch());
+
+  ref.onDispose(() {
+    timer.cancel();
+    controller.close();
+  });
+
+  return controller.stream;
 });
+
+final adminProjectEngineProgressProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
+  final c = ref.watch(supabaseClientProvider);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'engine_progress',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+  );
+});
+

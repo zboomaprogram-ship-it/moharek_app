@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/theme/rabhan_theme_constants.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/profile.dart';
 import '../models/package_model.dart';
 import '../providers/package_provider.dart';
+
+class _ThemeColors {
+  static bool get isRabhan => AppConfig.flavorName == 'rabhan';
+  static Color get background => isRabhan ? RabhanTheme.background : AppTheme.background;
+  static Color get card => isRabhan ? RabhanTheme.card : AppTheme.cardColor;
+  static Color get primaryGreen => isRabhan ? RabhanTheme.primaryGreen : AppTheme.primaryGreen;
+  static Color get gold => isRabhan ? RabhanTheme.gold : Colors.amber;
+  static Color get error => isRabhan ? RabhanTheme.error : Colors.redAccent;
+}
 
 class GrowthProScreen extends ConsumerWidget {
   const GrowthProScreen({super.key});
@@ -20,7 +31,7 @@ class GrowthProScreen extends ConsumerWidget {
     final amAsync = ref.watch(accountManagerProvider(projectId));
 
     return Scaffold(
-      backgroundColor: RabhanTheme.background,
+      backgroundColor: _ThemeColors.background,
       appBar: AppBar(
         title: const Text('الحساب والباقة'),
         centerTitle: true,
@@ -34,7 +45,7 @@ class GrowthProScreen extends ConsumerWidget {
       body: projectId.isEmpty
           ? const Center(child: Text('لا يوجد مشروع نشط حالياً'))
           : packageAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: RabhanTheme.primaryGreen)),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
               error: (e, _) => const Center(child: Text('خطأ في تحميل بيانات الباقة')),
               data: (package) {
                 if (package == null) {
@@ -60,7 +71,7 @@ class GrowthProScreen extends ConsumerWidget {
                       amAsync.when(
                         loading: () => const SizedBox(
                           height: 80,
-                          child: Center(child: CircularProgressIndicator(color: RabhanTheme.primaryGreen)),
+                          child: Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
                         ),
                         error: (_, __) => const SizedBox.shrink(),
                         data: (am) => am != null ? _AccountManagerCard(am: am) : const SizedBox.shrink(),
@@ -86,9 +97,9 @@ class _PackageHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = switch (package.status) {
-      'active' => RabhanTheme.primaryGreen,
-      'trial'  => RabhanTheme.gold,
-      _        => RabhanTheme.error,
+      'active' => _ThemeColors.primaryGreen,
+      'trial'  => _ThemeColors.gold,
+      _        => _ThemeColors.error,
     };
     final statusLabel = switch (package.status) {
       'active' => 'نشطة',
@@ -100,9 +111,9 @@ class _PackageHeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: RabhanTheme.card,
+        color: _ThemeColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: RabhanTheme.gold.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: _ThemeColors.gold.withOpacity(0.3), width: 0.5),
       ),
       child: Row(
         children: [
@@ -110,10 +121,10 @@ class _PackageHeaderCard extends StatelessWidget {
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color: RabhanTheme.gold.withOpacity(0.15),
+              color: _ThemeColors.gold.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.workspace_premium, color: RabhanTheme.gold, size: 28),
+            child: Icon(Icons.workspace_premium, color: _ThemeColors.gold, size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -150,13 +161,13 @@ class _PackageHeaderCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: RabhanTheme.gold.withOpacity(0.15),
+              color: _ThemeColors.gold.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: RabhanTheme.gold.withOpacity(0.4)),
+              border: Border.all(color: _ThemeColors.gold.withOpacity(0.4)),
             ),
             child: const Text(
               'الباقة',
-              style: TextStyle(color: RabhanTheme.gold, fontSize: 12, fontWeight: FontWeight.w500),
+              style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -185,7 +196,7 @@ class _ServicesCard extends StatelessWidget {
               children: services.map((s) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Row(children: [
-                  const Icon(Icons.check_circle_outline, color: RabhanTheme.primaryGreen, size: 18),
+                  Icon(Icons.check_circle_outline, color: _ThemeColors.primaryGreen, size: 18),
                   const SizedBox(width: 10),
                   Text(s, style: const TextStyle(color: Colors.white, fontSize: 14)),
                 ]),
@@ -204,9 +215,9 @@ class _RequestsUsageCard extends StatelessWidget {
     final used  = package.requestsUsed;
     final limit = package.requestsLimit;
     final pct   = limit == 0 ? 0.0 : used / limit;
-    final barColor = pct > 0.9 ? RabhanTheme.error
-                   : pct > 0.7 ? RabhanTheme.gold
-                   : RabhanTheme.primaryGreen;
+    final barColor = pct > 0.9 ? _ThemeColors.error
+                   : pct > 0.7 ? _ThemeColors.gold
+                   : _ThemeColors.primaryGreen;
 
     return _RabhanCard(
       title: 'استخدام الطلبات الشهرية',
@@ -276,9 +287,9 @@ class _AccountManagerCard extends StatelessWidget {
               child: Container(
                 width: 12, height: 12,
                 decoration: BoxDecoration(
-                  color: RabhanTheme.primaryGreen,
+                  color: _ThemeColors.primaryGreen,
                   shape: BoxShape.circle,
-                  border: Border.all(color: RabhanTheme.card, width: 2),
+                  border: Border.all(color: _ThemeColors.card, width: 2),
                 ),
               ),
             ),
@@ -289,7 +300,7 @@ class _AccountManagerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(am.fullName, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-                const Text('متصل الآن', style: TextStyle(color: RabhanTheme.primaryGreen, fontSize: 12)),
+                Text('متصل الآن', style: TextStyle(color: _ThemeColors.primaryGreen, fontSize: 12)),
               ],
             ),
           ),
@@ -342,7 +353,7 @@ class _QuickLinksSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: RabhanTheme.card,
+        color: _ThemeColors.card,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -368,7 +379,7 @@ class _RabhanCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: RabhanTheme.card,
+        color: _ThemeColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withOpacity(0.06), width: 0.5),
       ),

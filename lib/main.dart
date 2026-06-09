@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:ui' as ui;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:moharek_app/firebase_options.dart' as moharek_firebase;
 import 'package:moharek_app/rabhan_firebase_options.dart' as rabhan_firebase;
@@ -18,31 +19,24 @@ import 'package:moharek_app/core/providers/locale_provider.dart';
 import 'package:flutter_callkeep/flutter_callkeep.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkeep_stub.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/calls/widgets/call_signal_listener.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class SafeLocalStorage extends LocalStorage {
   final _inMemoryStore = <String, String>{};
-  SharedPreferences? _prefs;
-  bool _useInMemory = false;
+  final SharedPreferences? _prefs;
   static const _key = 'supabase.auth.token';
 
+  SafeLocalStorage(this._prefs);
+
   @override
-  Future<void> initialize() async {
-    try {
-      _prefs = await SharedPreferences.getInstance();
-    } catch (e) {
-      _useInMemory = true;
-      debugPrint('SharedPreferences secure/Private Browsing error: $e');
-    }
-  }
+  Future<void> initialize() async {}
 
   @override
   Future<String?> accessToken() async {
-    if (_useInMemory || _prefs == null) return _inMemoryStore[_key];
+    if (_prefs == null) return _inMemoryStore[_key];
     try {
-      return _prefs!.getString(_key);
+      return _prefs.getString(_key);
     } catch (e) {
       return _inMemoryStore[_key];
     }
@@ -50,9 +44,9 @@ class SafeLocalStorage extends LocalStorage {
 
   @override
   Future<bool> hasAccessToken() async {
-    if (_useInMemory || _prefs == null) return _inMemoryStore.containsKey(_key);
+    if (_prefs == null) return _inMemoryStore.containsKey(_key);
     try {
-      return _prefs!.containsKey(_key);
+      return _prefs.containsKey(_key);
     } catch (e) {
       return _inMemoryStore.containsKey(_key);
     }
@@ -61,22 +55,22 @@ class SafeLocalStorage extends LocalStorage {
   @override
   Future<void> persistSession(String session) async {
     _inMemoryStore[_key] = session;
-    if (_useInMemory || _prefs == null) return;
+    if (_prefs == null) return;
     try {
-      await _prefs!.setString(_key, session);
+      await _prefs.setString(_key, session);
     } catch (e) {
-      _useInMemory = true;
+      // ignore
     }
   }
 
   @override
   Future<void> removePersistedSession() async {
     _inMemoryStore.remove(_key);
-    if (_useInMemory || _prefs == null) return;
+    if (_prefs == null) return;
     try {
-      await _prefs!.remove(_key);
+      await _prefs.remove(_key);
     } catch (e) {
-      _useInMemory = true;
+      // ignore
     }
   }
 }
@@ -95,36 +89,48 @@ void main() async {
   timeago.setLocaleMessages('ar', timeago.ArMessages());
   timeago.setLocaleMessages('en', timeago.EnMessages());
 
-  // Initialize WordPress Media API secret key in secure storage
-  const secureStorage = FlutterSecureStorage();
-  try {
-    final hasKey = await secureStorage.containsKey(key: 'wp_media_api_secret');
-    if (!hasKey) {
-      await secureStorage.write(key: 'wp_media_api_secret', value: 'omarmahmoud23112002');
-    }
-  } catch (e) {
-    debugPrint('Secure storage init error: $e');
-  }
-
   // Initialize CallKeep for background call handling
   if (!kIsWeb) {
     try {
-      CallKeep.instance.configure(CallKeepConfig(
-        appName: AppConfig.appName,
-        android: CallKeepAndroidConfig(
-          logo: "ic_launcher", // Standard launcher icon
-          incomingCallNotificationChannelName: '${AppConfig.appName} Calls',
-          missedCallNotificationChannelName: 'Missed Calls',
-        ),
-        ios: CallKeepIosConfig(
-          iconName: 'ic_launcher',
-          handleType: CallKitHandleType.generic,
-          isVideoSupported: true,
-        ),
-      ));
+      // Dynamic compliance with Apple Guideline 5 (Legal - CallKit in China)
+      // CallKit is prohibited on iOS in China.
+      bool isChinaIOS = false;
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        try {
+          final country = ui.PlatformDispatcher.instance.locale.countryCode?.toUpperCase();
+          if (country == 'CN') {
+            isChinaIOS = true;
+            debugPrint('China locale detected on iOS. CallKit configuration bypassed.');
+          }
+        } catch (_) {}
+      }
+
+      if (!isChinaIOS) {
+        CallKeep.instance.configure(CallKeepConfig(
+          appName: AppConfig.appName,
+          android: CallKeepAndroidConfig(
+            logo: "ic_launcher", // Standard launcher icon
+            incomingCallNotificationChannelName: '${AppConfig.appName} Calls',
+            missedCallNotificationChannelName: 'Missed Calls',
+          ),
+          ios: CallKeepIosConfig(
+            iconName: 'ic_launcher',
+            handleType: CallKitHandleType.generic,
+            isVideoSupported: true,
+          ),
+        ));
+      }
     } catch (e) {
       debugPrint('CallKeep Configuration Error: $e');
     }
+  }
+
+  // Pre-initialize SharedPreferences for SafeLocalStorage
+  SharedPreferences? prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (e) {
+    debugPrint('SharedPreferences initialization error: $e');
   }
 
   // Load saved locale before running the app
@@ -151,7 +157,7 @@ void main() async {
     url: AppConfig.supabaseUrl,
     anonKey: AppConfig.supabaseAnonKey,
     authOptions: FlutterAuthClientOptions(
-      localStorage: SafeLocalStorage(),
+      localStorage: SafeLocalStorage(prefs),
     ),
   );
 

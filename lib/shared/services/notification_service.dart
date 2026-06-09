@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/core/router/app_router.dart';
 import 'package:moharek_app/features/calls/services/call_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -46,13 +47,30 @@ class NotificationService {
       final data = event.notification.additionalData;
       final actionId = event.result.actionId;
       debugPrint('🔔 [OneSignal] Notification clicked: ${event.notification.title} data=$data actionId=$actionId');
-      if (data != null && data['type'] == 'call') {
-        if (actionId == 'accept') {
-          CallNotificationService.handleAcceptButtonPush(data);
-        } else if (actionId == 'reject') {
-          CallNotificationService.handleDeclineButtonPush(data);
-        } else {
-          CallNotificationService.handleIncomingCallPush(data);
+      
+      if (data != null) {
+        if (data['type'] == 'call') {
+          if (actionId == 'accept') {
+            CallNotificationService.handleAcceptButtonPush(data);
+          } else if (actionId == 'reject') {
+            CallNotificationService.handleDeclineButtonPush(data);
+          } else {
+            CallNotificationService.handleIncomingCallPush(data);
+          }
+        } else if (data['type'] == 'meeting') {
+          try {
+            appRouter.push('/dashboard/meetings');
+          } catch (e) {
+            debugPrint('🔔 [Notification Click] Meeting navigation error: $e');
+          }
+        } else if (data['link_path'] != null || data['route'] != null) {
+          try {
+            final rawRoute = (data['link_path'] ?? data['route']) as String;
+            final route = resolveNotificationPath(rawRoute);
+            appRouter.push(route);
+          } catch (e) {
+            debugPrint('🔔 [Notification Click] Deep-link navigation error: $e');
+          }
         }
       }
     });

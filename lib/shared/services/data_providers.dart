@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/shared/models/profile.dart';
@@ -86,6 +88,104 @@ final currentProjectProvider = FutureProvider<Project?>((ref) async {
   return Project.fromJson(data);
 });
 
+Stream<List<T>> robustQueryStream<T>({
+  required SupabaseClient client,
+  required String table,
+  String? filterColumn,
+  dynamic filterValue,
+  required T Function(Map<String, dynamic>) fromJson,
+  String? orderColumn,
+  bool ascending = false,
+  int? limit,
+}) {
+  final controller = StreamController<List<T>>.broadcast();
+  StreamSubscription? sub;
+  Timer? pollTimer;
+  bool isPolling = false;
+
+  Future<void> doPoll() async {
+    try {
+      dynamic query = client.from(table).select();
+      if (filterColumn != null && filterValue != null) {
+        query = query.eq(filterColumn, filterValue);
+      }
+      if (orderColumn != null) {
+        query = query.order(orderColumn, ascending: ascending);
+      }
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+      final data = await query;
+      final list = (data as List).map<T>((json) => fromJson(json as Map<String, dynamic>)).toList().cast<T>();
+      if (!controller.isClosed) {
+        controller.add(list);
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
+  }
+
+  void startPolling() {
+    if (isPolling) return;
+    isPolling = true;
+    sub?.cancel();
+    sub = null;
+    
+    debugPrint('⚠️ Falling back to polling for table: $table');
+    doPoll();
+    pollTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      doPoll();
+    });
+  }
+
+  void startRealtime() {
+    try {
+      dynamic streamQuery = client
+          .from(table)
+          .stream(primaryKey: ['id']);
+      
+      if (filterColumn != null && filterValue != null) {
+        streamQuery = streamQuery.eq(filterColumn, filterValue);
+      }
+      if (orderColumn != null) {
+        streamQuery = streamQuery.order(orderColumn, ascending: ascending);
+      }
+      if (limit != null) {
+        streamQuery = streamQuery.limit(limit);
+      }
+
+      sub = streamQuery.listen(
+        (data) {
+          final list = data.map<T>((json) => fromJson(json as Map<String, dynamic>)).toList().cast<T>();
+          if (!controller.isClosed) {
+            controller.add(list);
+          }
+        },
+        onError: (err) {
+          debugPrint('🚨 Realtime stream error on $table: $err. Switching to fallback polling.');
+          startPolling();
+        },
+        cancelOnError: false,
+      );
+    } catch (e) {
+      debugPrint('🚨 Failed to start realtime stream on $table: $e. Switching to fallback polling.');
+      startPolling();
+    }
+  }
+
+  startRealtime();
+
+  controller.onCancel = () {
+    sub?.cancel();
+    pollTimer?.cancel();
+    controller.close();
+  };
+
+  return controller.stream;
+}
+
 // ── Real-time Stream Providers ──
 
 // Tasks (Stream)
@@ -95,16 +195,19 @@ final tasksProvider = StreamProvider.autoDispose<List<ProjectTask>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('tasks')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => ProjectTask.fromJson(json)).toList());
+      if (project == null) return Stream<List<ProjectTask>>.value(<ProjectTask>[]);
+      return robustQueryStream<ProjectTask>(
+        client: client,
+        table: 'tasks',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ProjectTask.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ProjectTask>>.value(<ProjectTask>[]),
+    error: (_, __) => Stream<List<ProjectTask>>.value(<ProjectTask>[]),
   );
 });
 
@@ -115,16 +218,19 @@ final resultsProvider = StreamProvider.autoDispose<List<ResultMetric>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('results')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('recorded_at', ascending: false)
-          .map((data) => data.map((json) => ResultMetric.fromJson(json)).toList());
+      if (project == null) return Stream<List<ResultMetric>>.value(<ResultMetric>[]);
+      return robustQueryStream<ResultMetric>(
+        client: client,
+        table: 'results',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ResultMetric.fromJson,
+        orderColumn: 'recorded_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ResultMetric>>.value(<ResultMetric>[]),
+    error: (_, __) => Stream<List<ResultMetric>>.value(<ResultMetric>[]),
   );
 });
 
@@ -135,15 +241,17 @@ final engineProgressListProvider = StreamProvider.autoDispose<List<EngineProgres
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('engine_progress')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .map((data) => data.map((json) => EngineProgress.fromJson(json)).toList());
+      if (project == null) return Stream<List<EngineProgress>>.value(<EngineProgress>[]);
+      return robustQueryStream<EngineProgress>(
+        client: client,
+        table: 'engine_progress',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: EngineProgress.fromJson,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<EngineProgress>>.value(<EngineProgress>[]),
+    error: (_, __) => Stream<List<EngineProgress>>.value(<EngineProgress>[]),
   );
 });
 
@@ -154,16 +262,19 @@ final approvalsProvider = StreamProvider.autoDispose<List<ApprovalRequest>>((ref
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('approvals')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => ApprovalRequest.fromJson(json)).toList());
+      if (project == null) return Stream<List<ApprovalRequest>>.value(<ApprovalRequest>[]);
+      return robustQueryStream<ApprovalRequest>(
+        client: client,
+        table: 'approvals',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ApprovalRequest.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ApprovalRequest>>.value(<ApprovalRequest>[]),
+    error: (_, __) => Stream<List<ApprovalRequest>>.value(<ApprovalRequest>[]),
   );
 });
 
@@ -174,16 +285,19 @@ final journeyStagesProvider = StreamProvider.autoDispose<List<JourneyStage>>((re
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('journey_stages')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('order_index', ascending: true)
-          .map((data) => data.map((json) => JourneyStage.fromJson(json)).toList());
+      if (project == null) return Stream<List<JourneyStage>>.value(<JourneyStage>[]);
+      return robustQueryStream<JourneyStage>(
+        client: client,
+        table: 'journey_stages',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: JourneyStage.fromJson,
+        orderColumn: 'order_index',
+        ascending: true,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<JourneyStage>>.value(<JourneyStage>[]),
+    error: (_, __) => Stream<List<JourneyStage>>.value(<JourneyStage>[]),
   );
 });
 
@@ -194,16 +308,19 @@ final reportsProvider = StreamProvider.autoDispose<List<ProjectReport>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('reports')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => ProjectReport.fromJson(json)).toList());
+      if (project == null) return Stream<List<ProjectReport>>.value(<ProjectReport>[]);
+      return robustQueryStream<ProjectReport>(
+        client: client,
+        table: 'reports',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ProjectReport.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ProjectReport>>.value(<ProjectReport>[]),
+    error: (_, __) => Stream<List<ProjectReport>>.value(<ProjectReport>[]),
   );
 });
 
@@ -214,16 +331,19 @@ final invoicesProvider = StreamProvider.autoDispose<List<Invoice>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('invoices')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => Invoice.fromJson(json)).toList());
+      if (project == null) return Stream<List<Invoice>>.value(<Invoice>[]);
+      return robustQueryStream<Invoice>(
+        client: client,
+        table: 'invoices',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: Invoice.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<Invoice>>.value(<Invoice>[]),
+    error: (_, __) => Stream<List<Invoice>>.value(<Invoice>[]),
   );
 });
 
@@ -234,16 +354,19 @@ final contractsProvider = StreamProvider.autoDispose<List<Contract>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('contracts')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => Contract.fromJson(json)).toList());
+      if (project == null) return Stream<List<Contract>>.value(<Contract>[]);
+      return robustQueryStream<Contract>(
+        client: client,
+        table: 'contracts',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: Contract.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<Contract>>.value(<Contract>[]),
+    error: (_, __) => Stream<List<Contract>>.value(<Contract>[]),
   );
 });
 
@@ -254,15 +377,19 @@ final filesProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((re
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('files')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false);
+      if (project == null) return Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]);
+      return robustQueryStream<Map<String, dynamic>>(
+        client: client,
+        table: 'files',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: (json) => json,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]),
+    error: (_, __) => Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]),
   );
 });
 
@@ -273,16 +400,19 @@ final meetingsProvider = StreamProvider.autoDispose<List<ProjectMeeting>>((ref) 
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('meetings')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('scheduled_at', ascending: false)
-          .map((data) => data.map((json) => ProjectMeeting.fromJson(json)).toList());
+      if (project == null) return Stream<List<ProjectMeeting>>.value(<ProjectMeeting>[]);
+      return robustQueryStream<ProjectMeeting>(
+        client: client,
+        table: 'meetings',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ProjectMeeting.fromJson,
+        orderColumn: 'scheduled_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ProjectMeeting>>.value(<ProjectMeeting>[]),
+    error: (_, __) => Stream<List<ProjectMeeting>>.value(<ProjectMeeting>[]),
   );
 });
 
@@ -293,16 +423,19 @@ final ticketsProvider = StreamProvider.autoDispose<List<SupportTicket>>((ref) {
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('support_tickets')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => SupportTicket.fromJson(json)).toList());
+      if (project == null) return Stream<List<SupportTicket>>.value(<SupportTicket>[]);
+      return robustQueryStream<SupportTicket>(
+        client: client,
+        table: 'support_tickets',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: SupportTicket.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<SupportTicket>>.value(<SupportTicket>[]),
+    error: (_, __) => Stream<List<SupportTicket>>.value(<SupportTicket>[]),
   );
 });
 
@@ -313,27 +446,35 @@ final clientActivityFeedProvider = StreamProvider.autoDispose<List<Map<String, d
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('activity_feed')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .limit(10);
+      if (project == null) return Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]);
+      return robustQueryStream<Map<String, dynamic>>(
+        client: client,
+        table: 'activity_feed',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: (json) => json,
+        orderColumn: 'created_at',
+        ascending: false,
+        limit: 10,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]),
+    error: (_, __) => Stream<List<Map<String, dynamic>>>.value(<Map<String, dynamic>>[]),
   );
 });
 
 // Support Ticket Messages (Stream)
 final ticketMessagesProvider = StreamProvider.family.autoDispose<List<Map<String, dynamic>>, String>((ref, ticketId) {
   final client = ref.watch(supabaseClientProvider);
-  return client
-      .from('support_ticket_messages')
-      .stream(primaryKey: ['id'])
-      .eq('ticket_id', ticketId)
-      .order('created_at', ascending: true);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: client,
+    table: 'support_ticket_messages',
+    filterColumn: 'ticket_id',
+    filterValue: ticketId,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: true,
+  );
 });
 
 
@@ -362,28 +503,34 @@ final campaignsProvider = StreamProvider.autoDispose<List<ProjectCampaign>>((ref
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value([]);
-      return client
-          .from('campaigns')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => ProjectCampaign.fromJson(json)).toList());
+      if (project == null) return Stream<List<ProjectCampaign>>.value(<ProjectCampaign>[]);
+      return robustQueryStream<ProjectCampaign>(
+        client: client,
+        table: 'campaigns',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: ProjectCampaign.fromJson,
+        orderColumn: 'created_at',
+        ascending: false,
+      );
     },
-    loading: () => Stream.value([]),
-    error: (_, __) => Stream.value([]),
+    loading: () => Stream<List<ProjectCampaign>>.value(<ProjectCampaign>[]),
+    error: (_, __) => Stream<List<ProjectCampaign>>.value(<ProjectCampaign>[]),
   );
 });
 
 // Campaign Results (Stream)
 final campaignResultsProvider = StreamProvider.family.autoDispose<List<CampaignResult>, String>((ref, campaignId) {
   final client = ref.watch(supabaseClientProvider);
-  return client
-      .from('campaign_results')
-      .stream(primaryKey: ['id'])
-      .eq('campaign_id', campaignId)
-      .order('recorded_at', ascending: false)
-      .map((data) => data.map((json) => CampaignResult.fromJson(json)).toList());
+  return robustQueryStream<CampaignResult>(
+    client: client,
+    table: 'campaign_results',
+    filterColumn: 'campaign_id',
+    filterValue: campaignId,
+    fromJson: CampaignResult.fromJson,
+    orderColumn: 'recorded_at',
+    ascending: false,
+  );
 });
 
 // Engine Progress (Stream) — provides a map of engine_type → progress (0.0-1.0)
@@ -393,15 +540,16 @@ final engineProgressMapProvider = StreamProvider.autoDispose<Map<String, double>
 
   return projectAsync.when(
     data: (project) {
-      if (project == null) return Stream.value({});
-      return client
-          .from('engine_progress')
-          .stream(primaryKey: ['id'])
-          .eq('project_id', project.id)
-          .map((data) {
+      if (project == null) return Stream<Map<String, double>>.value(<String, double>{});
+      return robustQueryStream<Map<String, dynamic>>(
+        client: client,
+        table: 'engine_progress',
+        filterColumn: 'project_id',
+        filterValue: project.id,
+        fromJson: (json) => json,
+      ).map((data) {
         final Map<String, double> result = {};
         for (var item in data) {
-          // Column is 'engine_type' not 'engine', and 'progress' (0-100) not 'progress_percent'
           final engineType = item['engine_type'] as String? ?? item['engine'] as String? ?? '';
           final progressRaw = (item['progress'] ?? item['progress_percent'] ?? 0) as num;
           if (engineType.isNotEmpty) {
@@ -409,12 +557,10 @@ final engineProgressMapProvider = StreamProvider.autoDispose<Map<String, double>
           }
         }
         return result;
-      }).handleError((e) {
-        // Non-fatal: return empty map on realtime errors
       });
     },
-    loading: () => Stream.value({}),
-    error: (_, __) => Stream.value({}),
+    loading: () => Stream<Map<String, double>>.value(<String, double>{}),
+    error: (_, __) => Stream<Map<String, double>>.value(<String, double>{}),
   );
 });
 

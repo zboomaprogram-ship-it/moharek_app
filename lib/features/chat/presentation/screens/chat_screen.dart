@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/chat_provider.dart';
@@ -28,11 +30,13 @@ final _urlRegExp = RegExp(
 class ChatScreen extends ConsumerStatefulWidget {
   final String channelId;
   final String channelName;
+  final String? prefilledMessage;
   
   const ChatScreen({
     super.key,
     required this.channelId,
     required this.channelName,
+    this.prefilledMessage,
   });
 
   @override
@@ -46,13 +50,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _voiceUploadService = VoiceUploadService();
   bool _showAttachMenu = false;
   bool _isTyping = false;
-  bool _isRecording = false;
   bool _isConnecting = false;
   String _connectionStatus = 'جاري الاتصال...';
+  ChatMessage? _replyingTo;
+  String? _senderNameForReply;
 
   @override
   void initState() {
     super.initState();
+    if (widget.prefilledMessage != null) {
+      _msgCtrl.text = widget.prefilledMessage!;
+    }
     _msgCtrl.addListener(() {
       setState(() => _isTyping = _msgCtrl.text.isNotEmpty);
     });
@@ -84,6 +92,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
+    final replyId = _replyingTo?.id;
+    final replyContent = _replyingTo?.content;
+    final replySender = _senderNameForReply;
+
+    setState(() {
+      _replyingTo = null;
+      _senderNameForReply = null;
+    });
+
     // 1. Clear input immediately for snappy UX
     _msgCtrl.clear();
     HapticService.light();
@@ -100,12 +117,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       messageType: 'text',
       isRead: false,
       createdAt: DateTime.now(),
+      replyToId: replyId,
+      replyToContent: replyContent,
+      replyToSenderName: replySender,
     );
     ref.read(chatMessagesProvider(widget.channelId).notifier).addOptimistic(optimistic);
 
     // 3. Fire the actual DB insert (Realtime stream will confirm & replace optimistic row)
     try {
-      await ref.read(chatNotifierProvider.notifier).sendMessage(widget.channelId, text);
+      await ref.read(chatNotifierProvider.notifier).sendMessage(
+        widget.channelId, 
+        text,
+        replyToId: replyId,
+        replyToContent: replyContent,
+        replyToSenderName: replySender,
+      );
       // ✅ No manual refresh() needed — Realtime stream updates state automatically
     } catch (e) {
       debugPrint('❌ [Chat] _sendText error: $e');
@@ -159,6 +185,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         await client.storage
             .from('files')
             .uploadBinary('chat/$storageName', bytes);
+      } else if (path != null) {
+        final file = File(path);
+        if (await file.exists()) {
+          final fileBytes = await file.readAsBytes();
+          await client.storage
+              .from('files')
+              .uploadBinary('chat/$storageName', fileBytes);
+        } else {
+          throw Exception('File does not exist at path: $path');
+        }
+      } else {
+        throw Exception('No file data or path available');
       }
       final url = client.storage
           .from('files')
@@ -518,17 +556,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       final url = match.group(0)!;
+      final tapUrl = url.startsWith('http') ? url : 'https://$url';
       spans.add(TextSpan(
         text: url,
-        style: const TextStyle(
-          color: AppTheme.primaryBlue,
+        style: TextStyle(
+          color: isMe ? Colors.blue[900] : AppTheme.primaryBlue,
           fontSize: 14,
           decoration: TextDecoration.underline,
         ),
-        // Note: Tap gestures in RichText can be tricky with SelectableText.
-        // For simplicity, we use SelectableText for the whole block, 
-        // but link detection is better handled by a package.
-        // Since we are doing a quick fix, we'll use a Column of SelectableText pieces.
+        recognizer: TapGestureRecognizer()
+          ..onTap = () async {
+            final uri = Uri.tryParse(tapUrl);
+            if (uri != null) {
+              try {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            }
+          },
       ));
       lastMatchEnd = match.end;
     }
@@ -540,17 +584,62 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ));
     }
 
-    // Since SelectableText.rich doesn't support tap callbacks easily without complex setup,
-    // we will use SelectableText with the raw text for copyability, 
-    // and if there are links, we display them clearly.
-    return SelectableText(
-      text,
-      style: TextStyle(
-        color: isMe ? Colors.black : (matches.isNotEmpty ? AppTheme.primaryBlue : Colors.white),
-        fontSize: 14,
-        decoration: matches.isNotEmpty ? TextDecoration.underline : null,
+    return SelectableText.rich(
+      TextSpan(children: spans),
+    );
+  }
+
+  void _showContextOptions(ChatMessage msg, bool isMe, AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      onTap: matches.isNotEmpty ? () => launchUrl(Uri.parse(matches.first.group(0)!)) : null,
+      builder: (context) {
+        final isAr = Localizations.localeOf(context).languageCode == 'ar';
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.reply, color: Colors.white70),
+                title: Text(
+                  isAr ? 'رد' : 'Reply',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _replyingTo = msg;
+                    _senderNameForReply = isMe 
+                        ? (isAr ? 'أنت' : 'You')
+                        : widget.channelName;
+                  });
+                },
+              ),
+              if (msg.messageType == 'text')
+                ListTile(
+                  leading: const Icon(Icons.copy, color: Colors.white70),
+                  title: Text(
+                    isAr ? 'نسخ النص' : 'Copy Text',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Clipboard.setData(ClipboardData(text: msg.content));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isAr ? 'تم نسخ النص إلى الحافظة' : 'Text copied to clipboard'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -564,27 +653,70 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(isImage ? 4 : 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isMe ? AppTheme.primaryGreen : AppTheme.cardColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+      child: GestureDetector(
+        onLongPress: () {
+          HapticService.medium();
+          _showContextOptions(msg, isMe, l10n);
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.all(isImage ? 4 : 12),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image message
-            if (isImage && msg.fileUrl != null)
-              GestureDetector(
+          decoration: BoxDecoration(
+            color: isMe ? AppTheme.primaryGreen : AppTheme.cardColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isMe ? 16 : 4),
+              bottomRight: Radius.circular(isMe ? 4 : 16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (msg.replyToId != null) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isMe ? Colors.black : Colors.white).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border(
+                      left: BorderSide(
+                        color: isMe ? Colors.black38 : AppTheme.primaryGreen,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg.replyToSenderName ?? '',
+                        style: TextStyle(
+                          color: isMe ? Colors.black87 : AppTheme.primaryGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        msg.replyToContent ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isMe ? Colors.black54 : Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (isImage && msg.fileUrl != null)
+                GestureDetector(
                 onTap: () => launchUrl(Uri.parse(msg.fileUrl!)),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
@@ -704,8 +836,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildAttachMenu() {
     final l10n = AppLocalizations.of(context)!;
@@ -766,76 +899,119 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Widget _buildReplyPreviewBanner(bool isRtl) {
+    if (_replyingTo == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: isRtl ? BorderSide.none : const BorderSide(color: AppTheme.primaryGreen, width: 4),
+          right: isRtl ? const BorderSide(color: AppTheme.primaryGreen, width: 4) : BorderSide.none,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.reply, color: AppTheme.primaryGreen, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _senderNameForReply ?? '',
+                  style: const TextStyle(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _replyingTo!.content,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+            onPressed: () {
+              setState(() {
+                _replyingTo = null;
+                _senderNameForReply = null;
+              });
+            },
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInput() {
+    final isRtl = Localizations.localeOf(context).languageCode == 'ar';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       color: AppTheme.background,
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (!_isRecording) ...[
-              IconButton(
-                icon: Icon(
-                  _showAttachMenu ? Icons.close : Icons.add,
-                  color: Colors.grey,
-                ),
-                onPressed: () =>
-                    setState(() => _showAttachMenu = !_showAttachMenu),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white10),
+            if (_replyingTo != null) _buildReplyPreviewBanner(isRtl),
+            VoiceRecordButton(
+              recorderService: _voiceRecorderService,
+              onRecordingComplete: _handleVoiceRecording,
+              isRtl: isRtl,
+              isTyping: _isTyping,
+              onSendTap: _sendText,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _showAttachMenu ? Icons.close : Icons.add,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () =>
+                        setState(() => _showAttachMenu = !_showAttachMenu),
                   ),
-                  child: TextField(
-                    controller: _msgCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.typeMessage,
-                      hintStyle: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardColor,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white10),
                       ),
-                      border: InputBorder.none,
+                      child: TextField(
+                        controller: _msgCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.typeMessage,
+                          hintStyle: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _sendText(),
+                      ),
                     ),
-                    onSubmitted: (_) => _sendText(),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                ],
               ),
-              const SizedBox(width: 8),
-            ],
-            if (_isTyping)
-              GestureDetector(
-                onTap: _sendText,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.send, color: Colors.black, size: 24),
-                ),
-              )
-            else
-              _isRecording 
-                ? Expanded(
-                    child: VoiceRecordButton(
-                      recorderService: _voiceRecorderService,
-                      onRecordingComplete: _handleVoiceRecording,
-                      onRecordingToggle: (val) => setState(() => _isRecording = val),
-                      isRtl: Localizations.localeOf(context).languageCode == 'ar',
-                    ),
-                  )
-                : VoiceRecordButton(
-                    recorderService: _voiceRecorderService,
-                    onRecordingComplete: _handleVoiceRecording,
-                    onRecordingToggle: (val) => setState(() => _isRecording = val),
-                    isRtl: Localizations.localeOf(context).languageCode == 'ar',
-                  ),
+            ),
           ],
         ),
       ),

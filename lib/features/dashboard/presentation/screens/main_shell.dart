@@ -8,6 +8,7 @@ import 'package:moharek_app/features/dashboard/presentation/widgets/milestone_ce
 import 'package:moharek_app/features/dashboard/presentation/widgets/main_drawer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, Key? key})
@@ -45,9 +46,31 @@ class _MainShellState extends ConsumerState<MainShell> {
     final l10n = AppLocalizations.of(context)!;
     final currentIndex = widget.navigationShell.currentIndex;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final isRabhan = AppConfig.flavorName == 'rabhan';
 
     final isMobile = MediaQuery.of(context).size.width < 1000;
     final scaffoldKey = GlobalKey<ScaffoldState>();
+
+    // Unread counts logic
+    final unreadChat = ref.watch(unreadChatNotificationsCountProvider);
+    final unreadTasks = ref.watch(unreadTaskNotificationsCountProvider);
+    final unreadApprovals = ref.watch(unreadApprovalNotificationsCountProvider);
+    final unreadMeetings = ref.watch(unreadMeetingNotificationsCountProvider);
+    final unreadReports = ref.watch(unreadReportNotificationsCountProvider);
+    final unreadTotal = ref.watch(unreadNotificationsCountProvider);
+
+    final totalWorkUnread = unreadTasks + unreadApprovals + unreadMeetings;
+
+    Widget buildBadgeIcon({
+      required IconData iconData,
+      required int count,
+      bool active = false,
+    }) {
+      return Icon(
+        iconData,
+        color: active ? AppTheme.primaryGreen : Colors.white70,
+      );
+    }
 
     return Scaffold(
       key: scaffoldKey,
@@ -55,7 +78,16 @@ class _MainShellState extends ConsumerState<MainShell> {
       body: Row(
         children: [
           if (!isMobile)
-            _buildSidebar(context, l10n, currentIndex),
+            _buildSidebar(
+              context,
+              l10n,
+              currentIndex,
+              unreadChat,
+              totalWorkUnread,
+              unreadTasks,
+              unreadReports,
+              unreadTotal,
+            ),
           Expanded(
             child: Stack(
               children: [
@@ -75,7 +107,11 @@ class _MainShellState extends ConsumerState<MainShell> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                                  const Icon(
+                                    Icons.wifi_off,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     l10n.offlineMessage,
@@ -102,7 +138,10 @@ class _MainShellState extends ConsumerState<MainShell> {
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.redAccent,
                           borderRadius: BorderRadius.circular(20),
@@ -110,9 +149,19 @@ class _MainShellState extends ConsumerState<MainShell> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.wifi_off, color: Colors.white, size: 14),
+                            const Icon(
+                              Icons.wifi_off,
+                              color: Colors.white,
+                              size: 14,
+                            ),
                             const SizedBox(width: 8),
-                            Text(l10n.offlineMessage, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                            Text(
+                              l10n.offlineMessage,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -123,76 +172,143 @@ class _MainShellState extends ConsumerState<MainShell> {
           ),
         ],
       ),
-      bottomNavigationBar: isMobile ? NavigationBar(
-        selectedIndex: currentIndex.clamp(0, 4),
-        onDestinationSelected: (index) {
-          HapticService.light();
-          widget.navigationShell.goBranch(
-            index,
-            initialLocation: index == widget.navigationShell.currentIndex,
-          );
-        },
-        backgroundColor: AppTheme.background,
-        indicatorColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: AppConfig.flavorName == 'rabhan' ? [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home, color: AppTheme.primaryGreen),
-            label: isAr ? 'الرئيسية' : 'Home',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.checklist_outlined),
-            selectedIcon: const Icon(Icons.checklist, color: AppTheme.primaryGreen),
-            label: isAr ? 'العمل' : 'Work',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.chat_bubble_outline),
-            selectedIcon: const Icon(Icons.chat_bubble, color: AppTheme.primaryGreen),
-            label: isAr ? 'المحادثات' : 'Chat',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.notifications_none_outlined),
-            selectedIcon: const Icon(Icons.notifications, color: AppTheme.primaryGreen),
-            label: isAr ? 'الإشعارات' : 'Notifications',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.grid_view_outlined),
-            selectedIcon: const Icon(Icons.grid_view, color: AppTheme.primaryGreen),
-            label: isAr ? 'المزيد' : 'More',
-          ),
-        ] : [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home, color: AppTheme.primaryGreen),
-            label: l10n.homeTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.task_alt_outlined),
-            selectedIcon: const Icon(Icons.task_alt, color: AppTheme.primaryGreen),
-            label: l10n.tasksTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.chat_bubble_outline),
-            selectedIcon: const Icon(Icons.chat_bubble, color: AppTheme.primaryGreen),
-            label: l10n.chatTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics, color: AppTheme.primaryGreen),
-            label: l10n.resultsTab,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.description_outlined),
-            selectedIcon: const Icon(Icons.description, color: AppTheme.primaryGreen),
-            label: isAr ? 'التقارير' : 'Reports',
-          ),
-        ],
-      ) : null,
+      bottomNavigationBar: isMobile
+          ? NavigationBar(
+              selectedIndex: currentIndex.clamp(0, 4),
+              onDestinationSelected: (index) {
+                HapticService.light();
+                widget.navigationShell.goBranch(
+                  index,
+                  initialLocation: index == widget.navigationShell.currentIndex,
+                );
+              },
+              backgroundColor: AppTheme.background,
+              indicatorColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: isRabhan
+                  ? [
+                      NavigationDestination(
+                        icon: const Icon(Icons.home_outlined),
+                        selectedIcon: const Icon(
+                          Icons.home,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        label: isAr ? 'الرئيسية' : 'Home',
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.checklist_outlined,
+                          count: totalWorkUnread,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.checklist,
+                          count: totalWorkUnread,
+                          active: true,
+                        ),
+                        label: isAr ? 'العمل' : 'Work',
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.chat_bubble_outline,
+                          count: unreadChat,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.chat_bubble,
+                          count: unreadChat,
+                          active: true,
+                        ),
+                        label: isAr ? 'المحادثات' : 'Chat',
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.notifications_none_outlined,
+                          count: unreadTotal,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.notifications,
+                          count: unreadTotal,
+                          active: true,
+                        ),
+                        label: isAr ? 'الإشعارات' : 'Notifications',
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.grid_view_outlined),
+                        selectedIcon: const Icon(
+                          Icons.grid_view,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        label: isAr ? 'المزيد' : 'More',
+                      ),
+                    ]
+                  : [
+                      NavigationDestination(
+                        icon: const Icon(Icons.home_outlined),
+                        selectedIcon: const Icon(
+                          Icons.home,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        label: l10n.homeTab,
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.task_alt_outlined,
+                          count: unreadTasks,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.task_alt,
+                          count: unreadTasks,
+                          active: true,
+                        ),
+                        label: l10n.tasksTab,
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.chat_bubble_outline,
+                          count: unreadChat,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.chat_bubble,
+                          count: unreadChat,
+                          active: true,
+                        ),
+                        label: l10n.chatTab,
+                      ),
+                      NavigationDestination(
+                        icon: const Icon(Icons.analytics_outlined),
+                        selectedIcon: const Icon(
+                          Icons.analytics,
+                          color: AppTheme.primaryGreen,
+                        ),
+                        label: l10n.resultsTab,
+                      ),
+                      NavigationDestination(
+                        icon: buildBadgeIcon(
+                          iconData: Icons.description_outlined,
+                          count: unreadReports,
+                        ),
+                        selectedIcon: buildBadgeIcon(
+                          iconData: Icons.description,
+                          count: unreadReports,
+                          active: true,
+                        ),
+                        label: isAr ? 'التقارير' : 'Reports',
+                      ),
+                    ],
+            )
+          : null,
     );
   }
 
-  Widget _buildSidebar(BuildContext context, AppLocalizations l10n, int currentIndex) {
+  Widget _buildSidebar(
+    BuildContext context,
+    AppLocalizations l10n,
+    int currentIndex,
+    int unreadChat,
+    int totalWorkUnread,
+    int unreadTasks,
+    int unreadReports,
+    int unreadTotal,
+  ) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final isRabhan = AppConfig.flavorName == 'rabhan';
 
@@ -202,9 +318,21 @@ class _MainShellState extends ConsumerState<MainShell> {
       child: Column(
         children: [
           const SizedBox(height: 32),
-          Image.asset(AppConfig.logoAsset, height: 60, fit: BoxFit.contain),
+          Image.asset(
+            AppConfig.logoAsset,
+            height: 120,
+            fit: BoxFit.contain,
+            color: Colors.white,
+          ),
           const SizedBox(height: 12),
-          Text(AppConfig.appName, style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            AppConfig.appName,
+            style: const TextStyle(
+              color: AppTheme.primaryGreen,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 32),
           _SidebarItem(
             icon: Icons.home_outlined,
@@ -217,24 +345,36 @@ class _MainShellState extends ConsumerState<MainShell> {
             label: isRabhan ? (isAr ? 'العمل' : 'Work') : l10n.tasksTab,
             active: currentIndex == 1,
             onTap: () => _onTap(context, 1),
+            badgeCount: isRabhan ? totalWorkUnread : unreadTasks,
           ),
           _SidebarItem(
             icon: Icons.chat_bubble_outline,
             label: isRabhan ? (isAr ? 'المحادثات' : 'Chat') : l10n.chatTab,
             active: currentIndex == 2,
             onTap: () => _onTap(context, 2),
+            badgeCount: unreadChat,
           ),
           _SidebarItem(
-            icon: isRabhan ? Icons.notifications_none_outlined : Icons.analytics_outlined,
-            label: isRabhan ? (isAr ? 'الإشعارات' : 'Notifications') : l10n.resultsTab,
+            icon: isRabhan
+                ? Icons.notifications_none_outlined
+                : Icons.analytics_outlined,
+            label: isRabhan
+                ? (isAr ? 'الإشعارات' : 'Notifications')
+                : l10n.resultsTab,
             active: currentIndex == 3,
             onTap: () => _onTap(context, 3),
+            badgeCount: isRabhan ? unreadTotal : 0,
           ),
           _SidebarItem(
-            icon: isRabhan ? Icons.grid_view_outlined : Icons.description_outlined,
-            label: isRabhan ? (isAr ? 'المزيد' : 'More') : (isAr ? 'التقارير' : 'Reports'),
+            icon: isRabhan
+                ? Icons.grid_view_outlined
+                : Icons.description_outlined,
+            label: isRabhan
+                ? (isAr ? 'المزيد' : 'More')
+                : (isAr ? 'التقارير' : 'Reports'),
             active: currentIndex == 4,
             onTap: () => _onTap(context, 4),
+            badgeCount: isRabhan ? 0 : unreadReports,
           ),
           const Spacer(),
           _SidebarItem(
@@ -255,16 +395,24 @@ class _SidebarItem extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
     required this.active,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget iconWidget = Icon(
+      icon,
+      color: active ? AppTheme.primaryGreen : Colors.grey,
+      size: 20,
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
@@ -273,12 +421,14 @@ class _SidebarItem extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: active ? AppTheme.primaryGreen.withValues(alpha: 0.1) : Colors.transparent,
+            color: active
+                ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              Icon(icon, color: active ? AppTheme.primaryGreen : Colors.grey, size: 20),
+              iconWidget,
               const SizedBox(width: 12),
               Text(
                 label,

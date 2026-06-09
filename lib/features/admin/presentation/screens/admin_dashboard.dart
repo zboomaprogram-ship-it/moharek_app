@@ -453,7 +453,7 @@ class AdminDashboard extends ConsumerWidget {
               const SizedBox(width: 8),
               _buildAction(
                 Icons.open_in_new,
-                () => context.push('/admin/manage/${project['id']}'),
+                () => context.push('/admin/clients/${project['id']}'),
               ),
             ],
           ),

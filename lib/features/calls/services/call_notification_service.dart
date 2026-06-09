@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:ui' as ui;
 import 'package:flutter_callkeep/flutter_callkeep.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
@@ -14,6 +15,17 @@ class CallNotificationService {
   static void init() {
     if (kIsWeb) return; // CallKeep not supported on web
     if (_isInitialized) return;
+
+    // Check if it's iOS and the region is China to bypass CallKit
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        final country = ui.PlatformDispatcher.instance.locale.countryCode?.toUpperCase();
+        if (country == 'CN') {
+          return;
+        }
+      } catch (_) {}
+    }
+
     _isInitialized = true;
 
     // Set the handler for CallKeep events (Accept/Decline from native UI)
@@ -33,6 +45,16 @@ class CallNotificationService {
   /// Called when a push notification with call data is received
   static Future<void> handleIncomingCallPush(Map<String, dynamic> data) async {
     if (kIsWeb) return;
+
+    // Check if it's iOS and the region is China to bypass CallKit
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        final country = ui.PlatformDispatcher.instance.locale.countryCode?.toUpperCase();
+        if (country == 'CN') {
+          return;
+        }
+      } catch (_) {}
+    }
 
     final signalId = data['id'] as String?;
     final callerName = data['caller_name'] as String? ?? 'Someone';

@@ -161,8 +161,14 @@ class ChatNotifier extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
-  Future<void> sendMessage(String channelId, String content,
-      {String messageType = 'text'}) async {
+  Future<void> sendMessage(
+    String channelId,
+    String content, {
+    String messageType = 'text',
+    String? replyToId,
+    String? replyToContent,
+    String? replyToSenderName,
+  }) async {
     final client = ref.read(supabaseClientProvider);
     final user = client.auth.currentUser;
     if (user == null) {
@@ -180,6 +186,11 @@ class ChatNotifier extends AutoDisposeAsyncNotifier<void> {
         'sender_id': user.id,
         'content': content,
         'message_type': messageType,
+        'payload': replyToId != null ? {
+          'reply_to_id': replyToId,
+          'reply_to_content': replyToContent,
+          'reply_to_sender_name': replyToSenderName,
+        } : null,
       });
       debugPrint('✅ [Chat] Message sent successfully');
     } on PostgrestException catch (e) {
@@ -188,7 +199,7 @@ class ChatNotifier extends AutoDisposeAsyncNotifier<void> {
       debugPrint('   message: ${e.message}');
       debugPrint('   details: ${e.details}');
       debugPrint('   hint   : ${e.hint}');
-      rethrow;  // Let the UI catch and display it
+      rethrow;
     } catch (e) {
       debugPrint('❌ [Chat] Unexpected error sending message: $e');
       rethrow;

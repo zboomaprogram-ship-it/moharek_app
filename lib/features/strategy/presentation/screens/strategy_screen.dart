@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
@@ -8,6 +9,7 @@ import 'package:moharek_app/shared/models/project.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/screens/rabhan_strategy_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StrategyScreen extends ConsumerWidget {
   const StrategyScreen({super.key});
@@ -95,13 +97,55 @@ class StrategyScreen extends ConsumerWidget {
                   ),
                   error: (err, _) => Text('Error: $err'),
                   data: (engines) {
+                    final profile = ref.watch(profileProvider).valueOrNull;
+                    final userRole = profile?.role ?? 'client';
                     return Column(
                       children: [
-                        _buildEngineCard('content', isAr ? 'محرك المحتوى' : 'Content Engine', engines, Icons.edit_note, Colors.orange),
-                        _buildEngineCard('seo', isAr ? 'محرك SEO' : 'SEO Engine', engines, Icons.search, Colors.blue),
-                        _buildEngineCard('ai_visibility', isAr ? 'محرك الظهور في AI' : 'AI Visibility Engine', engines, Icons.smart_toy, Colors.purple),
-                        _buildEngineCard('trust', isAr ? 'محرك الثقة' : 'Trust Engine', engines, Icons.star_outline, Colors.amber),
-                        _buildEngineCard('conversion', isAr ? 'محرك التحويل' : 'Conversion Engine', engines, Icons.shopping_cart_outlined, Colors.green),
+                        GrowthEngineCard(
+                          type: 'content',
+                          label: isAr ? 'محرك المحتوى' : 'Content Engine',
+                          engines: engines,
+                          icon: Icons.edit_note,
+                          color: Colors.orange,
+                          project: project,
+                          userRole: userRole,
+                        ),
+                        GrowthEngineCard(
+                          type: 'seo',
+                          label: isAr ? 'محرك SEO' : 'SEO Engine',
+                          engines: engines,
+                          icon: Icons.search,
+                          color: Colors.blue,
+                          project: project,
+                          userRole: userRole,
+                        ),
+                        GrowthEngineCard(
+                          type: 'ai_visibility',
+                          label: isAr ? 'محرك الظهور في AI' : 'AI Visibility Engine',
+                          engines: engines,
+                          icon: Icons.smart_toy,
+                          color: Colors.purple,
+                          project: project,
+                          userRole: userRole,
+                        ),
+                        GrowthEngineCard(
+                          type: 'trust',
+                          label: isAr ? 'محرك الثقة' : 'Trust Engine',
+                          engines: engines,
+                          icon: Icons.star_outline,
+                          color: Colors.amber,
+                          project: project,
+                          userRole: userRole,
+                        ),
+                        GrowthEngineCard(
+                          type: 'conversion',
+                          label: isAr ? 'محرك التحويل' : 'Conversion Engine',
+                          engines: engines,
+                          icon: Icons.shopping_cart_outlined,
+                          color: Colors.green,
+                          project: project,
+                          userRole: userRole,
+                        ),
                       ],
                     );
                   },
@@ -376,28 +420,227 @@ class StrategyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEngineCard(
-    String type,
-    String label,
-    List<EngineProgress> engines,
-    IconData icon,
-    Color color,
-  ) {
-    final engine = engines.firstWhere(
-      (e) => e.engine == type,
+  // Growth engine steps mapped by type, containing both English and Arabic translations.
+  // The English text is used as the database key to track checked items consistently.
+  static const Map<String, List<Map<String, String>>> engineSteps = {
+    'content': [
+      {
+        'en': 'Keyword Research: Target primary, secondary & LSI keywords.',
+        'ar': 'البحث عن الكلمات المفتاحية: استهداف الكلمات الأساسية والثانوية وLSI.'
+      },
+      {
+        'en': 'Optimize On-Page Elements: Title, Meta Description, H1–H6, URL.',
+        'ar': 'تحسين العناصر داخل الصفحة: العناوين، الأوصاف التعريفية، وسوم H1-H6، والروابط.'
+      },
+      {
+        'en': 'Content Quality: Original, in-depth, useful, and intent-focused content.',
+        'ar': 'جودة المحتوى: محتوى أصلي، متعمق، مفيد وموجه لنية بحث المستخدم.'
+      },
+      {
+        'en': 'Semantic SEO: Add related terms & entities (Entity SEO / Knowledge Graph).',
+        'ar': 'سيو دلالي (Semantic SEO): إضافة مصطلحات وكيانات ذات صلة (Entity SEO).'
+      },
+      {
+        'en': 'Readability: Short paragraphs, bullet points, scannable structure.',
+        'ar': 'سهولة القراءة: فقرات قصيرة، نقاط تعداد، وهيكل سهل التصفح.'
+      },
+      {
+        'en': 'Media Optimization: Compress images, use descriptive filenames & Alt Text.',
+        'ar': 'تحسين الوسائط: ضغط الصور، استخدام أسماء ملفات وصفية ونصوص بديلة (Alt Text).'
+      },
+      {
+        'en': 'Internal Linking: Link relevant pages with keyword-rich anchor text.',
+        'ar': 'الربط الداخلي: ربط الصفحات ذات الصلة بنصوص مرساة غنية بالكلمات المفتاحية.'
+      },
+      {
+        'en': 'Content Freshness: Update content regularly to maintain rankings.',
+        'ar': 'تحديث المحتوى: تحديث المحتوى بانتظام للحفاظ على التصنيفات.'
+      },
+    ],
+    'seo': [
+      {
+        'en': 'Technical Audit: Fix crawl errors, redirects, and broken links.',
+        'ar': 'التدقيق التقني: إصلاح أخطاء الزحف، التوجيهات، والروابط المعطلة.'
+      },
+      {
+        'en': 'URL Structure: Clean, short, keyword-optimized, canonicalized URLs.',
+        'ar': 'بنية الروابط: روابط نظيفة، قصيرة، محسنة للكلمات المفتاحية، ومحددة أساسياً (Canonical).'
+      },
+      {
+        'en': 'Site Speed: Optimize Core Web Vitals (LCP, INP, CLS) and page speed.',
+        'ar': 'سرعة الموقع: تحسين مؤشرات أداء الويب الأساسية (Core Web Vitals) وسرعة الصفحة.'
+      },
+      {
+        'en': 'Mobile Optimization: Ensure mobile-first design & responsiveness.',
+        'ar': 'التوافق مع الجوال: ضمان تصميم مستجيب ومتوافق مع الجوال أولاً.'
+      },
+      {
+        'en': 'Robots.txt & Sitemap.xml: Submit and keep updated in Google Search Console.',
+        'ar': 'ملفات Robots.txt و Sitemap.xml: تقديمها وتحديثها في Google Search Console.'
+      },
+      {
+        'en': 'Structured Data (Schema): Implement relevant schema markup.',
+        'ar': 'البيانات المنظمة (Schema): تطبيق ترميز المخطط المناسب.'
+      },
+      {
+        'en': 'Indexation: Check index coverage and fix indexing issues.',
+        'ar': 'الفهرسة: التحقق من تغطية الفهرسة وإصلاح مشاكل الفهرسة.'
+      },
+      {
+        'en': 'Monitoring: Track performance in Google Search Console.',
+        'ar': 'المراقبة: تتبع الأداء والظهور في Google Search Console.'
+      },
+    ],
+    'ai_visibility': [
+      {
+        'en': 'Create High-Quality, E-E-A-T Driven Content: Experience, Expertise, Authoritativeness, Trust.',
+        'ar': 'إنشاء محتوى عالي الجودة يدعم E-E-A-T: الخبرة، التخصص، الموثوقية، والمصداقية.'
+      },
+      {
+        'en': 'FAQ & Q&A Optimization: Answer user questions clearly and concisely.',
+        'ar': 'تحسين الأسئلة الشائعة: الإجابة على أسئلة المستخدمين بوضوح واختصار.'
+      },
+      {
+        'en': 'Content Structure: Use headings, bullets, and tables for AI readability.',
+        'ar': 'بنية المحتوى: استخدام العناوين والنقاط والجداول لتسهيل القراءة على نماذج الذكاء الاصطناعي.'
+      },
+      {
+        'en': 'Mentions & Citations: Get mentioned on reputable sites and platforms.',
+        'ar': 'الإشارات والاستشهادات: الحصول على إشارات في مواقع ومنصات موثوقة.'
+      },
+      {
+        'en': 'Optimize for AI Overviews: Provide clear, direct, and factual answers.',
+        'ar': 'تحسين لنتائج بحث الذكاء الاصطناعي: تقديم إجابات واضحة ومباشرة وحقيقية.'
+      },
+      {
+        'en': 'Monitor Brand Presence: Track visibility in AI responses and platforms (ChatGPT, Gemini, Perplexity).',
+        'ar': 'مراقبة حضور العلامة التجارية: تتبع الظهور في إجابات الذكاء الاصطناعي (ChatGPT, Gemini, Perplexity).'
+      },
+    ],
+    'trust': [
+      {
+        'en': 'Secure Website: Enable HTTPS with a valid SSL certificate.',
+        'ar': 'أمان الموقع: تفعيل بروتوكول HTTPS مع شهادة SSL صالحة.'
+      },
+      {
+        'en': 'Trust Signals: Add About Us, Contact, Privacy Policy, and Terms pages.',
+        'ar': 'إشارات الثقة: إضافة صفحات من نحن، اتصل بنا، سياسة الخصوصية، والشروط والأحكام.'
+      },
+      {
+        'en': 'Reviews & Ratings: Showcase customer reviews, testimonials & ratings.',
+        'ar': 'المراجعات والتقييمات: عرض مراجعات العملاء وتوصياتهم وتقييماتهم.'
+      },
+      {
+        'en': 'Author & Publisher Info: Add author bios and company credentials.',
+        'ar': 'معلومات الكاتب والناشر: إضافة سيرة ذاتية للمؤلفين ومستندات اعتماد الشركة.'
+      },
+      {
+        'en': 'Transparent Policies: Clear return, shipping, and refund policies.',
+        'ar': 'سياسات شفافة: سياسات واضحة للاسترجاع، الشحن، واسترداد الأموال.'
+      },
+      {
+        'en': 'Security & Compliance: Ensure GDPR/CCPA compliance and data protection.',
+        'ar': 'الأمن والامتثال: ضمان الامتثال لمعايير GDPR/CCPA وحماية البيانات.'
+      },
+    ],
+    'conversion': [
+      {
+        'en': 'Landing Page Optimization: Clear value proposition and strong CTA.',
+        'ar': 'تحسين صفحات الهبوط: عرض قيمة واضح ودعوة قوية لاتخاذ إجراء (CTA).'
+      },
+      {
+        'en': 'Product Pages: Unique descriptions, high-quality images, specs, and FAQs.',
+        'ar': 'صفحات المنتجات: أوصاف فريدة، صور عالية الجودة، المواصفات، والأسئلة الشائعة.'
+      },
+      {
+        'en': 'User Experience (UX): Easy navigation, search, filters, and site structure.',
+        'ar': 'تجربة المستخدم (UX): سهولة التنقل، البحث، الفلاتر، وهيكل الموقع.'
+      },
+      {
+        'en': 'Add-to-Cart & Checkout: Simplify steps and reduce friction.',
+        'ar': 'الإضافة للسلة وإتمام الشراء: تبسيط الخطوات وتقليل نقاط الاحتكاك.'
+      },
+      {
+        'en': 'Offer Optimization: Discounts, bundles, upsells, and free shipping thresholds.',
+        'ar': 'تحسين العروض: خصومات، حزم منتجات، صفقات بديلة، وحدود الشحن المجاني.'
+      },
+      {
+        'en': 'A/B Testing: Test headlines, CTAs, layouts, and offers.',
+        'ar': 'اختبارات A/B: اختبار العناوين، دعوات اتخاذ الإجراء، التنسيقات، والعروض.'
+      },
+      {
+        'en': 'Analytics & Tracking: Implement GA4, conversion tracking, and event tracking.',
+        'ar': 'التحليلات والتتبع: إعداد GA4، تتبع التحويلات، وتتبع الأحداث.'
+      },
+    ],
+  };
+}
+
+class GrowthEngineCard extends StatefulWidget {
+  final String type;
+  final String label;
+  final List<EngineProgress> engines;
+  final IconData icon;
+  final Color color;
+  final Project project;
+  final String userRole;
+
+  const GrowthEngineCard({
+    super.key,
+    required this.type,
+    required this.label,
+    required this.engines,
+    required this.icon,
+    required this.color,
+    required this.project,
+    required this.userRole,
+  });
+
+  @override
+  State<GrowthEngineCard> createState() => _GrowthEngineCardState();
+}
+
+class _GrowthEngineCardState extends State<GrowthEngineCard> {
+  bool _isExpanded = false;
+  bool _isUpdating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    
+    final engine = widget.engines.firstWhere(
+      (e) => e.engine == widget.type,
       orElse: () => EngineProgress(
         id: '',
-        projectId: '',
-        engine: type,
+        projectId: widget.project.id,
+        engine: widget.type,
         progressPercent: 0,
         updatedAt: DateTime.now(),
       ),
     );
-    final progress = engine.progressPercent / 100.0;
+
+    // Decode checked steps from statusNotes
+    List<String> checkedSteps = [];
+    if (engine.statusNotes != null && engine.statusNotes!.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(engine.statusNotes!);
+        if (decoded is List) {
+          checkedSteps = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        // Fallback for non-JSON content
+      }
+    }
+
+    final steps = StrategyScreen.engineSteps[widget.type] ?? [];
+    final totalSteps = steps.length;
+    final progress = totalSteps > 0 ? checkedSteps.length / totalSteps : 0.0;
+    final progressPercent = (progress * 100).toInt();
+
+    final isEditable = widget.userRole == 'admin' || widget.userRole == 'am';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -405,55 +648,183 @@ class StrategyScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+          // Header Row
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.white.withValues(alpha: 0.05),
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                        minHeight: 6,
-                      ),
+                    child: Icon(widget.icon, color: widget.color, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$progressPercent%',
+                        style: TextStyle(
+                          color: widget.color,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Icon(
+                        _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        color: Colors.white30,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+            ),
           ),
+
+          // Collapsible Checklist Section
+          if (_isExpanded) ...[
+            const Divider(color: Colors.white10, height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  if (_isUpdating)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: LinearProgressIndicator(color: AppTheme.primaryGreen, minHeight: 2),
+                    ),
+                  ...steps.map((stepMap) {
+                    final enText = stepMap['en']!;
+                    final arText = stepMap['ar']!;
+                    final displayText = isAr ? arText : enText;
+                    final isChecked = checkedSteps.contains(enText);
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          if (isEditable)
+                            Checkbox(
+                              value: isChecked,
+                              activeColor: widget.color,
+                              checkColor: Colors.black,
+                              side: const BorderSide(color: Colors.white30),
+                              onChanged: _isUpdating
+                                  ? null
+                                  : (value) async {
+                                      setState(() {
+                                        _isUpdating = true;
+                                      });
+                                      
+                                      final newChecked = List<String>.from(checkedSteps);
+                                      if (value == true) {
+                                        newChecked.add(enText);
+                                      } else {
+                                        newChecked.remove(enText);
+                                      }
+
+                                      final newPercent = ((newChecked.length / totalSteps) * 100).toInt();
+
+                                      try {
+                                        final client = Supabase.instance.client;
+                                        if (engine.id.isNotEmpty) {
+                                          await client.from('engine_progress').update({
+                                            'progress_percent': newPercent,
+                                            'status_notes': jsonEncode(newChecked),
+                                            'updated_at': DateTime.now().toIso8601String(),
+                                          }).eq('id', engine.id);
+                                        } else {
+                                          await client.from('engine_progress').insert({
+                                            'project_id': widget.project.id,
+                                            'engine': widget.type,
+                                            'progress_percent': newPercent,
+                                            'status_notes': jsonEncode(newChecked),
+                                            'updated_at': DateTime.now().toIso8601String(),
+                                          });
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to update progress: $e')),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isUpdating = false;
+                                          });
+                                        }
+                                      }
+                                    },
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Icon(
+                                isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+                                color: isChecked ? widget.color : Colors.white30,
+                                size: 20,
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              displayText,
+                              style: TextStyle(
+                                color: isChecked ? Colors.white70 : Colors.white,
+                                fontSize: 13,
+                                decoration: isChecked ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
+

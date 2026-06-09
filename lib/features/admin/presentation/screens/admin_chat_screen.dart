@@ -1,8 +1,13 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
+import 'package:moharek_app/shared/services/chat_provider.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/message.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
@@ -12,9 +17,11 @@ import 'package:moharek_app/features/chat/services/voice_upload_service.dart';
 import 'package:moharek_app/features/chat/widgets/voice_record_button.dart';
 import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:moharek_app/shared/services/chat_provider.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
+import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 
@@ -40,6 +47,11 @@ final adminChatChannelProvider = FutureProvider.family<String?, String>((
       .single();
   return inserted['id'];
 });
+
+final _urlRegExp = RegExp(
+  r'((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))',
+  caseSensitive: false,
+);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -68,9 +80,11 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   final _voiceUploadService = VoiceUploadService();
 
   bool _isTyping = false;
-  bool _isRecording = false;
+  bool _showAttachMenu = false;
   bool _isConnecting = false; // call loading overlay
   String _connectionStatus = 'جاري الاتصال...';
+  ChatMessage? _replyingTo;
+  String? _senderNameForReply;
 
   @override
   void initState() {
@@ -79,9 +93,13 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   }
 
   void _onScroll() {
-    // Reverse list: scrolling up (towards older messages) increases pixels towards maxScrollExtent
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
-      ref.read(chatMessagesProvider(widget.channelId).notifier).loadMore();
+    if (_scrollCtrl.hasClients) {
+      final maxScroll = _scrollCtrl.position.maxScrollExtent;
+      final currentScroll = _scrollCtrl.position.pixels;
+      final notifier = ref.read(chatMessagesProvider(widget.channelId).notifier);
+      if (notifier.hasMore && maxScroll > 0 && currentScroll > 0 && currentScroll >= maxScroll - 100) {
+        notifier.loadMore();
+      }
     }
   }
 
@@ -89,23 +107,68 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   Future<void> _sendText() async {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
+
+    final replyId = _replyingTo?.id;
+    final replyContent = _replyingTo?.content;
+    final replySender = _senderNameForReply;
+
+    setState(() {
+      _replyingTo = null;
+      _senderNameForReply = null;
+      _isTyping = false;
+    });
+
     _msgCtrl.clear();
-    setState(() => _isTyping = false);
 
     final actions = ref.read(adminActionsProvider);
     final channelId = widget.channelId;
+    final uid = actions.client.auth.currentUser!.id;
 
-    await actions.sendChatMessage({
-      'channel_id': channelId,
-      'sender_id': actions.client.auth.currentUser!.id,
-      'content': text,
-      'message_type': 'text',
-    });
-    ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+    // Snappy UX: optimistic UI injection
+    final tempId = 'opt_${DateTime.now().millisecondsSinceEpoch}';
+    final optimistic = ChatMessage(
+      id: tempId,
+      channelId: channelId,
+      senderId: uid,
+      content: text,
+      messageType: 'text',
+      isRead: false,
+      createdAt: DateTime.now(),
+      replyToId: replyId,
+      replyToContent: replyContent,
+      replyToSenderName: replySender,
+    );
+    ref.read(chatMessagesProvider(channelId).notifier).addOptimistic(optimistic);
+
+    try {
+      await actions.sendChatMessage({
+        'channel_id': channelId,
+        'sender_id': uid,
+        'content': text,
+        'message_type': 'text',
+        'payload': replyId != null ? {
+          'reply_to_id': replyId,
+          'reply_to_content': replyContent,
+          'reply_to_sender_name': replySender,
+        } : null,
+      });
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      ref.read(chatMessagesProvider(channelId).notifier).refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل إرسال الرسالة: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ── Send file ────────────────────────────────────────────────────────────
   Future<void> _sendFile() async {
+    setState(() => _showAttachMenu = false);
     final result = await FilePicker.pickFiles(withData: true);
     if (result == null) return;
     final file = result.files.first;
@@ -137,6 +200,44 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في رفع الملف: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ── Send image ───────────────────────────────────────────────────────────
+  Future<void> _sendImage() async {
+    setState(() => _showAttachMenu = false);
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+    final client = ref.read(supabaseClientProvider);
+    final channelId = widget.channelId;
+
+    try {
+      final url = await WordPressUploadService.uploadBytes(bytes, fileName);
+      final actions = ref.read(adminActionsProvider);
+      await actions.sendChatMessage({
+        'channel_id': channelId,
+        'sender_id': client.auth.currentUser!.id,
+        'content': '📷 صورة',
+        'message_type': 'image',
+        'file_url': url,
+      });
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في رفع الصورة: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -241,6 +342,12 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   Widget build(BuildContext context) {
     final isRtl = Directionality.of(context) == TextDirection.rtl;
 
+    // Clear notifications for this channel when opened / rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService.markChannelMessagesAsRead(widget.channelId);
+      ref.invalidate(notificationsProvider);
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -300,6 +407,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
       body: Column(
         children: [
           Expanded(child: _buildMessages(widget.channelId)),
+          if (_showAttachMenu) _buildAttachMenu(),
           _buildInput(isRtl),
         ],
       ),
@@ -312,8 +420,10 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     final currentUserId = ref.read(supabaseClientProvider).auth.currentUser?.id;
 
     return msgsAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+      loading: () => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (_, index) => ShimmerLoading.listTile(),
       ),
       error: (e, _) => Center(child: Text('خطأ: $e')),
       data: (messages) {
@@ -346,10 +456,119 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           itemBuilder: (_, i) {
             final msg = messages[i];
             final isMe = msg.senderId == currentUserId;
-            return _buildBubble(msg, isMe);
+            
+            bool showDateHeader = false;
+            if (i == messages.length - 1) {
+              showDateHeader = true;
+            } else {
+              final olderMsg = messages[i + 1];
+              if (msg.createdAt.day != olderMsg.createdAt.day ||
+                  msg.createdAt.month != olderMsg.createdAt.month ||
+                  msg.createdAt.year != olderMsg.createdAt.year) {
+                showDateHeader = true;
+              }
+            }
+
+            return Column(
+              children: [
+                if (showDateHeader) _buildDateHeader(msg.createdAt),
+                _buildBubble(msg, isMe),
+              ],
+            );
           },
         );
       },
+    );
+  }
+
+  Widget _buildDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final msgDate = DateTime(date.year, date.month, date.day);
+
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    String dateText;
+    if (msgDate == today) {
+      dateText = isAr ? 'اليوم' : 'Today';
+    } else if (msgDate == yesterday) {
+      dateText = isAr ? 'أمس' : 'Yesterday';
+    } else {
+      dateText = DateFormat.yMMMMd().format(date);
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            dateText,
+            style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkifiedText(String text, bool isMe) {
+    final matches = _urlRegExp.allMatches(text);
+    if (matches.isEmpty) {
+      return SelectableText(
+        text,
+        style: TextStyle(
+          color: isMe ? Colors.black : Colors.white,
+          fontSize: 14,
+        ),
+      );
+    }
+
+    final List<TextSpan> spans = [];
+    int lastMatchEnd = 0;
+
+    for (final match in matches) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: TextStyle(color: isMe ? Colors.black : Colors.white, fontSize: 14),
+        ));
+      }
+
+      final url = match.group(0)!;
+      final tapUrl = url.startsWith('http') ? url : 'https://$url';
+      spans.add(TextSpan(
+        text: url,
+        style: TextStyle(
+          color: isMe ? Colors.blue[900] : AppTheme.primaryBlue,
+          fontSize: 14,
+          decoration: TextDecoration.underline,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () async {
+            final uri = Uri.tryParse(tapUrl);
+            if (uri != null) {
+              try {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            }
+          },
+      ));
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: TextStyle(color: isMe ? Colors.black : Colors.white, fontSize: 14),
+      ));
+    }
+
+    return SelectableText.rich(
+      TextSpan(children: spans),
     );
   }
 
@@ -417,23 +636,14 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         ],
       );
     } else {
-      content = Text(
-        msg.content,
-        style: TextStyle(
-          color: isMe ? Colors.black : Colors.white,
-          fontSize: 14,
-        ),
-      );
+      content = _buildLinkifiedText(msg.content, isMe);
     }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onLongPress: () {
-          if (!isMe &&
-              (msg.messageType == 'text' || msg.messageType == 'voice')) {
-            _showConvertTaskMenu(context, msg);
-          }
+          _showContextOptions(msg, isMe);
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -453,6 +663,43 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (msg.replyToId != null) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isMe ? Colors.black : Colors.white).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border(
+                      left: isMe ? BorderSide.none : const BorderSide(color: AppTheme.primaryGreen, width: 3),
+                      right: isMe ? const BorderSide(color: AppTheme.primaryGreen, width: 3) : BorderSide.none,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg.replyToSenderName ?? '',
+                        style: TextStyle(
+                          color: isMe ? Colors.black87 : AppTheme.primaryGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        msg.replyToContent ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isMe ? Colors.black54 : Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               content,
               if (msg.convertedToTask) ...[
                 const SizedBox(height: 6),
@@ -497,6 +744,74 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showContextOptions(ChatMessage msg, bool isMe) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        final isAr = Localizations.localeOf(context).languageCode == 'ar';
+        final showConvert = !isMe && (msg.messageType == 'text' || msg.messageType == 'voice');
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.reply, color: Colors.white70),
+                title: Text(
+                  isAr ? 'رد' : 'Reply',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _replyingTo = msg;
+                    _senderNameForReply = isMe 
+                        ? (isAr ? 'أنت' : 'You')
+                        : widget.clientName;
+                  });
+                },
+              ),
+              if (msg.messageType == 'text')
+                ListTile(
+                  leading: const Icon(Icons.copy, color: Colors.white70),
+                  title: Text(
+                    isAr ? 'نسخ النص' : 'Copy Text',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Clipboard.setData(ClipboardData(text: msg.content));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isAr ? 'تم نسخ النص إلى الحافظة' : 'Text copied to clipboard'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              if (showConvert)
+                ListTile(
+                  leading: const Icon(Icons.task_alt, color: AppTheme.primaryGreen),
+                  title: Text(
+                    isAr ? 'حوّل إلى مهمة' : 'Convert to Task',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showTaskModal(this.context, msg);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -667,6 +982,124 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     );
   }
 
+  Widget _buildAttachMenu() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      color: AppTheme.cardColor,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _attachOption(Icons.image, 'صورة', Colors.purple, _sendImage),
+          _attachOption(
+            Icons.insert_drive_file,
+            'ملف',
+            AppTheme.primaryBlue,
+            _sendFile,
+          ),
+          _attachOption(Icons.videocam, 'مكالمة فيديو', Colors.teal, () {
+            setState(() => _showAttachMenu = false);
+            _startCall(true);
+          }),
+          _attachOption(
+            Icons.call,
+            'مكالمة صوتية',
+            AppTheme.primaryGreen,
+            () {
+              setState(() => _showAttachMenu = false);
+              _startCall(false);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _attachOption(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyPreviewBanner(bool isRtl) {
+    if (_replyingTo == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: isRtl ? BorderSide.none : const BorderSide(color: AppTheme.primaryGreen, width: 4),
+          right: isRtl ? const BorderSide(color: AppTheme.primaryGreen, width: 4) : BorderSide.none,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.reply, color: AppTheme.primaryGreen, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _senderNameForReply ?? '',
+                  style: const TextStyle(
+                    color: AppTheme.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _replyingTo!.content,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+            onPressed: () {
+              setState(() {
+                _replyingTo = null;
+                _senderNameForReply = null;
+              });
+            },
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Input bar ─────────────────────────────────────────────────────────────
   Widget _buildInput(bool isRtl) {
     return Container(
@@ -675,79 +1108,56 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         color: AppTheme.background,
         border: Border(top: BorderSide(color: Colors.white.withAlpha(15))),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (!_isRecording) ...[
-            // Attach file
-            IconButton(
-              icon: const Icon(Icons.attach_file, color: Colors.grey),
-              onPressed: _sendFile,
-              tooltip: 'إرفاق ملف',
+          if (_replyingTo != null) _buildReplyPreviewBanner(isRtl),
+          VoiceRecordButton(
+            recorderService: _voiceRecorderService,
+            onRecordingComplete: _handleVoiceRecording,
+            isRtl: isRtl,
+            isTyping: _isTyping,
+            onSendTap: _sendText,
+            child: Row(
+              children: [
+                // Attach toggle
+                IconButton(
+                  icon: Icon(
+                    _showAttachMenu ? Icons.close : Icons.add,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () => setState(() => _showAttachMenu = !_showAttachMenu),
+                  tooltip: 'إرفاق وسائط',
+                ),
+                const SizedBox(width: 8),
+
+                // Text field
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: TextField(
+                      controller: _msgCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      textAlign: TextAlign.right,
+                      onChanged: (v) => setState(() => _isTyping = v.isNotEmpty),
+                      decoration: const InputDecoration(
+                        hintText: 'اكتب رسالة...',
+                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (_) => _sendText(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-          ],
-
-          // Voice record button (shows idle mic or recording bar)
-          _isRecording
-              ? Expanded(
-                  child: VoiceRecordButton(
-                    recorderService: _voiceRecorderService,
-                    isRtl: isRtl,
-                    onRecordingComplete: _handleVoiceRecording,
-                    onRecordingToggle: (val) =>
-                        setState(() => _isRecording = val),
-                  ),
-                )
-              : VoiceRecordButton(
-                  recorderService: _voiceRecorderService,
-                  isRtl: isRtl,
-                  onRecordingComplete: _handleVoiceRecording,
-                  onRecordingToggle: (val) =>
-                      setState(() => _isRecording = val),
-                ),
-
-          if (!_isRecording) ...[
-            const SizedBox(width: 8),
-
-            // Text field
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: TextField(
-                  controller: _msgCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  textAlign: TextAlign.right,
-                  onChanged: (v) => setState(() => _isTyping = v.isNotEmpty),
-                  decoration: const InputDecoration(
-                    hintText: 'اكتب رسالة...',
-                    hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                    border: InputBorder.none,
-                  ),
-                  onSubmitted: (_) => _sendText(),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // Send button
-            if (_isTyping)
-              GestureDetector(
-                onTap: _sendText,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primaryGreen,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.send, color: Colors.black, size: 20),
-                ),
-              ),
-          ],
+          ),
         ],
       ),
     );

@@ -21,13 +21,12 @@ class AppTheme {
         surface: cardColor,
         background: background,
       ),
-      textTheme: cairoTextTheme.apply(
-        bodyColor: Colors.white,
-        displayColor: Colors.white,
-      ).copyWith(
-        bodyLarge: cairoTextTheme.bodyLarge?.copyWith(height: 1.6),
-        bodyMedium: cairoTextTheme.bodyMedium?.copyWith(height: 1.6),
-      ),
+      textTheme: cairoTextTheme
+          .apply(bodyColor: Colors.white, displayColor: Colors.white)
+          .copyWith(
+            bodyLarge: cairoTextTheme.bodyLarge?.copyWith(height: 1.6),
+            bodyMedium: cairoTextTheme.bodyMedium?.copyWith(height: 1.6),
+          ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: background,
         indicatorColor: primaryGreen.withValues(alpha: 0.1),
@@ -67,13 +66,17 @@ class AppTheme {
           backgroundColor: primaryGreen,
           foregroundColor: Colors.black,
           textStyle: GoogleFonts.cairo(fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           textStyle: GoogleFonts.cairo(fontWeight: FontWeight.w500),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

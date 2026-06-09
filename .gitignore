@@ -47,3 +47,7 @@ key.properties
 key-rabhan.properties
 *.jks
 *.keystore
+
+# Python virtual environment
+venv/
+/venv/

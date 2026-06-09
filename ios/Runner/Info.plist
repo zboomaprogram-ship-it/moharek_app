@@ -46,7 +46,6 @@
 		<string>$(PRODUCT_NAME) needs photo library access to upload profile pictures and attachments.</string>
 		<key>UIBackgroundModes</key>
 		<array>
-			<string>audio</string>
 			<string>fetch</string>
 			<string>remote-notification</string>
 			<string>voip</string>

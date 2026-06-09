@@ -6,6 +6,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class ReportsTab extends ConsumerStatefulWidget {
   final String pid;
@@ -60,6 +61,11 @@ class _ReportsTabState extends ConsumerState<ReportsTab> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.markProjectNotificationsAsRead(widget.pid, 'report');
+      ref.invalidate(notificationsProvider);
+    });
+
     final reportsAsync = ref.watch(projectReportsProvider(widget.pid));
 
     return Scaffold(

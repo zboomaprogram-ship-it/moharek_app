@@ -5,6 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -60,30 +61,34 @@ class AmShell extends StatelessWidget {
 class AmSidebar extends ConsumerWidget {
   const AmSidebar({super.key});
 
-  static const _items = [
-    (
-      icon: Icons.business_center_outlined,
-      label: 'عملائي',
-      path: '/am/clients',
-    ),
-    (icon: Icons.task_alt_outlined, label: 'المهام', path: '/am/tasks'),
-    (
-      icon: Icons.pending_actions_outlined,
-      label: 'الموافقات',
-      path: '/am/approvals',
-    ),
-    (icon: Icons.bar_chart_outlined, label: 'التقارير', path: '/am/reports'),
-    (icon: Icons.chat_bubble_outline, label: 'المحادثات', path: '/am/chat'),
-    (
-      icon: Icons.calendar_month_outlined,
-      label: 'الاجتماعات',
-      path: '/am/calendar',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = GoRouterState.of(context).matchedLocation;
+
+    // Watch notification counts for red dots
+    final unreadChat = ref.watch(unreadChatNotificationsCountProvider);
+    final unreadTasks = ref.watch(unreadTaskNotificationsCountProvider);
+    final unreadApprovals = ref.watch(unreadApprovalNotificationsCountProvider);
+    final unreadMeetings = ref.watch(unreadMeetingNotificationsCountProvider);
+    final unreadClients = unreadChat + unreadTasks + unreadApprovals + unreadMeetings;
+
+    final items = [
+      (
+        icon: Icons.business_center_outlined,
+        label: 'عملائي',
+        path: '/am/clients',
+        showDot: unreadClients > 0,
+      ),
+      (icon: Icons.task_alt_outlined, label: 'المهام', path: '/am/tasks', showDot: false),
+      (icon: Icons.bar_chart_outlined, label: 'التقارير', path: '/am/reports', showDot: false),
+      (icon: Icons.chat_bubble_outline, label: 'المحادثات', path: '/am/chat', showDot: unreadChat > 0),
+      (
+        icon: Icons.calendar_month_outlined,
+        label: 'الاجتماعات',
+        path: '/am/calendar',
+        showDot: false,
+      ),
+    ];
 
     return Container(
       width: 260,
@@ -122,13 +127,14 @@ class AmSidebar extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-              children: _items.map((item) {
+              children: items.map((item) {
                 final active = current.startsWith(item.path);
                 return _SidebarItem(
                   icon: item.icon,
                   label: item.label,
                   path: item.path,
                   active: active,
+                  showDot: item.showDot,
                 );
               }).toList(),
             ),
@@ -163,7 +169,7 @@ class AmSidebar extends ConsumerWidget {
                     } catch (e) {
                       // Ignore
                     }
-                    
+
                     if (context.mounted) context.go('/login');
                   },
                 ),
@@ -181,6 +187,7 @@ class _SidebarItem extends StatelessWidget {
   final String label;
   final String path;
   final bool active;
+  final bool showDot;
   final VoidCallback? onTap;
 
   const _SidebarItem({
@@ -188,6 +195,7 @@ class _SidebarItem extends StatelessWidget {
     required this.label,
     required this.path,
     required this.active,
+    this.showDot = false,
     this.onTap,
   });
 
@@ -224,14 +232,25 @@ class _SidebarItem extends StatelessWidget {
               color: active ? AppTheme.primaryGreen : const Color(0xFF64748B),
             ),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? AppTheme.primaryGreen : const Color(0xFF94A3B8),
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: active ? AppTheme.primaryGreen : const Color(0xFF94A3B8),
+                  fontSize: 14,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                ),
               ),
             ),
+            if (showDot)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
           ],
         ),
       ),
@@ -243,11 +262,7 @@ class AmTopBar extends ConsumerWidget {
   final VoidCallback? onMenuPressed;
   final bool isMobile;
 
-  const AmTopBar({
-    super.key,
-    this.onMenuPressed,
-    this.isMobile = false,
-  });
+  const AmTopBar({super.key, this.onMenuPressed, this.isMobile = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -342,7 +357,9 @@ class AmTopBar extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0F172A),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => Consumer(
         builder: (context, ref, _) {
           final notificationsAsync = ref.watch(amNotificationsProvider);
@@ -352,11 +369,18 @@ class AmTopBar extends ConsumerWidget {
                 padding: const EdgeInsets.all(24),
                 child: const Row(
                   children: [
-                    Icon(Icons.notifications_outlined, color: AppTheme.primaryGreen),
+                    Icon(
+                      Icons.notifications_outlined,
+                      color: AppTheme.primaryGreen,
+                    ),
                     SizedBox(width: 12),
                     Text(
                       'التنبيهات والنشاط',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -364,25 +388,61 @@ class AmTopBar extends ConsumerWidget {
               const Divider(color: Color(0xFF1E293B), height: 1),
               Expanded(
                 child: notificationsAsync.when(
-                  data: (logs) => logs.isEmpty 
-                    ? const Center(child: Text('لا توجد تنبيهات جديدة', style: TextStyle(color: Color(0xFF64748B))))
-                    : ListView.separated(
-                        itemCount: logs.length,
-                        separatorBuilder: (context, index) => const Divider(color: Color(0xFF1E293B), height: 1),
-                        itemBuilder: (context, index) {
-                          final log = logs[index];
-                          final action = log['action_ar'] ?? log['action'] ?? 'نشاط جديد';
-                          final projectName = log['projects']?['name'] ?? 'مشروع';
-                          final time = DateFormat('HH:mm').format(DateTime.parse(log['created_at']));
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                            title: Text(action, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                            subtitle: Text(projectName, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
-                            trailing: Text(time, style: const TextStyle(color: Color(0xFF475569), fontSize: 11)),
-                          );
-                        },
-                      ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  data: (logs) => logs.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'لا توجد تنبيهات جديدة',
+                            style: TextStyle(color: Color(0xFF64748B)),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: logs.length,
+                          separatorBuilder: (context, index) => const Divider(
+                            color: Color(0xFF1E293B),
+                            height: 1,
+                          ),
+                          itemBuilder: (context, index) {
+                            final log = logs[index];
+                            final action =
+                                log['action_ar'] ??
+                                log['action'] ??
+                                'نشاط جديد';
+                            final projectName =
+                                log['projects']?['name'] ?? 'مشروع';
+                            final time = DateFormat(
+                              'HH:mm',
+                            ).format(DateTime.parse(log['created_at']));
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 8,
+                              ),
+                              title: Text(
+                                action,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: Text(
+                                projectName,
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              trailing: Text(
+                                time,
+                                style: const TextStyle(
+                                  color: Color(0xFF475569),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Error: $e')),
                 ),
               ),

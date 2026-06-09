@@ -5,6 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/theme/rabhan_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class AmClientsScreen extends ConsumerWidget {
   const AmClientsScreen({super.key});
@@ -22,14 +23,18 @@ class AmClientsScreen extends ConsumerWidget {
           children: [
             const Text(
               'عملائي',
-              style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const Text(
               'قائمة المشاريع المسندة إليك للمتابعة والإدارة',
               style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
             ),
             const SizedBox(height: 32),
-            
+
             Expanded(
               child: clients.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -38,15 +43,26 @@ class AmClientsScreen extends ConsumerWidget {
                   if (list.isEmpty) {
                     return _buildEmptyState();
                   }
+                  final unreadMap = ref.watch(
+                    unreadNotificationsByProjectProvider,
+                  );
                   return GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 400,
-                      mainAxisSpacing: 20,
-                      crossAxisSpacing: 20,
-                      mainAxisExtent: 220,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 400,
+                          mainAxisSpacing: 20,
+                          crossAxisSpacing: 20,
+                          mainAxisExtent: 220,
+                        ),
                     itemCount: list.length,
-                    itemBuilder: (context, index) => _ClientCard(project: list[index]),
+                    itemBuilder: (context, index) {
+                      final project = list[index];
+                      final unreadCount = unreadMap[project['id']] ?? 0;
+                      return _ClientCard(
+                        project: project,
+                        unreadCount: unreadCount,
+                      );
+                    },
                   );
                 },
               ),
@@ -62,7 +78,11 @@ class AmClientsScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.business_center_outlined, size: 64, color: const Color(0xFF334155)),
+          Icon(
+            Icons.business_center_outlined,
+            size: 64,
+            color: const Color(0xFF334155),
+          ),
           const SizedBox(height: 16),
           const Text(
             'لا يوجد عملاء مسندون إليك حالياً',
@@ -76,12 +96,14 @@ class AmClientsScreen extends ConsumerWidget {
 
 class _ClientCard extends StatelessWidget {
   final Map<String, dynamic> project;
-  const _ClientCard({required this.project});
+  final int unreadCount;
+  const _ClientCard({required this.project, this.unreadCount = 0});
 
   @override
   Widget build(BuildContext context) {
     final profile = project['profiles'];
-    final clientName = profile['company_name'] ?? profile['full_name'] ?? 'عميل';
+    final clientName =
+        profile['company_name'] ?? profile['full_name'] ?? 'عميل';
     final health = (project['health_score'] ?? 0).toDouble();
 
     return InkWell(
@@ -106,16 +128,50 @@ class _ClientCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                  child: const Icon(Icons.business, color: AppTheme.primaryGreen, size: 20),
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppTheme.primaryGreen.withValues(
+                        alpha: 0.1,
+                      ),
+                      child: const Icon(
+                        Icons.business,
+                        color: AppTheme.primaryGreen,
+                        size: 20,
+                      ),
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.redAccent,
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     clientName,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -126,8 +182,18 @@ class _ClientCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('مؤشر الصحة', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                Text('${health.toStringAsFixed(0)}%', style: TextStyle(color: _getHealthColor(health), fontSize: 13, fontWeight: FontWeight.bold)),
+                const Text(
+                  'مؤشر الصحة',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                ),
+                Text(
+                  '${health.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: _getHealthColor(health),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -147,16 +213,33 @@ class _ClientCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.list_alt_rounded, color: Color(0xFF64748B), size: 16),
+                    const Icon(
+                      Icons.list_alt_rounded,
+                      color: Color(0xFF64748B),
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
-                    const Text('المهام المعلقة', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                    const Text(
+                      'المهام المعلقة',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                    ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                       child: Text(
                         '${(project['tasks'] as List?)?.where((t) => t['status'] != 'completed').length ?? 0}',
-                        style: const TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -166,13 +249,21 @@ class _ClientCard extends StatelessWidget {
                     children: [
                       _buildPackageBadge(project),
                       const SizedBox(width: 8),
-                      const Icon(Icons.show_chart, color: Color(0xFF64748B), size: 14),
+                      const Icon(
+                        Icons.show_chart,
+                        color: Color(0xFF64748B),
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       _buildRoasText(project),
                     ],
                   ),
                 ],
-                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF64748B), size: 14),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Color(0xFF64748B),
+                  size: 14,
+                ),
               ],
             ),
           ],
@@ -184,10 +275,10 @@ class _ClientCard extends StatelessWidget {
   Widget _buildPackageBadge(Map<String, dynamic> project) {
     final packages = project['packages'] as List<dynamic>? ?? [];
     if (packages.isEmpty) return const SizedBox.shrink();
-    
+
     final pkg = packages.first as Map<String, dynamic>;
     final tier = pkg['tier'] as String? ?? 'basic';
-    
+
     Color color;
     String label;
     switch (tier.toLowerCase()) {
@@ -220,21 +311,33 @@ class _ClientCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
 
   Widget _buildRoasText(Map<String, dynamic> project) {
     final metricsList = project['ecom_metrics'] as List<dynamic>? ?? [];
-    if (metricsList.isEmpty) return const Text('—', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12));
-    
+    if (metricsList.isEmpty)
+      return const Text(
+        '—',
+        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+      );
+
     final metrics = metricsList.first as Map<String, dynamic>;
     final roas = metrics['roas'] ?? 0;
-    
+
     return Text(
       '${roas}x',
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+      ),
     );
   }
 
@@ -243,12 +346,18 @@ class _ClientCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? AppTheme.primaryGreen.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+        color: isActive
+            ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+            : Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         isActive ? 'نشط' : 'قيد الانتظار',
-        style: TextStyle(color: isActive ? AppTheme.primaryGreen : Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: isActive ? AppTheme.primaryGreen : Colors.orange,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
@@ -14,23 +13,42 @@ class ApprovalsScreen extends ConsumerWidget {
   const ApprovalsScreen({super.key});
 
   Future<void> _updateStatus(
+    BuildContext context,
     WidgetRef ref,
     String id,
     String status, {
     String? notes,
   }) async {
-    final client = ref.read(supabaseClientProvider);
-    await client
-        .from('approvals')
-        .update({
-          'status': status,
-          'client_notes': notes,
-          'responded_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', id);
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
+    );
 
-    // Refresh the list
-    ref.invalidate(approvalsProvider);
+    try {
+      final client = ref.read(supabaseClientProvider);
+      await client
+          .from('approvals')
+          .update({
+            'status': status,
+            'client_notes': notes,
+            'responded_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', id);
+
+      ref.invalidate(approvalsProvider);
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء حفظ الموافقة: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -143,7 +161,7 @@ class ApprovalsScreen extends ConsumerWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         HapticService.medium();
-                        _updateStatus(ref, approval.id, 'approved');
+                        _updateStatus(context, ref, approval.id, 'approved');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryGreen,
@@ -252,7 +270,7 @@ class ApprovalsScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              _updateStatus(ref, approval.id, status, notes: controller.text);
+              _updateStatus(context, ref, approval.id, status, notes: controller.text);
               Navigator.pop(context);
             },
             child: Text(AppLocalizations.of(context)!.send),

@@ -235,6 +235,14 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
     double progress = ((task?['progress_percent'] as num?) ?? 0).toDouble();
     bool saving = false;
 
+    // Parse existing dates if present
+    DateTime? selectedStartDate = task?['start_date'] != null 
+        ? DateTime.tryParse(task!['start_date'].toString()) 
+        : null;
+    DateTime? selectedDeadline = task?['deadline'] != null 
+        ? DateTime.tryParse(task!['deadline'].toString()) 
+        : null;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -343,6 +351,106 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                   _buildField(titleController, 'عنوان المهمة', Icons.title),
                   const SizedBox(height: 12),
                   _buildField(descController, 'وصف المهمة', Icons.description_outlined, maxLines: 3),
+                  const SizedBox(height: 16),
+
+                  // Date Pickers
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('تاريخ البدء:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: selectedStartDate ?? DateTime.now(),
+                                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                                  builder: (context, child) => Theme(
+                                    data: ThemeData.dark().copyWith(
+                                      colorScheme: const ColorScheme.dark(
+                                        primary: AppTheme.primaryGreen,
+                                        onPrimary: Colors.black,
+                                        surface: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    child: child!,
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => selectedStartDate = picked);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      selectedStartDate == null ? 'اختر التاريخ' : selectedStartDate!.toString().split(' ')[0],
+                                      style: TextStyle(color: selectedStartDate == null ? const Color(0xFF64748B) : Colors.white, fontSize: 13),
+                                    ),
+                                    const Icon(Icons.calendar_today, color: Color(0xFF64748B), size: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('تاريخ الاستحقاق:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: selectedDeadline ?? DateTime.now(),
+                                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                                  builder: (context, child) => Theme(
+                                    data: ThemeData.dark().copyWith(
+                                      colorScheme: const ColorScheme.dark(
+                                        primary: AppTheme.primaryGreen,
+                                        onPrimary: Colors.black,
+                                        surface: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    child: child!,
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => selectedDeadline = picked);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      selectedDeadline == null ? 'اختر التاريخ' : selectedDeadline!.toString().split(' ')[0],
+                                      style: TextStyle(color: selectedDeadline == null ? const Color(0xFF64748B) : Colors.white, fontSize: 13),
+                                    ),
+                                    const Icon(Icons.calendar_today, color: Color(0xFF64748B), size: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -384,6 +492,8 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                       'description': descController.text.trim(),
                       'status': selectedStatus,
                       'progress_percent': progress.toInt(),
+                      'start_date': selectedStartDate?.toIso8601String(),
+                      'deadline': selectedDeadline?.toIso8601String(),
                     });
                   } else {
                     await actions.createTask({
@@ -391,6 +501,8 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                       'title': titleController.text.trim(),
                       'description': descController.text.trim(),
                       'status': 'todo',
+                      'start_date': selectedStartDate?.toIso8601String(),
+                      'deadline': selectedDeadline?.toIso8601String(),
                     });
                   }
                   _isControllerInitialized = false;

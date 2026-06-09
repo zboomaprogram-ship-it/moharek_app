@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -73,7 +74,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
         context.go('/login');
       }
     } else {
-      context.go('/login');
+      // First-time check: if onboarding has not been shown, show it!
+      final prefs = await SharedPreferences.getInstance();
+      final shown = prefs.getBool('onboarding_shown') ?? false;
+      if (!shown) {
+        context.go('/onboarding');
+      } else {
+        context.go('/login');
+      }
     }
   }
 
@@ -95,8 +103,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
             children: [
               Image.asset(
                 AppConfig.logoAsset,
-                height: 180,
+                height: 280,
                 fit: BoxFit.contain,
+                color: Colors.white,
               ),
               const SizedBox(height: 24),
               Text(

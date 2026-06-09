@@ -38,6 +38,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     _buildStatsRow(ref),
+                    _buildSubscriptionCard(context, ref),
                     const SizedBox(height: 40),
                     _buildSectionHeader(l10n.accountSettings),
                     const SizedBox(height: 16),
@@ -580,5 +581,127 @@ class ProfileScreen extends ConsumerWidget {
         }
       }
     }
+  }
+
+  Widget _buildSubscriptionCard(BuildContext context, WidgetRef ref) {
+    final project = ref.watch(currentProjectProvider).value;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    
+    final tier = project?.subscriptionTier ?? 'Free';
+    final renewalDate = project?.nextRenewalDate;
+    
+    // Formatting date
+    final dateStr = renewalDate != null 
+        ? "${renewalDate.year}/${renewalDate.month}/${renewalDate.day}"
+        : (isAr ? "غير محدد" : "Not specified");
+
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.workspace_premium, color: AppTheme.primaryGreen, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    isAr ? 'الباقة الحالية' : 'Current Subscription',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  tier.toUpperCase(),
+                  style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const Divider(color: Colors.white10, height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isAr ? 'تاريخ التجديد القادم:' : 'Next Renewal Date:',
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              Text(
+                dateStr,
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                final client = Supabase.instance.client;
+                final projectVal = ref.read(currentProjectProvider).value;
+                if (projectVal != null) {
+                  final channel = await client
+                      .from('chat_channels')
+                      .select()
+                      .eq('project_id', projectVal.id)
+                      .eq('is_active', true)
+                      .limit(1)
+                      .maybeSingle();
+                      
+                  if (channel != null && context.mounted) {
+                    final cId = channel['id'];
+                    final cName = isAr ? channel['name_ar'] ?? 'المحادثة' : channel['name'] ?? 'Chat';
+                    final prefilled = Uri.encodeComponent(isAr 
+                        ? 'أرغب في ترقية باقتي الإعلانية / التسويقية الحالية.' 
+                        : 'I would like to upgrade my current advertising / marketing package.');
+                    context.push('/chat/$cId?name=${Uri.encodeComponent(cName)}&prefilled=$prefilled');
+                  } else {
+                    context.push('/chat');
+                  }
+                } else {
+                  context.push('/chat');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                isAr ? 'طلب ترقية الباقة' : 'Request Package Upgrade',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

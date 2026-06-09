@@ -118,9 +118,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final resultsAsync = ref.watch(resultsProvider);
     final journeyAsync = ref.watch(journeyStagesProvider);
     final milestonesAsync = ref.watch(milestonesProvider);
-    final engineProgressAsync = ref.watch(engineProgressMapProvider);
+    final engineProgressAsync = ref.watch(engineProgressListProvider);
     final l10n = AppLocalizations.of(context)!;
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
+
+    final Map<String, double> engineProgressMap = {};
+    if (engineProgressAsync.hasValue) {
+      for (var ep in engineProgressAsync.value!) {
+        engineProgressMap[ep.engine] = ep.progressPercent / 100.0;
+      }
+    }
 
     return Stack(
       children: [
@@ -129,15 +136,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: RefreshIndicator(
               color: AppTheme.primaryGreen,
               onRefresh: () async {
-                ref.invalidate(profileProvider);
-                ref.invalidate(currentProjectProvider);
-                ref.invalidate(tasksProvider);
-                ref.invalidate(approvalsProvider);
-                ref.invalidate(activityFeedProvider);
-                ref.invalidate(contractsProvider);
-                ref.invalidate(resultsProvider);
-                ref.invalidate(milestonesProvider);
                 HapticService.light();
+                try {
+                  ref.invalidate(profileProvider);
+                  ref.invalidate(currentProjectProvider);
+                  ref.invalidate(tasksProvider);
+                  ref.invalidate(approvalsProvider);
+                  ref.invalidate(clientActivityFeedProvider);
+                  ref.invalidate(contractsProvider);
+                  ref.invalidate(resultsProvider);
+                  ref.invalidate(milestonesProvider);
+                  ref.invalidate(engineProgressListProvider);
+
+                  await ref.read(profileProvider.future);
+                  await ref.read(currentProjectProvider.future);
+                } catch (e) {
+                  debugPrint('Refresh Error: $e');
+                }
               },
               child: profileAsync.when(
                 loading: () => const DashboardSkeleton(),
@@ -158,7 +173,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       projectAsync.value?.projectGoal ?? 
                       (profile?.role == 'admin' 
                         ? (l10n.localeName == 'ar' ? 'مدير النظام' : 'Administrator')
-                        : (profile?.role == 'am'
+                        : (profile?.role == 'account_manager'
                           ? (l10n.localeName == 'ar' ? 'مدير حسابات' : 'Account Manager')
                           : null));
                   return SingleChildScrollView(
@@ -176,6 +191,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
+
+                        // Brief completion reminder card
+                        if (projectAsync.hasValue && projectAsync.value != null) ...[
+                          (() {
+                            final project = projectAsync.value!;
+                            final filled = _countFilledBriefFields(project.clientBrief);
+                            const total = 21;
+                            if (filled < total) {
+                              return FadeInSlide(
+                                delay: const Duration(milliseconds: 150),
+                                child: _buildBriefReminder(context, filled, total, l10n, isAr),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          })(),
+                        ],
 
                         // WhatsNew & Contract alerts — not relevant for Rabhan e-commerce clients
                         if (AppConfig.flavorName != 'rabhan') ...[
@@ -363,7 +394,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                                 journeyAsync,
                                                 tasksAsync.asData?.value ?? [],
                                                 approvalsAsync.asData?.value ?? [],
-                                                engineProgressAsync.asData?.value ?? {},
+                                                engineProgressMap,
                                               ),
                                             ),
                                           ),
@@ -392,7 +423,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                           journeyAsync,
                                           tasksAsync.asData?.value ?? [],
                                           approvalsAsync.asData?.value ?? [],
-                                          engineProgressAsync.asData?.value ?? {},
+                                          engineProgressMap,
                                         ),
                                       ),
                                     ),
@@ -470,6 +501,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             child: _buildPerformanceSection(
                               resultsAsync.asData?.value ?? [],
                               l10n,
+                              profileAsync.valueOrNull?.role == 'admin' || profileAsync.valueOrNull?.role == 'account_manager',
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -477,8 +509,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             delay: const Duration(milliseconds: 675),
                             child: engineProgressAsync.when(
                               data: (progress) => EngineProgressCard(
-                                progress: progress,
+                                engineProgressList: progress,
                                 isAr: isAr,
+                                userRole: profileAsync.valueOrNull?.role ?? 'client',
+                                projectId: projectAsync.valueOrNull?.id ?? '',
                               ),
                               loading: () => const SizedBox.shrink(),
                               error: (_, __) => const SizedBox.shrink(),
@@ -486,10 +520,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                           const SizedBox(height: 24),
                         ],
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 700),
-                          child: _buildActivityFeed(activityAsync, isAr),
-                        ),
+
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -519,6 +550,159 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             error: (_, __) => const SizedBox.shrink(),
           ),
       ],
+    );
+  }
+
+  int _countFilledBriefFields(Map<String, dynamic>? brief) {
+    if (brief == null) return 0;
+    final coreFields = [
+      'platform_mail',
+      'platform_password',
+      'best_contact_time',
+      'employment_type',
+      'business_structure',
+      'investment_timeline',
+      'store_age',
+      'has_offline_store',
+      'store_market_stage',
+      'current_future_goals',
+      'target_age_group',
+      'best_selling_products',
+      'competitors',
+      'competitive_advantage',
+      'past_campaigns_details',
+      'past_marketing_agency',
+      'past_seo',
+      'ad_budget',
+      'shipping_service_details',
+      'pricing_vs_competitors',
+      'profit_margin_range',
+    ];
+    int filled = 0;
+    for (final field in coreFields) {
+      final val = brief[field];
+      if (val != null) {
+        if (val is String && val.trim().isNotEmpty) {
+          filled++;
+        } else if (val is bool) {
+          filled++;
+        } else if (val is List && val.isNotEmpty) {
+          filled++;
+        } else if (val is Map && val.isNotEmpty) {
+          filled++;
+        }
+      }
+    }
+    return filled;
+  }
+
+  Widget _buildBriefReminder(BuildContext context, int filledCount, int totalCount, AppLocalizations l10n, bool isAr) {
+    final double percentage = (filledCount / totalCount).clamp(0.0, 1.0);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryGreen.withValues(alpha: 0.15),
+            Colors.white.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            HapticService.light();
+            context.push('/onboarding?edit=true');
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.assignment_outlined,
+                    color: AppTheme.primaryGreen,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isAr ? 'أكمل معلومات مشروعك' : 'Complete Your Project Brief',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isAr 
+                          ? 'يرجى إكمال الحقول المتبقية لتحسين أداء متجرك.' 
+                          : 'Please fill the remaining fields to optimize your store.',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: percentage,
+                                minHeight: 6,
+                                backgroundColor: Colors.white10,
+                                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            isAr 
+                              ? 'تم إكمال $filledCount/$totalCount' 
+                              : '$filledCount/$totalCount filled',
+                            style: const TextStyle(
+                              color: AppTheme.primaryGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  isAr ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios,
+                  color: Colors.white60,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -605,41 +789,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildNotificationButton(BuildContext context, WidgetRef ref) {
-    final unreadCount = ref.watch(unreadNotificationsCountProvider);
-
     return InkWell(
       onTap: () {
         HapticService.light();
         context.push('/dashboard/notifications');
       },
       borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.notifications_outlined, color: Colors.white),
-          ),
-          if (unreadCount > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  unreadCount > 9 ? '9+' : unreadCount.toString(),
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.notifications_outlined, color: Colors.white),
       ),
     );
   }
@@ -858,11 +1020,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .where(
           (r) =>
               r.resultType == 'seo' &&
-              r.metricName.toLowerCase().contains('keyword'),
+              (r.metricName.toLowerCase().contains('keyword') ||
+               (r.metricLabel ?? '').toLowerCase().contains('keyword') ||
+               (r.metricLabel ?? '').contains('الكلمات') ||
+               (r.metricLabel ?? '').contains('الكلمة')),
         )
         .toList();
     final keywordsValue = keywordMetric.isNotEmpty
-        ? keywordMetric.last.metricValue
+        ? keywordMetric.first.metricValue
         : 0.0;
 
     return Row(
@@ -993,16 +1158,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .toList();
   }
 
-  Widget _buildPerformanceSection(List results, AppLocalizations l10n) {
+  Widget _buildPerformanceSection(List results, AppLocalizations l10n, bool isEditable) {
     // Find the latest value for each metric type from the results
     String _getMetricValue(String type, String name) {
       final matches = results.where(
-        (r) =>
-            r.resultType == type &&
-            r.metricName.toLowerCase().contains(name.toLowerCase()),
+        (r) {
+          final isTypeMatch = r.resultType.toLowerCase() == type.toLowerCase();
+          if (!isTypeMatch) return false;
+          
+          final metricNameLower = r.metricName.toLowerCase();
+          final metricLabelLower = (r.metricLabel ?? '').toLowerCase();
+          
+          if (name == 'traffic') {
+            return metricNameLower.contains('traffic') || 
+                   metricNameLower.contains('organic') || 
+                   metricLabelLower.contains('traffic') || 
+                   metricLabelLower.contains('الزيارات') || 
+                   metricLabelLower.contains('الزيارة') || 
+                   metricLabelLower.contains('زيارة') || 
+                   metricLabelLower.contains('زوار');
+          }
+          if (name == 'spend') {
+            return metricNameLower.contains('spend') || 
+                   metricNameLower.contains('cost') || 
+                   metricLabelLower.contains('spend') || 
+                   metricLabelLower.contains('الإنفاق') || 
+                   metricLabelLower.contains('الانفاق') || 
+                   metricLabelLower.contains('صرف') || 
+                   metricLabelLower.contains('ميزانية') || 
+                   metricLabelLower.contains('ميزانيه');
+          }
+          if (name == 'keyword') {
+            return metricNameLower.contains('keyword') || 
+                   metricLabelLower.contains('keyword') || 
+                   metricLabelLower.contains('الكلمات') || 
+                   metricLabelLower.contains('الكلمة') || 
+                   metricLabelLower.contains('كلمات') || 
+                   metricLabelLower.contains('كلمة');
+          }
+          return metricNameLower.contains(name.toLowerCase());
+        }
       );
       if (matches.isEmpty) return '—';
-      return matches.last.metricValue.toStringAsFixed(0);
+      return matches.first.metricValue.toStringAsFixed(0);
     }
 
     final traffic = _getMetricValue('seo', 'traffic');
@@ -1027,16 +1225,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             scrollDirection: Axis.horizontal,
             children: [
               _buildPerformanceCard(
-                l10n.organicTraffic,
-                traffic,
-                Icons.show_chart,
+                title: l10n.organicTraffic,
+                trend: traffic,
+                icon: Icons.show_chart,
+                onEdit: isEditable
+                    ? () => _showEditMetricDialog(context, 'seo', 'traffic', l10n.organicTraffic, traffic)
+                    : null,
               ),
               _buildPerformanceCard(
-                l10n.adSpend,
-                spend.isNotEmpty && spend != '—' ? 'SAR $spend' : '—',
-                Icons.monetization_on_outlined,
+                title: l10n.adSpend,
+                trend: spend.isNotEmpty && spend != '—' ? 'SAR $spend' : '—',
+                icon: Icons.monetization_on_outlined,
+                onEdit: isEditable
+                    ? () => _showEditMetricDialog(context, 'ads', 'spend', l10n.adSpend, spend)
+                    : null,
               ),
-              _buildPerformanceCard(l10n.keywords, keywords, Icons.bar_chart),
+              _buildPerformanceCard(
+                title: l10n.keywords,
+                trend: keywords,
+                icon: Icons.bar_chart,
+                onEdit: isEditable
+                    ? () => _showEditMetricDialog(context, 'seo', 'keyword', l10n.keywords, keywords)
+                    : null,
+              ),
             ],
           ),
         ),
@@ -1044,7 +1255,115 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildPerformanceCard(String title, String trend, IconData icon) {
+  void _showEditMetricDialog(BuildContext context, String type, String name, String title, String currentValue) {
+    final controller = TextEditingController(text: currentValue == '—' ? '' : currentValue);
+    bool saving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            Localizations.localeOf(context).languageCode == 'ar' ? 'تعديل $title' : 'Edit $title',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                Localizations.localeOf(context).languageCode == 'ar' 
+                    ? 'أدخل القيمة الجديدة لـ $title:' 
+                    : 'Enter new value for $title:',
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  filled: true,
+                  fillColor: Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(10))),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                Localizations.localeOf(context).languageCode == 'ar' ? 'إلغاء' : 'Cancel',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.black,
+              ),
+              onPressed: saving ? null : () async {
+                final val = double.tryParse(controller.text);
+                if (val == null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        Localizations.localeOf(context).languageCode == 'ar' 
+                            ? 'الرجاء إدخال رقم صحيح' 
+                            : 'Please enter a valid number',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                setState(() => saving = true);
+
+                try {
+                  final project = ref.read(currentProjectProvider).value;
+                  if (project != null) {
+                    await Supabase.instance.client.from('results').insert({
+                      'project_id': project.id,
+                      'result_type': type,
+                      'metric_name': name,
+                      'metric_value': val,
+                      'recorded_at': DateTime.now().toIso8601String(),
+                    });
+                    ref.invalidate(resultsProvider);
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                } finally {
+                  if (ctx.mounted) setState(() => saving = false);
+                }
+              },
+              child: saving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  : Text(
+                      Localizations.localeOf(context).languageCode == 'ar' ? 'حفظ' : 'Save',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPerformanceCard({
+    required String title,
+    required String trend,
+    required IconData icon,
+    VoidCallback? onEdit,
+  }) {
     return Container(
       width: 140,
       margin: const EdgeInsetsDirectional.only(end: 12),
@@ -1059,16 +1378,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: AppTheme.primaryGreen, size: 16),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  title,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(icon, color: AppTheme.primaryGreen, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (onEdit != null)
+                GestureDetector(
+                  onTap: onEdit,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Icon(Icons.edit, color: AppTheme.primaryGreen, size: 14),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1254,173 +1588,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildActivityFeed(
-    AsyncValue<List<Map<String, dynamic>>> activityAsync,
-    bool isAr,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Recent Activity',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        activityAsync.when(
-          loading: () => const Center(
-            child: SizedBox(
-              height: 40,
-              child: CircularProgressIndicator(
-                color: AppTheme.primaryGreen,
-                strokeWidth: 2,
-              ),
-            ),
-          ),
-          error: (_, __) => const SizedBox.shrink(),
-          data: (items) {
-            if (items.isEmpty) {
-              return _buildActivityItem(
-                isAr ? 'مرحباً بك في محرك!' : 'Welcome to Moharek!',
-                isAr ? 'رحلتك تبدأ من هنا' : 'Your growth journey begins here.',
-                isAr ? 'الآن' : 'Now',
-                Icons.rocket_launch,
-                AppTheme.primaryGreen,
-              );
-            }
-            return Column(
-              children: items.map((item) {
-                final type = item['entity_type'] as String? ?? '';
-                // Read the correct bilingual column
-                final action = isAr
-                    ? (item['action_ar'] as String? ??
-                          item['action_en'] as String? ??
-                          'تحديث')
-                    : (item['action_en'] as String? ??
-                          item['action_ar'] as String? ??
-                          'Update');
-                final (icon, color) = _getActivityMeta(type, action);
 
-                return _buildActivityItem(
-                  action,
-                  type.replaceAll('_', ' ').toUpperCase(),
-                  _timeAgo(DateTime.parse(item['created_at'] as String)),
-                  icon,
-                  color,
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
-
-  String _translateStage(String stage, AppLocalizations l10n) {
-    switch (stage.toLowerCase()) {
-      case 'audit':
-        return l10n.auditStage;
-      case 'strategy':
-        return l10n.strategyStage;
-      case 'setup':
-        return l10n.setupStage;
-      case 'execution':
-        return l10n.executionStage;
-      case 'optimization':
-        return l10n.optimizationStage;
-      case 'results':
-        return l10n.resultsStage;
-      default:
-        return stage;
-    }
-  }
-
-  (IconData, Color) _getActivityMeta(String type, String action) {
-    switch (type.toLowerCase()) {
-      case 'task':
-        return (Icons.task_alt, AppTheme.primaryBlue);
-      case 'approval':
-        return (Icons.rule, Colors.orange);
-      case 'file':
-        return (Icons.insert_drive_file_outlined, Colors.purpleAccent);
-      case 'contract':
-        return (Icons.gavel_outlined, Colors.amber);
-      case 'result':
-        return (Icons.analytics_outlined, AppTheme.primaryGreen);
-      case 'meeting':
-        return (Icons.video_call_outlined, Colors.redAccent);
-      default:
-        return (Icons.notifications_outlined, Colors.grey);
-    }
-  }
-
-  Widget _buildActivityItem(
-    String title,
-    String subtitle,
-    String time,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            time,
-            style: const TextStyle(color: Colors.white24, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildEmptyJourneyPlaceholder(AppLocalizations l10n, bool isAr) {
     return Container(
@@ -1576,5 +1744,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ],
     );
+  }
+
+  String _translateStage(String stage, AppLocalizations l10n) {
+    switch (stage.toLowerCase()) {
+      case 'audit':
+        return l10n.audit;
+      case 'strategy':
+        return l10n.strategy;
+      case 'setup':
+        return l10n.setup;
+      case 'execution':
+        return l10n.execution;
+      case 'optimization':
+        return l10n.optimization;
+      case 'results':
+        return l10n.results;
+      default:
+        return stage;
+    }
   }
 }

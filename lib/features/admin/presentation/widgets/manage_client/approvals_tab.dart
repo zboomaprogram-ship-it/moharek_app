@@ -3,10 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 final _approvalsForProject = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('approvals').stream(primaryKey: ['id']).eq('project_id', pid).order('created_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'approvals',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'created_at',
+    ascending: false,
+  );
 });
 
 class ApprovalsTab extends ConsumerWidget {
@@ -15,6 +27,11 @@ class ApprovalsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.markProjectNotificationsAsRead(pid, 'approval');
+      ref.invalidate(notificationsProvider);
+    });
+
     final approvalsAsync = ref.watch(_approvalsForProject(pid));
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -76,6 +93,28 @@ class ApprovalsTab extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(a['description'].toString(), style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
           ],
+          if (a['file_url'] != null && a['file_url'].toString().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final uri = Uri.tryParse(a['file_url'].toString());
+                if (uri != null) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.attach_file, color: Colors.purpleAccent, size: 14),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'عرض المرفق / الملف المراد اعتماده',
+                    style: TextStyle(color: Colors.purpleAccent, fontSize: 12, decoration: TextDecoration.underline),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Quick status update
           const SizedBox(height: 12),
           Wrap(
@@ -117,6 +156,11 @@ class ApprovalsTab extends ConsumerWidget {
     final descCtrl = TextEditingController(text: a?['description'] ?? '');
     bool saving = false;
 
+    String? selectedFileUrl = a?['file_url'];
+    String? pickedFileName;
+    PlatformFile? pickedFile;
+    bool uploadingFile = false;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -131,6 +175,37 @@ class ApprovalsTab extends ConsumerWidget {
               _field(titleCtrl, 'العنوان', Icons.title),
               const SizedBox(height: 12),
               _field(descCtrl, 'التفاصيل / رابط', Icons.link, maxLines: 3),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      pickedFileName ?? (selectedFileUrl != null ? 'ملف مرفق موجود' : 'لا يوجد ملف مرفق'),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (uploadingFile)
+                    const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purpleAccent))
+                  else
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                      onPressed: () async {
+                        final result = await FilePicker.pickFiles(withData: true);
+                        if (result != null) {
+                          setState(() {
+                            pickedFile = result.files.first;
+                            pickedFileName = pickedFile!.name;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.attach_file, size: 16),
+                      label: const Text('إرفاق ملف'),
+                    ),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -141,17 +216,31 @@ class ApprovalsTab extends ConsumerWidget {
                 if (titleCtrl.text.trim().isEmpty) return;
                 setState(() => saving = true);
                 try {
+                  String? fileUrl = selectedFileUrl;
+                  if (pickedFile != null) {
+                    setState(() => uploadingFile = true);
+                    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${pickedFile!.name}';
+                    if (pickedFile!.bytes != null) {
+                      fileUrl = await WordPressUploadService.uploadBytes(pickedFile!.bytes!, fileName);
+                    } else if (pickedFile!.path != null) {
+                      fileUrl = await WordPressUploadService.uploadFile(pickedFile!.path!, fileName);
+                    }
+                  }
+
                   final actions = ref.read(adminActionsProvider);
                   if (isEditing) {
                     await actions.updateApproval(a['id'], {
                       'title': titleCtrl.text.trim(),
                       'description': descCtrl.text.trim(),
+                      'file_url': fileUrl,
                     });
                   } else {
                     await actions.createApproval({
                       'project_id': pid,
                       'title': titleCtrl.text.trim(),
                       'description': descCtrl.text.trim(),
+                      'file_url': fileUrl,
+                      'status': 'pending',
                     });
                   }
                   if (ctx.mounted) Navigator.pop(ctx);

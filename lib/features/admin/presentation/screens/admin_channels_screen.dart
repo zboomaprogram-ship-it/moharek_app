@@ -5,6 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_chat_screen.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class AdminChannelsScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -133,7 +134,37 @@ class _AdminChannelsScreenState extends ConsumerState<AdminChannelsScreen> {
                         (channel['channel_type']?.toString() ?? 'client_manager') == 'client_manager' ? 'Support Team' : 'Custom Channel',
                         style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                      trailing: Consumer(
+                        builder: (context, ref, child) {
+                          final chId = channel['id']?.toString() ?? '';
+                          final unreadCount = ref.watch(unreadChatNotificationsByChannelProvider(chId));
+                          if (unreadCount > 0) {
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.redAccent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.chevron_right, color: Colors.white24),
+                              ],
+                            );
+                          }
+                          return const Icon(Icons.chevron_right, color: Colors.white24);
+                        },
+                      ),
                     ),
                   );
                 },

@@ -4,10 +4,19 @@ import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/call_service.dart';
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 final _meetingsForProject = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
   final c = ref.watch(supabaseClientProvider);
-  return c.from('meetings').stream(primaryKey: ['id']).eq('project_id', pid).order('scheduled_at', ascending: false);
+  return robustQueryStream<Map<String, dynamic>>(
+    client: c,
+    table: 'meetings',
+    filterColumn: 'project_id',
+    filterValue: pid,
+    fromJson: (json) => json,
+    orderColumn: 'scheduled_at',
+    ascending: false,
+  );
 });
 
 class MeetingsTab extends ConsumerWidget {
@@ -16,6 +25,11 @@ class MeetingsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.markProjectNotificationsAsRead(pid, 'meeting');
+      ref.invalidate(notificationsProvider);
+    });
+
     final meetingsAsync = ref.watch(projectMeetingsProvider(pid));
     return Scaffold(
       backgroundColor: Colors.transparent,

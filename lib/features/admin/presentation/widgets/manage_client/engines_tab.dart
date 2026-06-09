@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:moharek_app/features/strategy/presentation/screens/strategy_screen.dart';
 
 class EnginesTab extends ConsumerWidget {
   final String pid;
@@ -11,7 +13,7 @@ class EnginesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enginesAsync = ref.watch(projectEnginesProvider(pid));
+    final enginesAsync = ref.watch(adminProjectEngineProgressProvider(pid));
     final projectAsync = ref.watch(adminProjectDetailStream(pid));
     final isRabhan = AppConfig.flavorName == 'rabhan';
 
@@ -72,7 +74,7 @@ class EnginesTab extends ConsumerWidget {
               ),
 
               const Text(
-                'Growth Engines Progress',
+                'Growth Engines Progress & Phases',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -81,33 +83,40 @@ class EnginesTab extends ConsumerWidget {
               enginesAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGreen)),
                 error: (e, _) => Center(child: Text('Error: $e')),
-                data: (engines) {
+                data: (progressList) {
                   final engineList = isRabhan
                       ? [
-                          {'key': 'store', 'label': 'Store Engine', 'icon': Icons.storefront_outlined},
-                          {'key': 'product', 'label': 'Product Engine', 'icon': Icons.inventory_2_outlined},
-                          {'key': 'ads', 'label': 'Ads Engine', 'icon': Icons.campaign_outlined},
-                          {'key': 'sales_page', 'label': 'Sales Page Engine', 'icon': Icons.web_outlined},
-                          {'key': 'operations', 'label': 'Operations Engine', 'icon': Icons.engineering_outlined},
-                          {'key': 'analytics', 'label': 'Analytics Engine', 'icon': Icons.analytics_outlined},
+                          {'key': 'store', 'label': 'Store Engine', 'icon': Icons.storefront_outlined, 'color': Colors.blueAccent},
+                          {'key': 'product', 'label': 'Product Engine', 'icon': Icons.inventory_2_outlined, 'color': Colors.purpleAccent},
+                          {'key': 'ads', 'label': 'Ads Engine', 'icon': Icons.campaign_outlined, 'color': Colors.redAccent},
+                          {'key': 'sales_page', 'label': 'Sales Page Engine', 'icon': Icons.web_outlined, 'color': Colors.orangeAccent},
+                          {'key': 'operations', 'label': 'Operations Engine', 'icon': Icons.engineering_outlined, 'color': Colors.cyanAccent},
+                          {'key': 'analytics', 'label': 'Analytics Engine', 'icon': Icons.analytics_outlined, 'color': Colors.greenAccent},
                         ]
                       : [
-                          {'key': 'content', 'label': 'Content Engine', 'icon': Icons.article_outlined},
-                          {'key': 'seo', 'label': 'SEO Engine', 'icon': Icons.search},
-                          {'key': 'ai_visibility', 'label': 'AI Visibility', 'icon': Icons.auto_awesome},
-                          {'key': 'trust', 'label': 'Trust Engine', 'icon': Icons.verified_user_outlined},
-                          {'key': 'conversion', 'label': 'Conversion Engine', 'icon': Icons.shopping_cart_outlined},
+                          {'key': 'content', 'label': 'Content Engine', 'icon': Icons.article_outlined, 'color': Colors.blueAccent},
+                          {'key': 'seo', 'label': 'SEO Engine', 'icon': Icons.search, 'color': Colors.purpleAccent},
+                          {'key': 'ai_visibility', 'label': 'AI Visibility', 'icon': Icons.auto_awesome, 'color': Colors.redAccent},
+                          {'key': 'trust', 'label': 'Trust Engine', 'icon': Icons.verified_user_outlined, 'color': Colors.orangeAccent},
+                          {'key': 'conversion', 'label': 'Conversion Engine', 'icon': Icons.shopping_cart_outlined, 'color': Colors.greenAccent},
                         ];
 
                   return Column(
                     children: engineList.map((e) {
-                      final progress = engines[e['key']] ?? 0.0;
+                      final key = e['key'] as String;
+                      // Find engine progress map
+                      final dbProgress = progressList.firstWhere(
+                        (item) => (item['engine'] ?? item['engine_type']) == key,
+                        orElse: () => <String, dynamic>{},
+                      );
+
                       return EngineProgressCard(
                         pid: pid,
-                        engineKey: e['key'] as String,
+                        engineKey: key,
                         label: e['label'] as String,
                         icon: e['icon'] as IconData,
-                        initialProgress: progress,
+                        color: e['color'] as Color,
+                        dbProgress: dbProgress,
                       );
                     }).toList(),
                   );
@@ -210,12 +219,13 @@ class EnginesTab extends ConsumerWidget {
   }
 }
 
-class EngineProgressCard extends StatefulWidget {
+class EngineProgressCard extends ConsumerStatefulWidget {
   final String pid;
   final String engineKey;
   final String label;
   final IconData icon;
-  final double initialProgress;
+  final Color color;
+  final Map<String, dynamic> dbProgress;
 
   const EngineProgressCard({
     super.key,
@@ -223,36 +233,40 @@ class EngineProgressCard extends StatefulWidget {
     required this.engineKey,
     required this.label,
     required this.icon,
-    required this.initialProgress,
+    required this.color,
+    required this.dbProgress,
   });
 
   @override
-  State<EngineProgressCard> createState() => _EngineProgressCardState();
+  ConsumerState<EngineProgressCard> createState() => _EngineProgressCardState();
 }
 
-class _EngineProgressCardState extends State<EngineProgressCard> {
-  late double _localProgress;
-
-  @override
-  void initState() {
-    super.initState();
-    _localProgress = widget.initialProgress;
-  }
-
-  @override
-  void didUpdateWidget(EngineProgressCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // If the DB value changes from outside, update local state
-    if (oldWidget.initialProgress != widget.initialProgress) {
-      _localProgress = widget.initialProgress;
-    }
-  }
+class _EngineProgressCardState extends ConsumerState<EngineProgressCard> {
+  bool _isExpanded = false;
+  bool _isUpdating = false;
 
   @override
   Widget build(BuildContext context) {
+    final client = ref.watch(supabaseClientProvider);
+    final steps = StrategyScreen.engineSteps[widget.engineKey] ?? [];
+    final totalSteps = steps.length;
+
+    // Decode checked steps
+    List<String> checkedSteps = [];
+    final statusNotes = widget.dbProgress['status_notes'] as String?;
+    if (statusNotes != null && statusNotes.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(statusNotes);
+        if (decoded is List) {
+          checkedSteps = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+    }
+
+    final double progressPercent = totalSteps > 0 ? (checkedSteps.length / totalSteps) : 0.0;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -260,52 +274,188 @@ class _EngineProgressCardState extends State<EngineProgressCard> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Icon(widget.icon, color: AppTheme.primaryGreen, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+          // Header Row (Clickable to Expand)
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.label,
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: progressPercent,
+                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${(progressPercent * 100).toInt()}%',
+                        style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Icon(
+                        _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        color: Colors.white38,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              Text(
-                '${(_localProgress * 100).toInt()}%',
-                style: const TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          // Steps list (Phases)
+          if (_isExpanded) ...[
+            const Divider(color: Colors.white10, height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  if (_isUpdating)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: LinearProgressIndicator(color: AppTheme.primaryGreen, minHeight: 2),
+                    ),
+                  ...steps.map((step) {
+                    final enText = step['en']!;
+                    final arText = step['ar']!;
+                    final isChecked = checkedSteps.contains(enText);
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isChecked,
+                            activeColor: widget.color,
+                            checkColor: Colors.black,
+                            side: const BorderSide(color: Colors.white30),
+                            onChanged: _isUpdating
+                                ? null
+                                : (val) async {
+                                    setState(() {
+                                      _isUpdating = true;
+                                    });
+
+                                    final newChecked = List<String>.from(checkedSteps);
+                                    if (val == true) {
+                                      newChecked.add(enText);
+                                    } else {
+                                      newChecked.remove(enText);
+                                    }
+
+                                    final newPercent = ((newChecked.length / totalSteps) * 100).toInt();
+                                    final engineId = widget.dbProgress['id'] as String? ?? '';
+
+                                    try {
+                                      // 1. Update/Insert into engine_progress
+                                      if (engineId.isNotEmpty) {
+                                        await client.from('engine_progress').update({
+                                          'progress_percent': newPercent,
+                                          'status_notes': jsonEncode(newChecked),
+                                          'updated_at': DateTime.now().toIso8601String(),
+                                        }).eq('id', engineId);
+                                      } else {
+                                        await client.from('engine_progress').insert({
+                                          'project_id': widget.pid,
+                                          'engine': widget.engineKey,
+                                          'progress_percent': newPercent,
+                                          'status_notes': jsonEncode(newChecked),
+                                          'updated_at': DateTime.now().toIso8601String(),
+                                        });
+                                      }
+
+                                      // 2. Sync to growth_engines table (updates the main engine health status)
+                                      final actions = ref.read(adminActionsProvider);
+                                      await actions.updateEngineProgress({
+                                        'project_id': widget.pid,
+                                        'engine': widget.engineKey,
+                                        'progress_percent': newPercent,
+                                      });
+
+                                      // Invalidate providers to push live streams
+                                      ref.invalidate(adminProjectEngineProgressProvider(widget.pid));
+                                      ref.invalidate(projectEnginesProvider(widget.pid));
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.redAccent),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isUpdating = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  arText,
+                                  style: TextStyle(
+                                    color: isChecked ? Colors.white70 : Colors.white,
+                                    fontSize: 13,
+                                    decoration: isChecked ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  enText,
+                                  style: TextStyle(
+                                    color: Colors.white30,
+                                    fontSize: 11,
+                                    decoration: isChecked ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppTheme.primaryGreen,
-              inactiveTrackColor: Colors.white10,
-              thumbColor: Colors.white,
-              overlayColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
             ),
-            child: Consumer(
-              builder: (context, ref, child) {
-                return Slider(
-                  value: _localProgress,
-                  onChanged: (v) {
-                    setState(() => _localProgress = v);
-                  },
-                  onChangeEnd: (v) async {
-                    final actions = ref.read(adminActionsProvider);
-                    await actions.updateEngineProgress({
-                      'project_id': widget.pid,
-                      'engine': widget.engineKey,
-                      'progress_percent': (v * 100).toInt(),
-                      'updated_at': DateTime.now().toIso8601String(),
-                    });
-                    // Invalidate the mobile provider so next open reflects the change
-                    ref.invalidate(projectEnginesProvider(widget.pid));
-                  },
-                );
-              },
-            ),
-          ),
+          ],
         ],
       ),
     );

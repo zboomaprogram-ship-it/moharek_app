@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_chat_screen.dart'; // Reuse the message list logic if possible
+import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 final amChatChannelsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
@@ -125,7 +126,36 @@ class _ChatChannelTile extends StatelessWidget {
             style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF475569), size: 16),
+        trailing: Consumer(
+          builder: (context, ref, child) {
+            final unreadCount = ref.watch(unreadChatNotificationsByChannelProvider(channel['id'] ?? ''));
+            if (unreadCount > 0) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: const Color(0xFF475569), size: 16),
+                ],
+              );
+            }
+            return const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF475569), size: 16);
+          },
+        ),
         onTap: () => _showChatDialog(context, channel, project),
       ),
     );

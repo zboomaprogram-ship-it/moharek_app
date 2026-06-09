@@ -10,6 +10,8 @@ import 'package:moharek_app/core/utils/arabic_formatter.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/widgets/rabhan_results_view.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
 
@@ -146,54 +148,81 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> with SingleTicker
   Widget _buildMetricCard(ResultMetric metric) {
     final change = metric.changeFromLast;
     final isPositive = change != null && change >= 0;
-    
-    return Container(
+    final hasAttachment = metric.fileUrl != null && metric.fileUrl!.isNotEmpty;
+
+    final cardContent = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(
+          color: hasAttachment ? AppTheme.primaryGreen.withValues(alpha: 0.3) : Colors.white10,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Text(
-            metric.metricLabel ?? metric.metricName,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                metric.metricLabel ?? metric.metricName,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              FittedBox(
+                child: Text(
+                  '${ArabicFormatter.number(metric.metricValue.truncateToDouble() == metric.metricValue ? metric.metricValue.toInt() : metric.metricValue.toStringAsFixed(1), isAr: Localizations.localeOf(context).languageCode == 'ar')} ${metric.metricUnit ?? ''}',
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (change != null)
+                Row(
+                  children: [
+                    Icon(
+                      isPositive ? Icons.trending_up : Icons.trending_down,
+                      color: isPositive ? AppTheme.primaryGreen : Colors.redAccent,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${isPositive ? '+' : ''}${ArabicFormatter.number(change.toStringAsFixed(1), isAr: Localizations.localeOf(context).languageCode == 'ar')}%',
+                      style: TextStyle(
+                        color: isPositive ? AppTheme.primaryGreen : Colors.redAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                const SizedBox(height: 14),
+            ],
           ),
-          FittedBox(
-            child: Text(
-              '${ArabicFormatter.number(metric.metricValue.truncateToDouble() == metric.metricValue ? metric.metricValue.toInt() : metric.metricValue.toStringAsFixed(1), isAr: Localizations.localeOf(context).languageCode == 'ar')} ${metric.metricUnit ?? ''}',
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          if (hasAttachment)
+            const Positioned(
+              top: 0,
+              right: 0,
+              child: Icon(Icons.attach_file, color: AppTheme.primaryGreen, size: 14),
             ),
-          ),
-          if (change != null)
-            Row(
-              children: [
-                Icon(
-                  isPositive ? Icons.trending_up : Icons.trending_down,
-                  color: isPositive ? AppTheme.primaryGreen : Colors.redAccent,
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${isPositive ? '+' : ''}${ArabicFormatter.number(change.toStringAsFixed(1), isAr: Localizations.localeOf(context).languageCode == 'ar')}%',
-                  style: TextStyle(
-                    color: isPositive ? AppTheme.primaryGreen : Colors.redAccent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            )
-          else
-            const SizedBox(height: 14),
         ],
       ),
     );
+
+    if (hasAttachment) {
+      return InkWell(
+        onTap: () async {
+          final uri = Uri.tryParse(metric.fileUrl!);
+          if (uri != null) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: cardContent,
+      );
+    }
+    return cardContent;
   }
 
   Widget _buildLineChart(List<ResultMetric> metrics) {
