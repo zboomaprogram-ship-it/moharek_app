@@ -51,7 +51,7 @@ class _AIChatBottomSheetState extends ConsumerState<AIChatBottomSheet> {
           
       final project = await supabase
           .from('projects')
-          .select('id, name, project_goal')
+          .select('id, name, project_goal, client_brief, current_stage')
           .eq('client_id', user?.id ?? '')
           .maybeSingle();
 
@@ -60,37 +60,57 @@ class _AIChatBottomSheetState extends ConsumerState<AIChatBottomSheet> {
       // Fetch expanded context data
       final resultsData = await supabase
           .from('results')
-          .select('result_type, metric_label, metric_value, metric_unit, change_from_last')
+          .select('result_type, metric_name, metric_label, metric_value, metric_unit, change_from_last, notes, recorded_at')
           .eq('project_id', project['id'])
           .order('recorded_at', ascending: false)
-          .limit(5);
+          .limit(10);
 
       final tasksData = await supabase
           .from('tasks')
-          .select('title, status, category, progress_percent')
+          .select('title, description, status, priority, category, stage_name, deadline, is_client_request, request_type, client_proposed_deadline')
           .eq('project_id', project['id'])
           .order('updated_at', ascending: false)
-          .limit(5);
+          .limit(10);
 
       final meetingsData = await supabase
           .from('meetings')
-          .select('title, scheduled_at, status')
+          .select('title, title_ar, scheduled_at, duration_minutes, meeting_type, status, agenda, summary, action_items')
           .eq('project_id', project['id'])
-          .eq('status', 'scheduled')
           .order('scheduled_at', ascending: true)
-          .limit(3);
+          .limit(5);
 
       final campaignsData = await supabase
           .from('campaigns')
           .select('name, channel, budget, status')
           .eq('project_id', project['id'])
           .eq('status', 'active')
-          .limit(3);
+          .limit(5);
 
       final engineData = await supabase
           .from('engine_progress')
-          .select('engine, progress_percent')
+          .select('engine, progress_percent, health_score, status')
           .eq('project_id', project['id']);
+
+      final invoicesData = await supabase
+          .from('invoices')
+          .select('invoice_number, amount, currency, status, due_date')
+          .eq('project_id', project['id'])
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      final contractsData = await supabase
+          .from('contracts')
+          .select('title, status, signed_at, created_at')
+          .eq('project_id', project['id'])
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      final filesData = await supabase
+          .from('files')
+          .select('name, file_url, file_type, size_bytes, created_at')
+          .eq('project_id', project['id'])
+          .order('created_at', ascending: false)
+          .limit(10);
 
       final response = await supabase.functions.invoke(
         'ai-assistant',
@@ -103,11 +123,16 @@ class _AIChatBottomSheetState extends ConsumerState<AIChatBottomSheet> {
           'context': {
             'project_name': project['name'],
             'project_goal': project['project_goal'],
+            'current_stage': project['current_stage'],
+            'client_brief': project['client_brief'],
             'recent_results': resultsData,
             'recent_tasks': tasksData,
             'upcoming_meetings': meetingsData,
             'active_campaigns': campaignsData,
             'engines': engineData,
+            'recent_invoices': invoicesData,
+            'recent_contracts': contractsData,
+            'recent_files': filesData,
           }
         },
       );

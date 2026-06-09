@@ -200,11 +200,15 @@ class MoharekApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       builder: (context, child) {
+        Widget content = CallSignalListener(child: child!);
+        if (kIsWeb) {
+          content = SelectionArea(child: content);
+        }
         return Directionality(
           textDirection: locale.languageCode == 'ar'
               ? TextDirection.rtl
               : TextDirection.ltr,
-          child: CallSignalListener(child: child!),
+          child: content,
         );
       },
     );

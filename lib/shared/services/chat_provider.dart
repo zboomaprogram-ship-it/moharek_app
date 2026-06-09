@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/shared/models/message.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:postgrest/postgrest.dart';
+import 'package:moharek_app/shared/services/connectivity_service.dart';
 
 // ─── Background isolate parser ───────────────────────────────────────────────
 // Keeps all JSON parsing off the main thread — the root cause of the 97s ANR.
@@ -31,21 +32,36 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
     _limit = 20;
     _hasMore = true;
 
+    ref.listen(connectivityStatusProvider, (previous, next) {
+      if (next.value == ConnectivityStatus.isConnected) {
+        debugPrint('[ChatMessagesNotifier] Connection restored. Refreshing messages...');
+        refresh();
+        _setupStreamSubscription();
+      }
+    });
+
     _setupStreamSubscription();
 
     ref.onDispose(() {
       _streamSub?.cancel();
     });
 
-    final messages = await _fetch(arg, _limit);
-    if (messages.length < _limit) {
-      _hasMore = false;
+    try {
+      final messages = await _fetch(arg, _limit);
+      if (messages.length < _limit) {
+        _hasMore = false;
+      }
+      return messages;
+    } catch (e) {
+      debugPrint('Initial chat messages fetch failed: $e');
+      return [];
     }
-    return messages;
   }
 
   void _setupStreamSubscription() {
     _streamSub?.cancel();
+    _streamSub = null;
+    
     final client = ref.read(supabaseClientProvider);
     
     _streamSub = client
@@ -80,6 +96,8 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
           state = AsyncData([...pendingOptimistics, ...parsed]);
         }, onError: (e) {
           debugPrint('Real-time Stream Error: $e');
+          _streamSub?.cancel();
+          _streamSub = null;
         });
   }
 
@@ -104,7 +122,7 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
       }
     } catch (e) {
       debugPrint('Error fetching messages: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -116,6 +134,13 @@ class ChatMessagesNotifier extends AutoDisposeFamilyAsyncNotifier<List<ChatMessa
       if (state.hasValue && !listEquals(state.value, messages)) {
         state = AsyncData(messages);
       }
+    } catch (e) {
+      final isConnected = await ref.read(connectivityServiceProvider).isConnected;
+      if (!isConnected) {
+        debugPrint('[ChatMessagesNotifier] Offline, keeping cached messages');
+        return;
+      }
+      debugPrint('[ChatMessagesNotifier] Error refreshing: $e');
     } finally {
       _isFetching = false;
     }

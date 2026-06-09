@@ -44,6 +44,7 @@ class AppConfig {
   static bool get enableAIVisibility => instance.enableAIVisibilityVal;
   static bool get enableTrustEngine => instance.enableTrustEngineVal;
   static bool get enableContentMarketing => instance.enableContentMarketingVal;
+  static String get complaintsWhatsapp => instance.complaintsWhatsappVal;
 
   // -----------------------------------------------------------
   // Instance properties configured per flavor
@@ -68,6 +69,7 @@ class AppConfig {
   final bool enableAIVisibilityVal;
   final bool enableTrustEngineVal;
   final bool enableContentMarketingVal;
+  final String complaintsWhatsappVal;
 
   const AppConfig({
     required this.supabaseUrlVal,
@@ -88,6 +90,7 @@ class AppConfig {
     this.enableAIVisibilityVal = true,
     this.enableTrustEngineVal = true,
     this.enableContentMarketingVal = true,
+    this.complaintsWhatsappVal = '',
   });
 
   // -----------------------------------------------------------

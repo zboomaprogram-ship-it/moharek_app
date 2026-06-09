@@ -7,17 +7,32 @@ import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
+import 'package:moharek_app/features/am/data/am_providers.dart';
+import 'package:moharek_app/core/utils/error_handler.dart';
 
-final allContractsProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
+final allContractsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
-  final data = await client
+  final user = client.auth.currentUser;
+  if (user == null) return [];
+
+  // Fetch the role of the logged-in user
+  final profileData = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+  final role = profileData['role'] as String? ?? 'client';
+  final isAdmin = role == 'admin';
+
+  var query = client
       .from('contracts')
-      .select(
-        '*, projects(profiles!projects_client_id_fkey(full_name, company_name))',
-      )
-      .order('created_at', ascending: false);
+      .select('*, projects!inner(name, account_manager_id, profiles!projects_client_id_fkey(full_name, company_name))');
+
+  if (!isAdmin) {
+    query = query.eq('projects.account_manager_id', user.id);
+  }
+
+  final data = await query.order('created_at', ascending: false);
   return (data as List).cast<Map<String, dynamic>>();
 });
 
@@ -119,9 +134,13 @@ class AdminContractsScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: AppTheme.primaryGreen),
                 ),
                 error: (err, _) => Center(
-                  child: Text(
-                    'Error: $err',
-                    style: const TextStyle(color: Colors.red),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      ErrorHandler.getFriendlyMessage(err, context),
+                      style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
                 data: (contracts) {
@@ -163,6 +182,10 @@ class AdminContractsScreen extends ConsumerWidget {
     final title = contract['title'] as String? ?? 'عقد بدون عنوان';
     final status = contract['status'] as String? ?? 'pending';
     final isSigned = status == 'signed';
+
+    final statusText = status == 'signed' 
+        ? 'موقع' 
+        : (status == 'expired' ? 'منتهي' : 'قيد الانتظار');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -223,7 +246,7 @@ class AdminContractsScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    status.toUpperCase(),
+                    statusText,
                     style: TextStyle(
                       color: isSigned ? AppTheme.primaryGreen : Colors.orange,
                       fontSize: 10,
@@ -253,7 +276,7 @@ class AdminContractsScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    status.toUpperCase(),
+                    statusText,
                     style: TextStyle(
                       color: isSigned ? AppTheme.primaryGreen : Colors.orange,
                       fontSize: 10,
@@ -297,7 +320,8 @@ class AdminContractsScreen extends ConsumerWidget {
   }
 
   void _showUploadContractDialog(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.read(allProjectsProvider);
+    final isAM = ref.read(profileProvider).value?.role == 'account_manager';
+    final projectsAsync = isAM ? ref.read(amClientsProvider) : ref.read(allProjectsProvider);
     final titleCtrl = TextEditingController();
     String? selectedProjectId;
     PlatformFile? selectedFile;
@@ -322,7 +346,7 @@ class AdminContractsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Upload New Contract',
+                'رفع عقد جديد',
                 style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
@@ -331,27 +355,27 @@ class AdminContractsScreen extends ConsumerWidget {
                   dropdownColor: AppTheme.cardColor,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    labelText: 'Select Client',
+                    labelText: 'اختر العميل',
                     labelStyle: TextStyle(color: Colors.grey),
                   ),
                   items: projects.map((p) {
                     final profile = p['profiles'] as Map<String, dynamic>?;
                     return DropdownMenuItem(
                       value: p['id'] as String,
-                      child: Text(profile?['full_name'] ?? 'Unknown'),
+                      child: Text(profile?['full_name'] ?? 'غير معروف'),
                     );
                   }).toList(),
                   onChanged: (v) => selectedProjectId = v,
                 ),
                 loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text('Error loading clients: $e'),
+                error: (e, _) => Text('خطأ في تحميل العملاء: $e'),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: titleCtrl,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  labelText: 'Contract Title (e.g. Annual SEO)',
+                  labelText: 'عنوان العقد (مثال: عقد خدمات التسويق السنوي)',
                   labelStyle: TextStyle(color: Colors.grey),
                 ),
               ),
@@ -377,9 +401,12 @@ class AdminContractsScreen extends ConsumerWidget {
                     children: [
                       const Icon(Icons.attach_file, color: AppTheme.primaryBlue),
                       const SizedBox(width: 12),
-                      Text(
-                        selectedFile?.name ?? 'Select PDF File',
-                        style: const TextStyle(color: Colors.white70),
+                      Expanded(
+                        child: Text(
+                          selectedFile?.name ?? 'اختر ملف العقد (PDF)',
+                          style: const TextStyle(color: Colors.white70),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -391,19 +418,33 @@ class AdminContractsScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (selectedProjectId == null || selectedFile == null || titleCtrl.text.isEmpty) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('يرجى ملء جميع الحقول واختيار الملف.'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
                       return;
                     }
                     final fileName = '${DateTime.now().millisecondsSinceEpoch}_${selectedFile!.name}';
                     
                     try {
+                      // Show loading snackbar
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('جاري رفع العقد وحفظه...'),
+                          duration: Duration(days: 1),
+                          backgroundColor: AppTheme.cardColor,
+                        ),
+                      );
+
                       String url = '';
                       if (selectedFile!.bytes != null) {
                         url = await WordPressUploadService.uploadBytes(selectedFile!.bytes!, fileName);
                       } else if (selectedFile!.path != null) {
                         url = await WordPressUploadService.uploadFile(selectedFile!.path!, fileName);
                       } else {
-                        throw Exception('No file data available');
+                        throw Exception('ملف العقد غير متوفر');
                       }
 
                       final actions = ref.read(adminActionsProvider);
@@ -412,10 +453,24 @@ class AdminContractsScreen extends ConsumerWidget {
                         'title': titleCtrl.text.trim(),
                         'file_url': url,
                       });
+                      
                       ref.invalidate(allContractsProvider);
-                      if (ctx.mounted) Navigator.pop(ctx);
+                      
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).clearSnackBars();
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('تم رفع العقد بنجاح! ✅'),
+                            backgroundColor: AppTheme.primaryGreen,
+                          ),
+                        );
+                        Navigator.pop(ctx);
+                      }
                     } catch (e) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).clearSnackBars();
+                        ErrorHandler.showErrorSnackBar(ctx, e);
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -423,7 +478,7 @@ class AdminContractsScreen extends ConsumerWidget {
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('Upload Contract', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('رفع العقد والاتفاقية', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

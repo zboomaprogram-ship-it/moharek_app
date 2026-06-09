@@ -8,12 +8,12 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/chat_provider.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
+import 'package:moharek_app/shared/services/connectivity_service.dart';
 import 'package:moharek_app/shared/models/message.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
-import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 import 'package:moharek_app/features/chat/services/voice_recorder_service.dart';
 import 'package:moharek_app/features/chat/services/voice_upload_service.dart';
@@ -229,65 +229,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final profile = ref.read(profileProvider).value;
     if (project == null || profile == null) return;
 
-    if (mounted) {
-      setState(() {
-        _isConnecting = true;
-        _connectionStatus = l10n.connecting;
-      });
-    }
-
-    try {
-      final callService = CallService();
-      final room = await callService.startCallWithSignal(
-        projectId: project.id,
-        callerName: profile.fullName,
-        callType: isVideo ? 'video' : 'voice',
-        identity: profile.id,
-        onStatusUpdate: (status) {
-          if (mounted) {
-            setState(() {
-              if (status == 'ringing') _connectionStatus = l10n.ringing;
-              if (status == 'accepted') _connectionStatus = l10n.accepted;
-            });
-          }
-        },
-      );
-
-      if (mounted) setState(() => _isConnecting = false);
-      if (!mounted) return;
-
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ActiveCallScreen(
-            room: room,
-            callType: isVideo ? 'video' : 'voice',
-          ),
+    // Push the active call screen immediately in outgoing/ringing mode
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ActiveCallScreen(
+          callType: isVideo ? 'video' : 'voice',
+          projectId: project.id,
+          callerName: profile.fullName,
+          recipientName: widget.channelName,
+          callerIdentity: profile.id,
+          isOutgoing: true,
         ),
-      );
+      ),
+    );
 
-      if (mounted) {
-        ref
-            .read(chatNotifierProvider.notifier)
-            .sendMessage(
-              widget.channelId,
-              isVideo
-                  ? '📹 ${l10n.callStarted(l10n.startVideoCall)}'
-                  : '📞 ${l10n.callStarted(l10n.startVoiceCall)}',
-              messageType: isVideo ? 'video_call' : 'voice_call',
-            );
-        ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isConnecting = false);
-        String errorMsg = l10n.errorOccurred(e.toString());
-        if (e == 'declined') errorMsg = l10n.callDeclined;
-        if (e == 'timeout') errorMsg = l10n.callTimeout;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-        );
-      }
+    if (mounted) {
+      ref
+          .read(chatNotifierProvider.notifier)
+          .sendMessage(
+            widget.channelId,
+            isVideo
+                ? '📹 ${l10n.callStarted(l10n.startVideoCall)}'
+                : '📞 ${l10n.callStarted(l10n.startVoiceCall)}',
+            messageType: isVideo ? 'video_call' : 'voice_call',
+          );
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
     }
   }
 
@@ -323,6 +289,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final l10n = AppLocalizations.of(context)!;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.channelId));
     final currentUser = ref.watch(supabaseClientProvider).auth.currentUser;
+    final connectivity = ref.watch(connectivityStatusProvider);
+    final isOffline = connectivity.value == ConnectivityStatus.isDisconnected;
 
     return Scaffold(
       appBar: AppBar(
@@ -354,6 +322,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Column(
             children: [
+              if (isOffline)
+                Container(
+                  width: double.infinity,
+                  color: Colors.redAccent.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.localeName == 'ar' 
+                            ? 'لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك.' 
+                            : 'No internet connection. Please check your connection.',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: messagesAsync.when(
                   data: (messages) {

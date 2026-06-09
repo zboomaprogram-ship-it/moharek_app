@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'dart:convert';
 
@@ -67,20 +66,67 @@ class AiAssistantNotifier extends StateNotifier<AiAssistantState> {
 
       // Collect Context
       final project = _ref.read(currentProjectProvider).valueOrNull;
-      final results =
-          _ref.read(projectResultsProvider(project?.id ?? '')).valueOrNull ??
-          [];
-      final tasks =
-          _ref.read(projectTasksProvider(project?.id ?? '')).valueOrNull ?? [];
+      final results = _ref.read(resultsProvider).valueOrNull ?? [];
+      final tasks = _ref.read(tasksProvider).valueOrNull ?? [];
+      final engines = _ref.read(engineProgressListProvider).valueOrNull ?? [];
+      final invoices = _ref.read(invoicesProvider).valueOrNull ?? [];
+      final contracts = _ref.read(contractsProvider).valueOrNull ?? [];
+      final files = _ref.read(filesProvider).valueOrNull ?? [];
+      final meetings = _ref.read(meetingsProvider).valueOrNull ?? [];
 
       final context = {
         'project_name': project?.name,
+        'project_goal': project?.projectGoal,
         'current_stage': project?.currentStage,
-        'recent_results': results.take(5).toList(),
-        'recent_tasks': tasks.take(5).toList(),
-        'engines':
-            _ref.read(projectEnginesProvider(project?.id ?? '')).valueOrNull ??
-            {},
+        'client_brief': project?.clientBrief,
+        'recent_results': results.take(10).map((r) => {
+          'result_type': r.resultType,
+          'metric_name': r.metricName,
+          'metric_label': r.metricLabel,
+          'metric_value': r.metricValue,
+          'metric_unit': r.metricUnit,
+          'change_from_last': r.changeFromLast,
+          'notes': r.notes,
+          'recorded_at': r.recordedAt.toIso8601String(),
+        }).toList(),
+        'recent_tasks': tasks.take(10).map((t) => {
+          'title': t.title,
+          'description': t.description,
+          'status': t.status,
+          'priority': t.priority,
+          'category': t.category,
+          'stage_name': t.stageName,
+          'deadline': t.deadline?.toIso8601String(),
+          'is_client_request': t.isClientRequest,
+          'request_type': t.requestType,
+          'client_proposed_deadline': t.clientProposedDeadline?.toIso8601String(),
+        }).toList(),
+        'engines': engines.map((e) => e.toJson()).toList(),
+        'recent_invoices': invoices.take(5).map((i) => {
+          'invoice_number': i.invoiceNumber,
+          'amount': i.amount,
+          'currency': i.currency,
+          'status': i.status,
+          'due_date': i.dueDate?.toIso8601String(),
+        }).toList(),
+        'recent_contracts': contracts.take(5).map((c) => {
+          'title': c.title,
+          'status': c.status,
+          'signed_at': c.signedAt?.toIso8601String(),
+          'created_at': c.createdAt.toIso8601String(),
+        }).toList(),
+        'recent_files': files.take(10).toList(),
+        'upcoming_meetings': meetings.take(5).map((m) => {
+          'title': m.title,
+          'title_ar': m.titleAr,
+          'scheduled_at': m.scheduledAt?.toIso8601String(),
+          'duration_minutes': m.durationMinutes,
+          'meeting_type': m.meetingType,
+          'status': m.status,
+          'agenda': m.agenda,
+          'summary': m.summary,
+          'action_items': m.actionItems,
+        }).toList(),
       };
 
       final response = await client.functions.invoke(

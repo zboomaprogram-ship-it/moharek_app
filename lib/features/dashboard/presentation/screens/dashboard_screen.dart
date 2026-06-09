@@ -169,20 +169,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ? profile.fullName
                       : (profile?.email ?? l10n.unknownUser);
 
-                  final String? displaySubtitle = profile?.clientGoal ?? 
-                      projectAsync.value?.projectGoal ?? 
-                      (profile?.role == 'admin' 
-                        ? (l10n.localeName == 'ar' ? 'مدير النظام' : 'Administrator')
-                        : (profile?.role == 'account_manager'
-                          ? (l10n.localeName == 'ar' ? 'مدير حسابات' : 'Account Manager')
-                          : null));
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FadeInSlide(
+                  final String? displaySubtitle =
+                      profile?.clientGoal ??
+                      projectAsync.value?.projectGoal ??
+                      (profile?.role == 'admin'
+                          ? (l10n.localeName == 'ar'
+                                ? 'مدير النظام'
+                                : 'Administrator')
+                          : (profile?.role == 'account_manager'
+                                ? (l10n.localeName == 'ar'
+                                      ? 'مدير حسابات'
+                                      : 'Account Manager')
+                                : null));
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 0.0),
+                        child: FadeInSlide(
                           delay: const Duration(milliseconds: 100),
                           child: _buildHeader(
                             displayName,
@@ -190,18 +193,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             l10n,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
 
                         // Brief completion reminder card
-                        if (projectAsync.hasValue && projectAsync.value != null) ...[
+                        if (projectAsync.hasValue &&
+                            projectAsync.value != null) ...[
                           (() {
                             final project = projectAsync.value!;
-                            final filled = _countFilledBriefFields(project.clientBrief);
+                            final filled = _countFilledBriefFields(
+                              project.clientBrief,
+                            );
                             const total = 21;
                             if (filled < total) {
                               return FadeInSlide(
                                 delay: const Duration(milliseconds: 150),
-                                child: _buildBriefReminder(context, filled, total, l10n, isAr),
+                                child: _buildBriefReminder(
+                                  context,
+                                  filled,
+                                  total,
+                                  l10n,
+                                  isAr,
+                                ),
                               );
                             }
                             return const SizedBox.shrink();
@@ -258,15 +277,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ],
 
                         // Ecom KPI Section for Rabhan
-                        if (AppConfig.flavorName == 'rabhan' && projectAsync.valueOrNull != null) ...[
+                        if (AppConfig.flavorName == 'rabhan' &&
+                            projectAsync.valueOrNull != null) ...[
                           FadeInSlide(
                             delay: const Duration(milliseconds: 325),
-                            child: EcomKpiSection(projectId: projectAsync.valueOrNull!.id),
+                            child: EcomKpiSection(
+                              projectId: projectAsync.valueOrNull!.id,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           FadeInSlide(
                             delay: const Duration(milliseconds: 328),
-                            child: SalesTrendChart(projectId: projectAsync.valueOrNull!.id),
+                            child: SalesTrendChart(
+                              projectId: projectAsync.valueOrNull!.id,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           FadeInSlide(
@@ -290,7 +314,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                                          color: AppTheme.primaryGreen
+                                              .withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: const Icon(
@@ -302,10 +327,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              isAr ? 'تقارير الأداء والتحليلات' : 'Performance Reports & Analytics',
+                                              isAr
+                                                  ? 'تقارير الأداء والتحليلات'
+                                                  : 'Performance Reports & Analytics',
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 16,
@@ -338,7 +366,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const SizedBox(height: 16),
                           FadeInSlide(
                             delay: const Duration(milliseconds: 332),
-                            child: JourneyMiniProgress(projectId: projectAsync.valueOrNull!.id),
+                            child: JourneyMiniProgress(
+                              projectId: projectAsync.valueOrNull!.id,
+                            ),
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -346,7 +376,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         projectAsync.when(
                           data: (project) {
                             _updateLastSeen(); // Update after data loads
-                            final isDesktop = MediaQuery.of(context).size.width >= 1000;
+                            final isDesktop =
+                                MediaQuery.of(context).size.width >= 1000;
                             return Column(
                               children: [
                                 if (project?.voiceUpdateUrl != null)
@@ -366,16 +397,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 if (AppConfig.flavorName != 'rabhan') ...[
                                   if (isDesktop)
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Expanded(
                                           flex: 2,
                                           child: FadeInSlide(
-                                            delay: const Duration(milliseconds: 400),
+                                            delay: const Duration(
+                                              milliseconds: 400,
+                                            ),
                                             child: _buildGrowthCard(
                                               context,
                                               _translateStage(
-                                                project?.currentStage ?? 'Audit',
+                                                project?.currentStage ??
+                                                    'Audit',
                                                 l10n,
                                               ),
                                               journeyAsync,
@@ -388,12 +423,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         Expanded(
                                           flex: 1,
                                           child: FadeInSlide(
-                                            delay: const Duration(milliseconds: 450),
+                                            delay: const Duration(
+                                              milliseconds: 450,
+                                            ),
                                             child: HealthScoreGauge(
                                               score: _calculateHealthScore(
                                                 journeyAsync,
                                                 tasksAsync.asData?.value ?? [],
-                                                approvalsAsync.asData?.value ?? [],
+                                                approvalsAsync.asData?.value ??
+                                                    [],
                                                 engineProgressMap,
                                               ),
                                             ),
@@ -501,7 +539,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             child: _buildPerformanceSection(
                               resultsAsync.asData?.value ?? [],
                               l10n,
-                              profileAsync.valueOrNull?.role == 'admin' || profileAsync.valueOrNull?.role == 'account_manager',
+                              profileAsync.valueOrNull?.role == 'admin' ||
+                                  profileAsync.valueOrNull?.role ==
+                                      'account_manager',
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -511,7 +551,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               data: (progress) => EngineProgressCard(
                                 engineProgressList: progress,
                                 isAr: isAr,
-                                userRole: profileAsync.valueOrNull?.role ?? 'client',
+                                userRole:
+                                    profileAsync.valueOrNull?.role ?? 'client',
                                 projectId: projectAsync.valueOrNull?.id ?? '',
                               ),
                               loading: () => const SizedBox.shrink(),
@@ -524,7 +565,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         const SizedBox(height: 80),
                       ],
                     ),
-                  );
+                  ),
+                ),
+              ],
+            );
                 },
               ),
             ),
@@ -596,7 +640,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return filled;
   }
 
-  Widget _buildBriefReminder(BuildContext context, int filledCount, int totalCount, AppLocalizations l10n, bool isAr) {
+  Widget _buildBriefReminder(
+    BuildContext context,
+    int filledCount,
+    int totalCount,
+    AppLocalizations l10n,
+    bool isAr,
+  ) {
     final double percentage = (filledCount / totalCount).clamp(0.0, 1.0);
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -645,7 +695,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAr ? 'أكمل معلومات مشروعك' : 'Complete Your Project Brief',
+                        isAr
+                            ? 'أكمل معلومات مشروعك'
+                            : 'Complete Your Project Brief',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -654,9 +706,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isAr 
-                          ? 'يرجى إكمال الحقول المتبقية لتحسين أداء متجرك.' 
-                          : 'Please fill the remaining fields to optimize your store.',
+                        isAr
+                            ? 'يرجى إكمال الحقول المتبقية لتحسين أداء متجرك.'
+                            : 'Please fill the remaining fields to optimize your store.',
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 12,
@@ -672,15 +724,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 value: percentage,
                                 minHeight: 6,
                                 backgroundColor: Colors.white10,
-                                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppTheme.primaryGreen,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            isAr 
-                              ? 'تم إكمال $filledCount/$totalCount' 
-                              : '$filledCount/$totalCount filled',
+                            isAr
+                                ? 'تم إكمال $filledCount/$totalCount'
+                                : '$filledCount/$totalCount filled',
                             style: const TextStyle(
                               color: AppTheme.primaryGreen,
                               fontSize: 11,
@@ -694,7 +748,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  isAr ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios,
+                  isAr ? Icons.arrow_forward_ios : Icons.arrow_back_ios,
                   color: Colors.white60,
                   size: 16,
                 ),
@@ -817,7 +871,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         decoration: BoxDecoration(
           color: AppTheme.primaryGreen.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -956,7 +1012,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         context.push('/journey');
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                        backgroundColor: AppTheme.primaryGreen.withValues(
+                          alpha: 0.1,
+                        ),
                         foregroundColor: AppTheme.primaryGreen,
                         elevation: 0,
                       ),
@@ -970,7 +1028,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       },
                       child: Text(
                         isAr ? 'قصة النمو' : 'Growth Story',
-                        style: const TextStyle(color: Colors.white54, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -1021,9 +1082,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           (r) =>
               r.resultType == 'seo' &&
               (r.metricName.toLowerCase().contains('keyword') ||
-               (r.metricLabel ?? '').toLowerCase().contains('keyword') ||
-               (r.metricLabel ?? '').contains('الكلمات') ||
-               (r.metricLabel ?? '').contains('الكلمة')),
+                  (r.metricLabel ?? '').toLowerCase().contains('keyword') ||
+                  (r.metricLabel ?? '').contains('الكلمات') ||
+                  (r.metricLabel ?? '').contains('الكلمة')),
         )
         .toList();
     final keywordsValue = keywordMetric.isNotEmpty
@@ -1088,7 +1149,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   : Text(
                       ArabicFormatter.number(
                         value.toInt(),
-                        isAr: Localizations.localeOf(context).languageCode == 'ar',
+                        isAr:
+                            Localizations.localeOf(context).languageCode ==
+                            'ar',
                       ),
                       style: const TextStyle(
                         color: Colors.white,
@@ -1158,47 +1221,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .toList();
   }
 
-  Widget _buildPerformanceSection(List results, AppLocalizations l10n, bool isEditable) {
+  Widget _buildPerformanceSection(
+    List results,
+    AppLocalizations l10n,
+    bool isEditable,
+  ) {
     // Find the latest value for each metric type from the results
     String _getMetricValue(String type, String name) {
-      final matches = results.where(
-        (r) {
-          final isTypeMatch = r.resultType.toLowerCase() == type.toLowerCase();
-          if (!isTypeMatch) return false;
-          
-          final metricNameLower = r.metricName.toLowerCase();
-          final metricLabelLower = (r.metricLabel ?? '').toLowerCase();
-          
-          if (name == 'traffic') {
-            return metricNameLower.contains('traffic') || 
-                   metricNameLower.contains('organic') || 
-                   metricLabelLower.contains('traffic') || 
-                   metricLabelLower.contains('الزيارات') || 
-                   metricLabelLower.contains('الزيارة') || 
-                   metricLabelLower.contains('زيارة') || 
-                   metricLabelLower.contains('زوار');
-          }
-          if (name == 'spend') {
-            return metricNameLower.contains('spend') || 
-                   metricNameLower.contains('cost') || 
-                   metricLabelLower.contains('spend') || 
-                   metricLabelLower.contains('الإنفاق') || 
-                   metricLabelLower.contains('الانفاق') || 
-                   metricLabelLower.contains('صرف') || 
-                   metricLabelLower.contains('ميزانية') || 
-                   metricLabelLower.contains('ميزانيه');
-          }
-          if (name == 'keyword') {
-            return metricNameLower.contains('keyword') || 
-                   metricLabelLower.contains('keyword') || 
-                   metricLabelLower.contains('الكلمات') || 
-                   metricLabelLower.contains('الكلمة') || 
-                   metricLabelLower.contains('كلمات') || 
-                   metricLabelLower.contains('كلمة');
-          }
-          return metricNameLower.contains(name.toLowerCase());
+      final matches = results.where((r) {
+        final isTypeMatch = r.resultType.toLowerCase() == type.toLowerCase();
+        if (!isTypeMatch) return false;
+
+        final metricNameLower = r.metricName.toLowerCase();
+        final metricLabelLower = (r.metricLabel ?? '').toLowerCase();
+
+        if (name == 'traffic') {
+          return metricNameLower.contains('traffic') ||
+              metricNameLower.contains('organic') ||
+              metricLabelLower.contains('traffic') ||
+              metricLabelLower.contains('الزيارات') ||
+              metricLabelLower.contains('الزيارة') ||
+              metricLabelLower.contains('زيارة') ||
+              metricLabelLower.contains('زوار');
         }
-      );
+        if (name == 'spend') {
+          return metricNameLower.contains('spend') ||
+              metricNameLower.contains('cost') ||
+              metricLabelLower.contains('spend') ||
+              metricLabelLower.contains('الإنفاق') ||
+              metricLabelLower.contains('الانفاق') ||
+              metricLabelLower.contains('صرف') ||
+              metricLabelLower.contains('ميزانية') ||
+              metricLabelLower.contains('ميزانيه');
+        }
+        if (name == 'keyword') {
+          return metricNameLower.contains('keyword') ||
+              metricLabelLower.contains('keyword') ||
+              metricLabelLower.contains('الكلمات') ||
+              metricLabelLower.contains('الكلمة') ||
+              metricLabelLower.contains('كلمات') ||
+              metricLabelLower.contains('كلمة');
+        }
+        return metricNameLower.contains(name.toLowerCase());
+      });
       if (matches.isEmpty) return '—';
       return matches.first.metricValue.toStringAsFixed(0);
     }
@@ -1229,7 +1294,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 trend: traffic,
                 icon: Icons.show_chart,
                 onEdit: isEditable
-                    ? () => _showEditMetricDialog(context, 'seo', 'traffic', l10n.organicTraffic, traffic)
+                    ? () => _showEditMetricDialog(
+                        context,
+                        'seo',
+                        'traffic',
+                        l10n.organicTraffic,
+                        traffic,
+                      )
                     : null,
               ),
               _buildPerformanceCard(
@@ -1237,7 +1308,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 trend: spend.isNotEmpty && spend != '—' ? 'SAR $spend' : '—',
                 icon: Icons.monetization_on_outlined,
                 onEdit: isEditable
-                    ? () => _showEditMetricDialog(context, 'ads', 'spend', l10n.adSpend, spend)
+                    ? () => _showEditMetricDialog(
+                        context,
+                        'ads',
+                        'spend',
+                        l10n.adSpend,
+                        spend,
+                      )
                     : null,
               ),
               _buildPerformanceCard(
@@ -1245,7 +1322,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 trend: keywords,
                 icon: Icons.bar_chart,
                 onEdit: isEditable
-                    ? () => _showEditMetricDialog(context, 'seo', 'keyword', l10n.keywords, keywords)
+                    ? () => _showEditMetricDialog(
+                        context,
+                        'seo',
+                        'keyword',
+                        l10n.keywords,
+                        keywords,
+                      )
                     : null,
               ),
             ],
@@ -1255,8 +1338,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  void _showEditMetricDialog(BuildContext context, String type, String name, String title, String currentValue) {
-    final controller = TextEditingController(text: currentValue == '—' ? '' : currentValue);
+  void _showEditMetricDialog(
+    BuildContext context,
+    String type,
+    String name,
+    String title,
+    String currentValue,
+  ) {
+    final controller = TextEditingController(
+      text: currentValue == '—' ? '' : currentValue,
+    );
     bool saving = false;
 
     showDialog(
@@ -1264,18 +1355,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
-            Localizations.localeOf(context).languageCode == 'ar' ? 'تعديل $title' : 'Edit $title',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            Localizations.localeOf(context).languageCode == 'ar'
+                ? 'تعديل $title'
+                : 'Edit $title',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                Localizations.localeOf(context).languageCode == 'ar' 
-                    ? 'أدخل القيمة الجديدة لـ $title:' 
+                Localizations.localeOf(context).languageCode == 'ar'
+                    ? 'أدخل القيمة الجديدة لـ $title:'
                     : 'Enter new value for $title:',
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
@@ -1287,7 +1385,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 decoration: const InputDecoration(
                   filled: true,
                   fillColor: Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(10))),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
                 ),
               ),
             ],
@@ -1296,7 +1397,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text(
-                Localizations.localeOf(context).languageCode == 'ar' ? 'إلغاء' : 'Cancel',
+                Localizations.localeOf(context).languageCode == 'ar'
+                    ? 'إلغاء'
+                    : 'Cancel',
                 style: const TextStyle(color: Colors.grey),
               ),
             ),
@@ -1305,50 +1408,67 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 backgroundColor: AppTheme.primaryGreen,
                 foregroundColor: Colors.black,
               ),
-              onPressed: saving ? null : () async {
-                final val = double.tryParse(controller.text);
-                if (val == null) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        Localizations.localeOf(context).languageCode == 'ar' 
-                            ? 'الرجاء إدخال رقم صحيح' 
-                            : 'Please enter a valid number',
-                      ),
-                    ),
-                  );
-                  return;
-                }
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final val = double.tryParse(controller.text);
+                      if (val == null) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              Localizations.localeOf(context).languageCode ==
+                                      'ar'
+                                  ? 'الرجاء إدخال رقم صحيح'
+                                  : 'Please enter a valid number',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
 
-                setState(() => saving = true);
+                      setState(() => saving = true);
 
-                try {
-                  final project = ref.read(currentProjectProvider).value;
-                  if (project != null) {
-                    await Supabase.instance.client.from('results').insert({
-                      'project_id': project.id,
-                      'result_type': type,
-                      'metric_name': name,
-                      'metric_value': val,
-                      'recorded_at': DateTime.now().toIso8601String(),
-                    });
-                    ref.invalidate(resultsProvider);
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
-                    );
-                  }
-                } finally {
-                  if (ctx.mounted) setState(() => saving = false);
-                }
-              },
+                      try {
+                        final project = ref.read(currentProjectProvider).value;
+                        if (project != null) {
+                          await Supabase.instance.client
+                              .from('results')
+                              .insert({
+                                'project_id': project.id,
+                                'result_type': type,
+                                'metric_name': name,
+                                'metric_value': val,
+                                'recorded_at': DateTime.now().toIso8601String(),
+                              });
+                          ref.invalidate(resultsProvider);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text('Error saving: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (ctx.mounted) setState(() => saving = false);
+                      }
+                    },
               child: saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
                   : Text(
-                      Localizations.localeOf(context).languageCode == 'ar' ? 'حفظ' : 'Save',
+                      Localizations.localeOf(context).languageCode == 'ar'
+                          ? 'حفظ'
+                          : 'Save',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
             ),
@@ -1388,7 +1508,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1400,7 +1523,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   onTap: onEdit,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Icon(Icons.edit, color: AppTheme.primaryGreen, size: 14),
+                    child: Icon(
+                      Icons.edit,
+                      color: AppTheme.primaryGreen,
+                      size: 14,
+                    ),
                   ),
                 ),
             ],
@@ -1587,8 +1714,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
-
-
 
   Widget _buildEmptyJourneyPlaceholder(AppLocalizations l10n, bool isAr) {
     return Container(

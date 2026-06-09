@@ -347,6 +347,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       {'id': 'youtube', 'name': 'يوتيوب', 'icon': Icons.play_circle_outline, 'color': Colors.red},
       {'id': 'facebook', 'name': 'فيسبوك', 'icon': Icons.facebook_outlined, 'color': Colors.blue},
       {'id': 'linkedin', 'name': 'لينكد إن', 'icon': Icons.work_outline, 'color': Colors.blueAccent},
+      {
+        'id': 'google_tag_manager',
+        'name': 'جوجل تاب مانجر (Google Tag Manager)',
+        'icon': Icons.integration_instructions_outlined,
+        'color': Colors.blue,
+      },
+      {
+        'id': 'google_analytics',
+        'name': 'تحليلات جوجل (Google Analytics)',
+        'icon': Icons.analytics_outlined,
+        'color': Colors.orange,
+      },
+      {
+        'id': 'google_search_console',
+        'name': 'جوجل سيرش كونسول (Google Search Console)',
+        'icon': Icons.search_outlined,
+        'color': Colors.amber,
+      },
     ];
 
     final isAr = Localizations.localeOf(context).languageCode == 'ar';

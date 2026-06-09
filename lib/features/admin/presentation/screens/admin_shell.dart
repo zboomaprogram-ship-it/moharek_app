@@ -117,6 +117,12 @@ class AdminSidebar extends ConsumerWidget {
         showDot: unreadBilling > 0,
       ),
       (
+        icon: Icons.description_outlined,
+        label: 'العقود',
+        path: '/admin/contracts',
+        showDot: false,
+      ),
+      (
         icon: Icons.support_agent_outlined,
         label: 'مركز الدعم',
         path: '/admin/support',

@@ -64,11 +64,22 @@ final allProjectsProvider = FutureProvider<List<Map<String, dynamic>>>((
 final adminAllPackagesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
   // Get all packages joined with projects and client profiles
-  final data = await client
-      .from('packages')
-      .select('*, projects!packages_project_id_fkey(name, profiles!projects_client_id_fkey(full_name, company_name))')
-      .order('created_at', ascending: false);
-  return (data as List).cast<Map<String, dynamic>>();
+  try {
+    final data = await client
+        .from('packages')
+        .select('*, projects!packages_project_id_fkey(name, profiles!projects_client_id_fkey(full_name, company_name))')
+        .order('updated_at', ascending: false);
+    return (data as List).cast<Map<String, dynamic>>();
+  } catch (e) {
+    try {
+      final data = await client
+          .from('packages')
+          .select('*, projects!packages_project_id_fkey(name, profiles!projects_client_id_fkey(full_name, company_name))');
+      return (data as List).cast<Map<String, dynamic>>();
+    } catch (e2) {
+      rethrow;
+    }
+  }
 });
 
 class AdminStats {

@@ -8,6 +8,7 @@ import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/features/contracts/presentation/screens/contract_sign_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:moharek_app/core/utils/error_handler.dart';
 
 class ContractsScreen extends ConsumerWidget {
   const ContractsScreen({super.key});
@@ -17,22 +18,34 @@ class ContractsScreen extends ConsumerWidget {
     final contractsAsync = ref.watch(contractsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Contracts')),
+      appBar: AppBar(title: const Text('العقود والاتفاقيات')),
       body: contractsAsync.when(
         loading: () => const ShimmerList(itemCount: 3, itemHeight: 100),
-        error: (err, _) => Center(child: Text('Error: $err')),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              ErrorHandler.getFriendlyMessage(err, context),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
         data: (contracts) {
           if (contracts.isEmpty) {
             return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.description_outlined, color: Colors.grey, size: 64),
-                  SizedBox(height: 16),
-                  Text('No contracts yet', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                  SizedBox(height: 8),
-                  Text('Your account manager will upload contracts here.', style: TextStyle(color: Colors.white38, fontSize: 13), textAlign: TextAlign.center),
-                ],
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.description_outlined, color: Colors.grey, size: 64),
+                    SizedBox(height: 16),
+                    Text('لا توجد عقود حالياً', style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    Text('سيقوم مدير حسابك برفع العقود والاتفاقيات هنا لتتمكن من مراجعتها وتوقيعها.', style: TextStyle(color: Colors.white38, fontSize: 13), textAlign: TextAlign.center),
+                  ],
+                ),
               ),
             );
           }
@@ -66,7 +79,7 @@ class ContractsScreen extends ConsumerWidget {
         color: AppTheme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPending ? AppTheme.primaryBlue.withValues(alpha: 0.4) : Colors.white10,
+          color: isPending ? AppTheme.primaryGreen.withValues(alpha: 0.4) : Colors.white10,
         ),
       ),
       child: Column(
@@ -79,10 +92,10 @@ class ContractsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.description_outlined, color: AppTheme.primaryBlue, size: 24),
+                  child: const Icon(Icons.description_outlined, color: AppTheme.primaryGreen, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -95,7 +108,7 @@ class ContractsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${contract.createdAt.day}/${contract.createdAt.month}/${contract.createdAt.year}',
+                        'تاريخ الرفع: ${contract.createdAt.day}/${contract.createdAt.month}/${contract.createdAt.year}',
                         style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
@@ -118,7 +131,7 @@ class ContractsScreen extends ConsumerWidget {
                         _openContract(context, contract);
                       },
                       icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: const Text('View Contract'),
+                      label: const Text('عرض العقد'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white70,
                         side: const BorderSide(color: Colors.white24),
@@ -135,7 +148,7 @@ class ContractsScreen extends ConsumerWidget {
                           _signContract(context, ref, contract);
                         },
                         icon: const Icon(Icons.draw_outlined, size: 16),
-                        label: const Text('Sign Contract'),
+                        label: const Text('توقيع العقد'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
                           foregroundColor: Colors.black,
@@ -159,15 +172,15 @@ class ContractsScreen extends ConsumerWidget {
     switch (status) {
       case 'signed':
         color = AppTheme.primaryGreen;
-        label = 'Signed';
+        label = 'موقّع';
         break;
       case 'expired':
         color = Colors.redAccent;
-        label = 'Expired';
+        label = 'منتهي';
         break;
       default:
         color = AppTheme.primaryBlue;
-        label = 'Pending';
+        label = 'قيد الانتظار';
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -199,7 +212,7 @@ class ContractsScreen extends ConsumerWidget {
     if (signed == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Contract signed successfully! ✅'),
+          content: Text('تم توقيع العقد بنجاح! ✅'),
           backgroundColor: AppTheme.primaryGreen,
         ),
       );
@@ -219,7 +232,7 @@ class _ContractViewerScreen extends StatelessWidget {
       appBar: AppBar(title: Text(contract.title)),
       body: contract.fileUrl != null
           ? SfPdfViewer.network(contract.fileUrl!)
-          : const Center(child: Text('No PDF available', style: TextStyle(color: Colors.grey))),
+          : const Center(child: Text('ملف العقد غير متوفر', style: TextStyle(color: Colors.grey))),
     );
   }
 }

@@ -5,14 +5,29 @@ import '../models/package_model.dart';
 
 final packageProvider = FutureProvider.family<PackageModel?, String>((ref, projectId) async {
   final client = ref.watch(supabaseClientProvider);
-  final data = await client
-      .from('packages')
-      .select()
-      .eq('project_id', projectId)
-      .order('created_at', ascending: false)
-      .limit(1)
-      .maybeSingle();
-  return data != null ? PackageModel.fromJson(data) : null;
+  try {
+    final data = await client
+        .from('packages')
+        .select()
+        .eq('project_id', projectId)
+        .order('updated_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return data != null ? PackageModel.fromJson(data) : null;
+  } catch (e) {
+    // Fallback: Query without ordering to prevent crash if columns don't exist
+    try {
+      final data = await client
+          .from('packages')
+          .select()
+          .eq('project_id', projectId)
+          .limit(1)
+          .maybeSingle();
+      return data != null ? PackageModel.fromJson(data) : null;
+    } catch (e2) {
+      rethrow;
+    }
+  }
 });
 
 final accountManagerProvider = FutureProvider.family<Profile?, String>((ref, projectId) async {

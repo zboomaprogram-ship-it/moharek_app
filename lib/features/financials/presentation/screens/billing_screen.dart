@@ -6,6 +6,9 @@ import 'package:moharek_app/shared/models/financials.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/features/rabhan/providers/package_provider.dart';
+import 'package:moharek_app/features/rabhan/models/package_model.dart';
+import 'package:moharek_app/core/utils/error_handler.dart';
 
 class BillingScreen extends ConsumerWidget {
   const BillingScreen({super.key});
@@ -16,6 +19,18 @@ class BillingScreen extends ConsumerWidget {
     final invoicesAsync = ref.watch(invoicesProvider);
     final l10n = AppLocalizations.of(context)!;
 
+    final project = projectAsync.valueOrNull;
+    final packageAsync = project != null ? ref.watch(packageProvider(project.id)) : null;
+    final package = packageAsync?.valueOrNull;
+
+    if (project != null) {
+      ref.listen<AsyncValue<PackageModel?>>(packageProvider(project.id), (previous, next) {
+        if (next is AsyncError && context.mounted) {
+          ErrorHandler.showErrorSnackBar(context, next.error);
+        }
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.billingAndPayments)),
       body: SingleChildScrollView(
@@ -25,7 +40,7 @@ class BillingScreen extends ConsumerWidget {
           children: [
             projectAsync.when(
               data: (project) => project != null 
-                ? _buildCurrentPlanCard(project, l10n)
+                ? _buildCurrentPlanCard(project, package, l10n)
                 : const SizedBox(),
               loading: () => const ShimmerCard(height: 180),
               error: (_, __) => const SizedBox(),
@@ -55,12 +70,13 @@ class BillingScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCurrentPlanCard(dynamic project, AppLocalizations l10n) {
-    // Assuming project has tier and renewal info
-    final tier = project.subscriptionTier ?? 'Growth Plan';
-    final renewal = project.nextRenewalDate != null 
-      ? '${project.nextRenewalDate!.day}/${project.nextRenewalDate!.month}/${project.nextRenewalDate!.year}'
-      : 'Auto-renewing monthly';
+  Widget _buildCurrentPlanCard(dynamic project, PackageModel? package, AppLocalizations l10n) {
+    final isAr = l10n.localeName == 'ar';
+    final tier = package?.packageName ?? (isAr ? 'لا توجد باقة نشطة' : 'No Active Package');
+    final renewalDate = package?.renewsAt;
+    final renewal = renewalDate != null 
+      ? '${renewalDate.day}/${renewalDate.month}/${renewalDate.year}'
+      : (isAr ? 'تلقائي شهرياً' : 'Auto-renewing monthly');
 
     return Container(
       width: double.infinity,

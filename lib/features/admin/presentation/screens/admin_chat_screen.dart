@@ -274,66 +274,31 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   Future<void> _startCall(bool isVideo) async {
     final client = ref.read(supabaseClientProvider);
 
-    if (mounted)
-      setState(() {
-        _isConnecting = true;
-        _connectionStatus = 'جاري طلب المكالمة...';
-      });
-
-    try {
-      final callService = CallService();
-      final room = await callService.startCallWithSignal(
-        projectId: widget.projectId,
-        callerName: 'Admin',
-        callType: isVideo ? 'video' : 'voice',
-        identity: client.auth.currentUser!.id,
-        onStatusUpdate: (status) {
-          if (mounted) {
-            setState(() {
-              if (status == 'ringing') _connectionStatus = 'يرن الآن...';
-              if (status == 'accepted')
-                _connectionStatus = 'تم القبول، جاري الانضمام...';
-            });
-          }
-        },
-      );
-
-      if (mounted) setState(() => _isConnecting = false);
-      if (!mounted) return;
-
-      // Navigate to in-app call screen
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ActiveCallScreen(
-            room: room,
-            callType: isVideo ? 'video' : 'voice',
-          ),
+    // Push the active call screen immediately in outgoing/ringing mode
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ActiveCallScreen(
+          callType: isVideo ? 'video' : 'voice',
+          projectId: widget.projectId,
+          callerName: 'Admin',
+          recipientName: widget.clientName,
+          callerIdentity: client.auth.currentUser!.id,
+          isOutgoing: true,
         ),
-      );
+      ),
+    );
 
-      // Post-call: send a notification message in chat
-      if (mounted) {
-        final channelId = widget.channelId;
-        final actions = ref.read(adminActionsProvider);
-        await actions.sendChatMessage({
-          'channel_id': channelId,
-          'sender_id': client.auth.currentUser!.id,
-          'content': isVideo ? '📹 بدأت مكالمة فيديو' : '📞 بدأت مكالمة صوتية',
-          'message_type': isVideo ? 'video_call' : 'voice_call',
-        });
-        ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isConnecting = false);
-        String errorMsg = 'خطأ في الاتصال';
-        if (e == 'declined') errorMsg = 'تم رفض المكالمة';
-        if (e == 'timeout') errorMsg = 'لا يوجد رد من الطرف الآخر';
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-        );
-      }
+    // Post-call: send a notification message in chat
+    if (mounted) {
+      final channelId = widget.channelId;
+      final actions = ref.read(adminActionsProvider);
+      await actions.sendChatMessage({
+        'channel_id': channelId,
+        'sender_id': client.auth.currentUser!.id,
+        'content': isVideo ? '📹 بدأت مكالمة فيديو' : '📞 بدأت مكالمة صوتية',
+        'message_type': isVideo ? 'video_call' : 'voice_call',
+      });
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
     }
   }
 

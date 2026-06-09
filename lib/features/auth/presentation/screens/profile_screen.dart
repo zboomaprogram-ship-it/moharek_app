@@ -7,10 +7,11 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/profile.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
-import 'package:moharek_app/features/profile/presentation/screens/settings_screen.dart';
-import 'package:moharek_app/features/profile/presentation/screens/team_management_screen.dart';
 import 'package:moharek_app/shared/widgets/fade_in_slide.dart';
 import 'dart:ui';
+import 'package:image_picker/image_picker.dart';
+import 'package:moharek_app/features/rabhan/providers/package_provider.dart';
+import 'package:moharek_app/core/utils/error_handler.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -26,8 +27,16 @@ class ProfileScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppTheme.primaryGreen),
         ),
-        error: (err, _) =>
-            Center(child: Text(l10n.errorOccurred(err.toString()))),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              ErrorHandler.getFriendlyMessage(err, context),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
         data: (profile) => CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -54,14 +63,6 @@ class ProfileScreen extends ConsumerWidget {
                         Icons.business_outlined,
                         AppTheme.primaryBlue,
                         () => context.push('/profile/company'),
-                      ),
-                      _buildPremiumItem(
-                        l10n.localeName == 'ar'
-                            ? 'إدارة الفريق'
-                            : 'Team Management',
-                        Icons.people_outline,
-                        Colors.orangeAccent,
-                        () => context.push('/profile/team'),
                       ),
                       _buildPremiumItem(
                         l10n.billingInvoices,
@@ -165,53 +166,57 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 40),
                 FadeInSlide(
                   duration: const Duration(milliseconds: 600),
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                            width: 2,
+                  child: GestureDetector(
+                    onTap: () => _pickAndUploadAvatar(context, ref, profile),
+                    behavior: HitTestBehavior.opaque,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: const Color(0xFF1E293B),
+                            backgroundImage: profile?.avatarUrl != null
+                                ? NetworkImage(profile!.avatarUrl!)
+                                : null,
+                            child: profile?.avatarUrl == null
+                                ? Text(
+                                    profile?.fullName.isNotEmpty == true
+                                        ? profile!.fullName[0].toUpperCase()
+                                        : (profile?.email?.isNotEmpty == true
+                                            ? profile!.email![0].toUpperCase()
+                                            : '?'),
+                                    style: const TextStyle(
+                                      color: AppTheme.primaryGreen,
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: const Color(0xFF1E293B),
-                          backgroundImage: profile?.avatarUrl != null
-                              ? NetworkImage(profile!.avatarUrl!)
-                              : null,
-                          child: profile?.avatarUrl == null
-                              ? Text(
-                                  profile?.fullName.isNotEmpty == true
-                                      ? profile!.fullName[0].toUpperCase()
-                                      : (profile?.email?.isNotEmpty == true
-                                          ? profile!.email![0].toUpperCase()
-                                          : '?'),
-                                  style: const TextStyle(
-                                    color: AppTheme.primaryGreen,
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                )
-                              : null,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppTheme.primaryGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          size: 16,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -254,7 +259,6 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildStatsRow(WidgetRef ref) {
     final tasks = ref.watch(tasksProvider).value ?? [];
     final activeTasks = tasks.where((t) => t.status != 'completed').length;
-    final project = ref.watch(currentProjectProvider).value;
     final results = ref.watch(resultsProvider).value ?? [];
 
     // Calculate growth from latest 2 results if available
@@ -270,8 +274,6 @@ class ProfileScreen extends ConsumerWidget {
       growth = '+${(results.first.metricValue % 100).toInt()}%';
     }
 
-    final level = project?.subscriptionTier?.toUpperCase() ?? 'FREE';
-
     return FadeInSlide(
       duration: const Duration(milliseconds: 900),
       child: LayoutBuilder(
@@ -286,21 +288,14 @@ class ProfileScreen extends ConsumerWidget {
                 activeTasks.toString(),
                 Icons.task_alt,
                 Colors.orangeAccent,
-                width: isSmall ? constraints.maxWidth : (constraints.maxWidth - 24) / 3,
-              ),
-              _buildStatCard(
-                'المستوى',
-                level,
-                Icons.workspace_premium,
-                Colors.amber,
-                width: isSmall ? constraints.maxWidth : (constraints.maxWidth - 24) / 3,
+                width: isSmall ? constraints.maxWidth : (constraints.maxWidth - 12) / 2,
               ),
               _buildStatCard(
                 'النمو',
                 growth,
                 Icons.trending_up,
                 AppTheme.primaryGreen,
-                width: isSmall ? constraints.maxWidth : (constraints.maxWidth - 24) / 3,
+                width: isSmall ? constraints.maxWidth : (constraints.maxWidth - 12) / 2,
               ),
             ],
           );
@@ -585,10 +580,13 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildSubscriptionCard(BuildContext context, WidgetRef ref) {
     final project = ref.watch(currentProjectProvider).value;
+    final packageAsync = project != null ? ref.watch(packageProvider(project.id)) : null;
+    final package = packageAsync?.valueOrNull;
+
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     
-    final tier = project?.subscriptionTier ?? 'Free';
-    final renewalDate = project?.nextRenewalDate;
+    final tier = package?.packageName ?? (isAr ? 'لا توجد باقة نشطة' : 'No Active Package');
+    final renewalDate = package?.renewsAt;
     
     // Formatting date
     final dateStr = renewalDate != null 
@@ -680,12 +678,12 @@ class ProfileScreen extends ConsumerWidget {
                     final prefilled = Uri.encodeComponent(isAr 
                         ? 'أرغب في ترقية باقتي الإعلانية / التسويقية الحالية.' 
                         : 'I would like to upgrade my current advertising / marketing package.');
-                    context.push('/chat/$cId?name=${Uri.encodeComponent(cName)}&prefilled=$prefilled');
+                    context.go('/chat/$cId?name=${Uri.encodeComponent(cName)}&prefilled=$prefilled');
                   } else {
-                    context.push('/chat');
+                    context.go('/chat');
                   }
                 } else {
-                  context.push('/chat');
+                  context.go('/chat');
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -703,5 +701,87 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndUploadAvatar(
+    BuildContext context,
+    WidgetRef ref,
+    Profile? profile,
+  ) async {
+    if (profile == null) return;
+    
+    final l10n = AppLocalizations.of(context)!;
+    final isAr = l10n.localeName == 'ar';
+    
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (image == null) return;
+
+      // Show loading indicator
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: AppTheme.primaryGreen,
+                  strokeWidth: 2,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(isAr ? 'جاري رفع الصورة الشخصية...' : 'Uploading avatar...'),
+            ],
+          ),
+          duration: const Duration(days: 1), // Keep open until done
+          backgroundColor: const Color(0xFF1E293B),
+        ),
+      );
+
+      final bytes = await image.readAsBytes();
+      final ext = image.name.split('.').last.toLowerCase();
+      final storagePath = 'avatars/${profile.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      
+      final client = ref.read(supabaseClientProvider);
+      
+      // Upload to Supabase Storage 'files' bucket
+      await client.storage.from('files').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: const FileOptions(contentType: 'image/jpeg', cacheControl: '3600', upsert: true),
+      );
+
+      // Get public URL
+      final publicUrl = client.storage.from('files').getPublicUrl(storagePath);
+
+      // Update profiles table
+      await client
+          .from('profiles')
+          .update({'avatar_url': publicUrl})
+          .eq('id', profile.id);
+
+      // Invalidate profileProvider to trigger rebuild
+      ref.invalidate(profileProvider);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isAr ? 'تم تحديث الصورة الشخصية بنجاح!' : 'Avatar updated successfully!'),
+          backgroundColor: AppTheme.primaryGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
+    }
   }
 }

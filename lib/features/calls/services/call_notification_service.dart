@@ -99,6 +99,7 @@ class CallNotificationService {
         roomName,
         user?.email ?? 'User', // Fallback
         user?.id ?? 'user',
+        isVideo: callType == 'video',
       );
 
       // 4. Navigate to call screen using root navigator
@@ -107,6 +108,7 @@ class CallNotificationService {
           builder: (_) => ActiveCallScreen(
             room: room,
             callType: callType,
+            incomingSignalId: uuid,
           ),
         ),
       );

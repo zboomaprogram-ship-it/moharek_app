@@ -20,8 +20,7 @@ class IncomingCallOverlay extends StatefulWidget {
   State<IncomingCallOverlay> createState() => _IncomingCallOverlayState();
 }
 
-class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   int _secondsLeft = 30;
   Timer? _timer;
   final _signalService = CallSignalService();
@@ -30,20 +29,18 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_secondsLeft > 0) {
-          _secondsLeft--;
-        } else {
-          _timer?.cancel();
-          _onTimeout();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_secondsLeft > 0) {
+            _secondsLeft--;
+          } else {
+            _timer?.cancel();
+            _onTimeout();
+          }
+        });
+      }
     });
 
     _playRingtone();
@@ -66,7 +63,6 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _timer?.cancel();
     _audioPlayer.dispose();
     super.dispose();
@@ -74,131 +70,127 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    final callerName = widget.signal['caller_name'] ?? 'متصل';
-    final callType = widget.signal['call_type'] == 'video' ? 'فيديو' : 'صوتية';
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final callerName = widget.signal['caller_name'] ?? (isAr ? 'متصل' : 'Caller');
+    final callType = widget.signal['call_type'] == 'video' 
+        ? (isAr ? 'فيديو' : 'Video') 
+        : (isAr ? 'صوتية' : 'Voice');
 
-    return Material(
-      color: Colors.black.withValues(alpha: 0.9),
-      child: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 60),
-            // Caller Avatar
-            ScaleTransition(
-              scale: Tween<double>(begin: 1.0, end: 1.1).animate(
-                CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: -150.0, end: 0.0),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, value),
+          child: child,
+        );
+      },
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white, // Classic Premium White Card
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppTheme.cardColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.primaryGreen, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.person, size: 60, color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              callerName,
-              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'مكالمة $callType واردة...',
-              style: const TextStyle(color: Colors.white70, fontSize: 18),
-            ),
-            const Spacer(),
-            // Countdown ring
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: CircularProgressIndicator(
-                    value: _secondsLeft / 30,
-                    strokeWidth: 4,
-                    color: AppTheme.primaryGreen,
-                    backgroundColor: Colors.white10,
-                  ),
-                ),
-                Text(
-                  '$_secondsLeft',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 60),
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            ],
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
                 children: [
-                  // Decline
-                  _CallActionButton(
-                    icon: Icons.call_end,
-                    color: Colors.red,
-                    label: 'رفض',
-                    onTap: widget.onDecline,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isAr ? 'مكالمة $callType واردة' : 'Incoming $callType Call',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          callerName,
+                          style: const TextStyle(
+                            color: Color(0xFF0F172A),
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  // Accept
-                  _CallActionButton(
-                    icon: widget.signal['call_type'] == 'video' ? Icons.videocam : Icons.call,
-                    color: AppTheme.primaryGreen,
-                    label: 'قبول',
-                    onTap: widget.onAccept,
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.person, size: 28, color: Colors.white54),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 80),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CallActionButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
-  final VoidCallback onTap;
-
-  const _CallActionButton({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.white, size: 32),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  // Decline Button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: widget.onDecline,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF43F5E), // Rose / Red
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      child: Text(
+                        isAr ? 'رفض' : 'Decline',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Accept Button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: widget.onAccept,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981), // Emerald / Green
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                      child: Text(
+                        isAr ? 'قبول' : 'Accept',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      ],
+      ),
     );
   }
 }

@@ -45,6 +45,7 @@ import 'package:moharek_app/features/profile/presentation/screens/company_profil
 
 // Admin Dashboard Imports
 import 'package:moharek_app/features/admin/presentation/screens/admin_shell.dart';
+import 'package:moharek_app/features/admin/presentation/screens/admin_contracts_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_overview_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_team_screen.dart';
 import 'package:moharek_app/features/admin/presentation/screens/admin_am_detail_screen.dart';
@@ -152,19 +153,12 @@ String? _processRedirect(
   final bool isAM = role == 'account_manager';
   final bool isClient = !isAdmin && !isAM;
 
-  // Onboarding Gate: Redirect clients who have not completed onboarding
+  // Onboarding Gate: Allow accessing onboarding only if not completed yet, or if edit=true query parameter is set
   if (isClient) {
-    if (!onboardingCompleted) {
-      if (path != '/onboarding') {
-        return '/onboarding';
-      }
-    } else {
-      // If completed onboarding, only allow /onboarding if edit=true query parameter is set
-      if (path == '/onboarding') {
-        final editMode = stateUri.queryParameters['edit'] == 'true';
-        if (!editMode) {
-          return '/dashboard';
-        }
+    if (path == '/onboarding') {
+      final editMode = stateUri.queryParameters['edit'] == 'true';
+      if (!editMode && onboardingCompleted) {
+        return '/dashboard';
       }
     }
   }
@@ -184,7 +178,6 @@ String? _processRedirect(
   if (isLoginPage || isRoot) {
     if (isAdmin) return '/admin/overview';
     if (isAM) return '/am/clients';
-    if (!onboardingCompleted) return '/onboarding';
     return '/dashboard';
   }
 
@@ -517,6 +510,10 @@ late final appRouter = GoRouter(
           builder: (_, __) => const AdminBillingScreen(),
         ),
         GoRoute(
+          path: '/admin/contracts',
+          builder: (_, __) => const AdminContractsScreen(),
+        ),
+        GoRoute(
           path: '/admin/logs',
           builder: (_, __) => const AdminLogsScreen(),
         ),
@@ -565,6 +562,10 @@ late final appRouter = GoRouter(
         GoRoute(
           path: '/am/reports',
           builder: (_, __) => const AmReportsScreen(),
+        ),
+        GoRoute(
+          path: '/am/contracts',
+          builder: (_, __) => const AdminContractsScreen(),
         ),
         GoRoute(path: '/am/chat', builder: (_, __) => const AmChatScreen()),
         GoRoute(

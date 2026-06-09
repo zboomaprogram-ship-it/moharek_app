@@ -5,6 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/core/config/app_config.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MainDrawer extends ConsumerWidget {
   const MainDrawer({super.key});
@@ -24,17 +25,25 @@ class MainDrawer extends ConsumerWidget {
               decoration: const BoxDecoration(color: AppTheme.cardColor),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: AppTheme.primaryGreen,
-                backgroundImage: profile?.avatarUrl != null 
-                  ? NetworkImage(profile!.avatarUrl!) 
-                  : null,
-                child: profile?.avatarUrl == null 
-                  ? Text(profile?.fullName[0] ?? 'U', style: const TextStyle(color: Colors.black))
-                  : null,
+                backgroundImage: profile?.avatarUrl != null
+                    ? NetworkImage(profile!.avatarUrl!)
+                    : null,
+                child: profile?.avatarUrl == null
+                    ? Text(
+                        profile?.fullName[0] ?? 'U',
+                        style: const TextStyle(color: Colors.black),
+                      )
+                    : null,
               ),
-              accountName: Text(profile?.fullName ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold)),
+              accountName: Text(
+                profile?.fullName ?? 'User',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               accountEmail: Text(profile?.companyName ?? 'Moharek Client'),
             ),
-            loading: () => const DrawerHeader(child: Center(child: CircularProgressIndicator())),
+            loading: () => const DrawerHeader(
+              child: Center(child: CircularProgressIndicator()),
+            ),
             error: (_, __) => const DrawerHeader(child: Icon(Icons.error)),
           ),
 
@@ -45,7 +54,13 @@ class MainDrawer extends ConsumerWidget {
               children: [
                 _buildItem(
                   context,
-                  leading: Image.asset(AppConfig.logoAsset, height: 50, width: 50, fit: BoxFit.contain, color: Colors.white),
+                  leading: Image.asset(
+                    AppConfig.logoAsset,
+                    height: 50,
+                    width: 50,
+                    fit: BoxFit.contain,
+                    color: Colors.white,
+                  ),
                   title: AppConfig.flavorName == 'rabhan'
                       ? (isAr ? 'نظام النمو' : 'Growth System')
                       : (isAr ? 'الاستراتيجية' : 'Strategy'),
@@ -58,58 +73,120 @@ class MainDrawer extends ConsumerWidget {
 
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.campaign_outlined, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.campaign_outlined,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الحملات' : 'Campaigns',
                   onTap: () => context.push('/dashboard/campaigns'),
                 ),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.folder_open_outlined, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.folder_open_outlined,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الملفات' : 'Files',
                   onTap: () => context.push('/dashboard/files'),
                 ),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.videocam_outlined, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.fact_check_outlined,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
+                  title: isAr ? 'الموافقات' : 'Approvals',
+                  onTap: () => context.push('/dashboard/approvals'),
+                ),
+                _buildItem(
+                  context,
+                  leading: const Icon(
+                    Icons.videocam_outlined,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الاجتماعات' : 'Meetings',
                   onTap: () => context.push('/dashboard/meetings'),
                 ),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.receipt_long_outlined, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.receipt_long_outlined,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الفواتير' : 'Billing',
                   onTap: () => context.push('/dashboard/billing'),
                 ),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.help_outline, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.help_outline,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الدعم' : 'Support',
                   onTap: () => context.push('/profile/support'),
+                ),
+                _buildItem(
+                  context,
+                  leading: const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
+                  title: isAr ? 'الشكاوى' : 'Complaints',
+                  onTap: () async {
+                    final whatsappNumber = AppConfig.complaintsWhatsapp;
+                    final cleanNumber = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+                    final url = Uri.parse('https://wa.me/$cleanNumber');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
                 const Divider(color: Colors.white10),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.workspace_premium_outlined, color: Colors.amber, size: 22),
-                  title: isAr ? 'الحساب والباقة' : (AppConfig.flavorName == 'rabhan' ? 'Growth Pro' : 'Subscription & Package'),
+                  leading: const Icon(
+                    Icons.workspace_premium_outlined,
+                    color: Colors.amber,
+                    size: 22,
+                  ),
+                  title: isAr
+                      ? 'الحساب والباقة'
+                      : (AppConfig.flavorName == 'rabhan'
+                            ? 'Growth Pro'
+                            : 'Subscription & Package'),
                   onTap: () => context.push('/dashboard/package'),
                 ),
                 const Divider(color: Colors.white10),
                 _buildItem(
                   context,
-                  leading: const Icon(Icons.person_outline, color: Colors.white70, size: 22),
+                  leading: const Icon(
+                    Icons.person_outline,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                   title: isAr ? 'الملف الشخصي' : 'Profile',
                   onTap: () => context.push('/profile'),
                 ),
               ],
             ),
           ),
-          
+
           // Footer
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Text(
               'v3.0.0 — ${AppConfig.appName} Growth Hub',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 10),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: 10,
+              ),
             ),
           ),
         ],
@@ -117,10 +194,18 @@ class MainDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildItem(BuildContext context, {required Widget leading, required String title, required VoidCallback onTap}) {
+  Widget _buildItem(
+    BuildContext context, {
+    required Widget leading,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       leading: leading,
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(
+        title,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+      ),
       onTap: () {
         HapticService.light();
         Navigator.pop(context);

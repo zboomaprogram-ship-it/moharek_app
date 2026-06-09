@@ -12,5 +12,6 @@ class MoharekConfig extends AppConfig {
         livekitEnabledVal: true,
         appNameVal: 'محرك',
         flavorNameVal: 'moharek',
+        complaintsWhatsappVal: '966500000000',
       );
 }

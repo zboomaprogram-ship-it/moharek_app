@@ -8,7 +8,12 @@ class CallService {
   final _supabase = Supabase.instance.client;
   final _signalService = CallSignalService();
 
-  Future<Room> joinCall(String roomName, String participantName, String identity) async {
+  Future<Room> joinCall(
+    String roomName, 
+    String participantName, 
+    String identity, {
+    bool isVideo = true,
+  }) async {
     try {
       // 1. Get token from Edge Function
       final res = await _supabase.functions.invoke('livekit-token', body: {
@@ -39,7 +44,7 @@ class CallService {
         adaptiveStream: true,
         dynacast: true,
       );
-
+      
       await room.connect(
         url, 
         token, 
@@ -48,16 +53,25 @@ class CallService {
       );
 
       // 3. Turn on camera and mic (graceful hardware fallback)
-      try {
-        await room.localParticipant?.setCameraEnabled(
-          true,
-          cameraCaptureOptions: const CameraCaptureOptions(
-            params: VideoParametersPresets.h720_169,
-          ),
-        );
-      } catch (e) {
-        debugPrint('Warning: Failed to enable camera (possibly no camera device): $e');
+      if (isVideo) {
+        try {
+          await room.localParticipant?.setCameraEnabled(
+            true,
+            cameraCaptureOptions: const CameraCaptureOptions(
+              params: VideoParametersPresets.h720_169,
+            ),
+          );
+        } catch (e) {
+          debugPrint('Warning: Failed to enable camera (possibly no camera device): $e');
+        }
+      } else {
+        try {
+          await room.localParticipant?.setCameraEnabled(false);
+        } catch (e) {
+          debugPrint('Warning: Failed to disable camera: $e');
+        }
       }
+
       try {
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
@@ -98,7 +112,12 @@ class CallService {
       if (status == 'accepted') {
         sub?.cancel();
         try {
-          final room = await joinCall('moharek-$projectId', callerName, identity);
+          final room = await joinCall(
+            'moharek-$projectId', 
+            callerName, 
+            identity,
+            isVideo: callType == 'video',
+          );
           if (!completer.isCompleted) {
             completer.complete(room);
           }

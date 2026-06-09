@@ -81,6 +81,12 @@ class AmSidebar extends ConsumerWidget {
       ),
       (icon: Icons.task_alt_outlined, label: 'المهام', path: '/am/tasks', showDot: false),
       (icon: Icons.bar_chart_outlined, label: 'التقارير', path: '/am/reports', showDot: false),
+      (
+        icon: Icons.description_outlined,
+        label: 'العقود',
+        path: '/am/contracts',
+        showDot: false,
+      ),
       (icon: Icons.chat_bubble_outline, label: 'المحادثات', path: '/am/chat', showDot: unreadChat > 0),
       (
         icon: Icons.calendar_month_outlined,
