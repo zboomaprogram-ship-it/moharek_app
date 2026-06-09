@@ -55,12 +55,7 @@ class MainDrawer extends ConsumerWidget {
                         : '/strategy',
                   ),
                 ),
-                _buildItem(
-                  context,
-                  leading: const Icon(Icons.check_circle_outline, color: Colors.white70, size: 22),
-                  title: isAr ? 'الموافقات' : 'Approvals',
-                  onTap: () => context.push('/dashboard/approvals'),
-                ),
+
                 _buildItem(
                   context,
                   leading: const Icon(Icons.campaign_outlined, color: Colors.white70, size: 22),
