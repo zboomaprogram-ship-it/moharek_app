@@ -48,7 +48,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   Future<void> _playRingtone() async {
     try {
-      await _audioPlayer.setUrl('https://assets.mixkit.co/active_storage/sfx/903/903-84.wav');
+      await _audioPlayer.setAsset('assets/ringtone.wav');
       await _audioPlayer.setLoopMode(LoopMode.one);
       await _audioPlayer.play();
     } catch (e) {

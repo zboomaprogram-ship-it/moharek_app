@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
+import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 
 class CallService {
   final _supabase = Supabase.instance.client;
@@ -144,5 +146,56 @@ class CallService {
     });
 
     return completer.future;
+  }
+
+  /// Unified join method to connect to a LiveKit room and navigate to the ActiveCallScreen.
+  /// Used for scheduled/ongoing meetings.
+  static Future<void> join(
+    BuildContext context, {
+    required String roomName,
+    required String userName,
+    bool isVideo = true,
+  }) async {
+    final nav = Navigator.of(context);
+    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final identity = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final callService = CallService();
+      
+      final room = await callService.joinCall(
+        roomName,
+        userName,
+        identity,
+        isVideo: isVideo,
+      );
+
+      Future.microtask(() {
+        if (nav.canPop()) nav.pop(); // Close loading indicator
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => ActiveCallScreen(
+              room: room,
+              callType: isVideo ? 'video' : 'voice',
+            ),
+          ),
+        );
+      });
+    } catch (e) {
+      Future.microtask(() {
+        if (nav.canPop()) nav.pop(); // Close loading indicator
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Call error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }

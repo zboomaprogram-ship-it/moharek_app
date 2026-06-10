@@ -1,12 +1,9 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class AdminVoiceRecorder extends ConsumerStatefulWidget {
@@ -111,16 +108,22 @@ class _AdminVoiceRecorderState extends ConsumerState<AdminVoiceRecorder> {
           const SizedBox(height: 40),
           GestureDetector(
             onTap: () {
-              final isAr = Localizations.localeOf(context).languageCode == 'ar';
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(isAr ? 'اضغط مطولاً للتسجيل' : 'Please press and hold the button to record.'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              if (_isRecording) {
+                _stopRecording();
+              } else {
+                _startRecording();
+              }
             },
-            onLongPressStart: (_) => _startRecording(),
-            onLongPressEnd: (_) => _stopRecording(),
+            onLongPressStart: (_) {
+              if (!_isRecording) {
+                _startRecording();
+              }
+            },
+            onLongPressEnd: (_) {
+              if (_isRecording) {
+                _stopRecording();
+              }
+            },
             child: Container(
               width: 80,
               height: 80,
@@ -129,7 +132,11 @@ class _AdminVoiceRecorderState extends ConsumerState<AdminVoiceRecorder> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   if (_isRecording)
-                    BoxShadow(color: Colors.redAccent.withValues(alpha: 0.5), blurRadius: 20, spreadRadius: 5),
+                    BoxShadow(
+                      color: Colors.redAccent.withValues(alpha: 0.5),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
                 ],
               ),
               child: Icon(
@@ -141,7 +148,7 @@ class _AdminVoiceRecorderState extends ConsumerState<AdminVoiceRecorder> {
           ),
           const SizedBox(height: 24),
           Text(
-            _isRecording ? 'Recording... Release to stop' : 'Long press to record',
+            _isRecording ? 'Recording... Tap to stop' : 'Tap or hold to record',
             style: TextStyle(color: _isRecording ? Colors.redAccent : Colors.grey),
           ),
           if (_isUploading) ...[

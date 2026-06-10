@@ -39,11 +39,11 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>NSCameraUsageDescription</key>
-		<string>Moharek requires access to the camera to capture video during video calls and to take photos to send in chat.</string>
+		<string>Moharek requires access to your camera to capture video and take photos. For example, this allows you to participate in live video calls with your account manager and capture photos to share directly within the chat channels.</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>Moharek requires access to the microphone to record and send voice messages in chat, and to transmit your voice during audio and video calls.</string>
+		<string>Moharek requires access to your microphone to capture audio. For example, this allows you to record and send voice messages in chat channels, and to transmit your voice during live audio and video calls with your project team.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Moharek requires access to the photo library to upload profile pictures and send photos or attachments in chat.</string>
+		<string>Moharek requires access to your photo library to select and upload media. For example, this allows you to upload a custom profile picture and select existing photos or document attachments from your device to send in chat.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>
@@ -51,7 +51,9 @@
 			<string>voip</string>
 		</array>
 		<key>NSBluetoothAlwaysUsageDescription</key>
-		<string>Moharek requires Bluetooth access to connect to wireless headsets and microphones for audio routing during voice and video calls.</string>
+		<string>Moharek requires Bluetooth access to detect and connect to external audio devices. For example, this allows you to use wireless Bluetooth headsets or speakers for audio routing during live voice and video calls.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Moharek requires access to your location when the app is in use. For example, this allows you to share your location with your project team or manager within the chat for delivery address coordination.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<key>UIStatusBarHidden</key>

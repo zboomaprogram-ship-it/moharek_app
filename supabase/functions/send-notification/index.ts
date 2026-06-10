@@ -132,18 +132,83 @@ serve(async (req) => {
     // 1. Direct body keys (manual trigger)
     // 2. Webhook record keys (e.g. from notifications table insert)
     // 3. Webhook on other tables
-    const targetId: string | null = 
+    let targetId: string | null = 
       body.target_user_id ?? 
       body.client_id ?? 
       record?.user_id ?? 
       record?.client_id ?? 
       null
 
+    // If targetId is not provided but we have a project_id, resolve it using the project ID
+    if (!targetId && record?.project_id) {
+      const { data: project, error: projError } = await supabase
+        .from('projects')
+        .select('client_id, account_manager_id')
+        .eq('id', record.project_id)
+        .single();
+      
+      if (project && !projError) {
+        if (table === 'call_signals' || table === 'call_signals_missed') {
+          if (record.caller_id === project.client_id) {
+            targetId = project.account_manager_id;
+          } else {
+            targetId = project.client_id;
+          }
+        } else if (table === 'tasks' && record.assigned_to) {
+          targetId = record.assigned_to;
+        } else {
+          // General fallback: notify the other party if we know who did the action
+          const actorId = 
+            body.sender_id ?? 
+            body.actor_id ?? 
+            record.sender_id ?? 
+            record.actor_id ?? 
+            record.uploaded_by ?? 
+            null;
+          
+          if (actorId) {
+            if (actorId === project.client_id) {
+              targetId = project.account_manager_id;
+            } else {
+              targetId = project.client_id;
+            }
+          } else {
+            // Default to client for client-facing updates, or AM
+            if (['approvals', 'invoices', 'reports', 'meetings'].includes(table)) {
+              targetId = project.client_id;
+            } else {
+              targetId = project.client_id || project.account_manager_id;
+            }
+          }
+        }
+      }
+    }
+
     const senderName: string | undefined = body.sender_name ?? record?.data?.sender_name
 
     if (!targetId) {
       console.error('[send-notification] Error: No target user ID found in payload')
       return new Response(JSON.stringify({ error: 'No target user ID provided' }), { status: 400 })
+    }
+
+    // ── Self-Notification Prevention ──────────────────────────────────────────
+    // Do not notify a user about their own actions.
+    const actorId = 
+      body.sender_id ?? 
+      body.actor_id ?? 
+      record?.sender_id ?? 
+      record?.actor_id ?? 
+      record?.uploaded_by ??
+      record?.metadata?.sender_id ??
+      record?.data?.sender_id ??
+      null;
+
+    if (actorId && targetId === actorId) {
+      console.log(`[send-notification] Skipping push notification: target user ${targetId} is the actor ${actorId}`);
+      return new Response(
+        JSON.stringify({ skipped: true, reason: 'self_notification' }),
+        { headers: corsHeaders, status: 200 }
+      );
     }
 
     // Fetch user profile
@@ -212,37 +277,49 @@ serve(async (req) => {
 
     const results: any[] = []
 
+    // ── OneSignal Credentials Resolution ─────────────────────────────────────────
+    // Identify if this request originates from Rabhan vs Moharek to prevent duplicate pushes.
+    const getOneSignalCredentials = () => {
+      const isRabhan = SUPABASE_URL.includes('pyzheqwypoaazpmpgiuq') || 
+                       Deno.env.get('APP_FLAVOR')?.trim().toLowerCase() === 'rabhan';
+      
+      if (isRabhan) {
+        const appId = RABHAN_ONESIGNAL_APP_ID || Deno.env.get('ONESIGNAL_APP_ID')?.trim();
+        const apiKey = RABHAN_ONESIGNAL_API_KEY || Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
+        if (appId && apiKey) return { appId, apiKey };
+      } else {
+        const appId = MOHAREK_ONESIGNAL_APP_ID || Deno.env.get('ONESIGNAL_APP_ID')?.trim();
+        const apiKey = MOHAREK_ONESIGNAL_API_KEY || Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
+        if (appId && apiKey) return { appId, apiKey };
+      }
+
+      // Final fallback to whatever default env vars are present
+      const appId = Deno.env.get('ONESIGNAL_APP_ID')?.trim();
+      const apiKey = Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
+      if (appId && apiKey) return { appId, apiKey };
+
+      return null;
+    };
+
+    const creds = getOneSignalCredentials();
+    if (!creds) {
+      console.error('[send-notification] Error: No OneSignal credentials found');
+      return new Response(JSON.stringify({ error: 'OneSignal credentials not found' }), { status: 500 });
+    }
+
     // ── Strategy A: Target by stored Player ID (most reliable) ─────────────
     if (userData.onesignal_player_id) {
       const playerTargeting = { include_player_ids: [userData.onesignal_player_id] }
-
-      const sends = []
-      if (MOHAREK_ONESIGNAL_APP_ID && MOHAREK_ONESIGNAL_API_KEY) {
-        sends.push(sendToOneSignal(MOHAREK_ONESIGNAL_APP_ID, MOHAREK_ONESIGNAL_API_KEY, playerTargeting, sharedPayload))
-      }
-      if (RABHAN_ONESIGNAL_APP_ID && RABHAN_ONESIGNAL_API_KEY) {
-        sends.push(sendToOneSignal(RABHAN_ONESIGNAL_APP_ID, RABHAN_ONESIGNAL_API_KEY, playerTargeting, sharedPayload))
-      }
-
-      const playerResults = await Promise.all(sends)
-      results.push(...playerResults)
+      const res = await sendToOneSignal(creds.appId, creds.apiKey, playerTargeting, sharedPayload);
+      results.push(res);
     } else {
       // ── Strategy B: Target by External User ID (fallback) ──────────────────
       const externalTargeting = {
         include_external_user_ids: [targetId],
         channel_for_external_user_ids: 'push',
       }
-
-      const extSends = []
-      if (MOHAREK_ONESIGNAL_APP_ID && MOHAREK_ONESIGNAL_API_KEY) {
-        extSends.push(sendToOneSignal(MOHAREK_ONESIGNAL_APP_ID, MOHAREK_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
-      }
-      if (RABHAN_ONESIGNAL_APP_ID && RABHAN_ONESIGNAL_API_KEY) {
-        extSends.push(sendToOneSignal(RABHAN_ONESIGNAL_APP_ID, RABHAN_ONESIGNAL_API_KEY, externalTargeting, sharedPayload))
-      }
-
-      const extResults = await Promise.all(extSends)
-      results.push(...extResults)
+      const res = await sendToOneSignal(creds.appId, creds.apiKey, externalTargeting, sharedPayload);
+      results.push(res);
     }
 
     const anySuccess = results.some(r => r.success)

@@ -283,22 +283,24 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           recipientName: widget.clientName,
           callerIdentity: client.auth.currentUser!.id,
           isOutgoing: true,
+          onCallConnected: () async {
+            try {
+              final channelId = widget.channelId;
+              final actions = ref.read(adminActionsProvider);
+              await actions.sendChatMessage({
+                'channel_id': channelId,
+                'sender_id': client.auth.currentUser!.id,
+                'content': isVideo ? '📹 بدأت مكالمة فيديو' : '📞 بدأت مكالمة صوتية',
+                'message_type': 'system', // System message type avoids double push notifications
+              });
+              ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+            } catch (e) {
+              debugPrint('Error sending call connected message: $e');
+            }
+          },
         ),
       ),
     );
-
-    // Post-call: send a notification message in chat
-    if (mounted) {
-      final channelId = widget.channelId;
-      final actions = ref.read(adminActionsProvider);
-      await actions.sendChatMessage({
-        'channel_id': channelId,
-        'sender_id': client.auth.currentUser!.id,
-        'content': isVideo ? '📹 بدأت مكالمة فيديو' : '📞 بدأت مكالمة صوتية',
-        'message_type': isVideo ? 'video_call' : 'voice_call',
-      });
-      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
-    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

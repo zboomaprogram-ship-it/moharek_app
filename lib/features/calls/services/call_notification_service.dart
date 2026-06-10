@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkit_stub.dart';
@@ -70,6 +71,11 @@ class CallNotificationService {
       return;
     }
     _processedCallIds.add(signalId);
+    
+    // Auto-remove from processed set after 5 minutes to prevent memory leak
+    Timer(const Duration(minutes: 5), () {
+      _processedCallIds.remove(signalId);
+    });
 
     // Check if it's iOS and the region is China to bypass CallKit
     if (defaultTargetPlatform == TargetPlatform.iOS) {

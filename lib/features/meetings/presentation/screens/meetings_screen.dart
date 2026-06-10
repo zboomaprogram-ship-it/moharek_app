@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
-import 'package:moharek_app/shared/services/call_service.dart';
+import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/shared/models/meeting.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
 import 'package:moharek_app/shared/widgets/empty_state.dart';

@@ -20,6 +20,7 @@ class ActiveCallScreen extends StatefulWidget {
   final String? callerIdentity;
   final bool isOutgoing;
   final String? incomingSignalId;
+  final VoidCallback? onCallConnected;
 
   const ActiveCallScreen({
     super.key,
@@ -31,6 +32,7 @@ class ActiveCallScreen extends StatefulWidget {
     this.callerIdentity,
     this.isOutgoing = false,
     this.incomingSignalId,
+    this.onCallConnected,
   });
 
   @override
@@ -43,6 +45,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   bool _isVideoOff = false;
   bool _isSpeakerOn = false;
   bool _isConnectingRoom = true;
+  bool _hasTriggeredConnected = false;
 
   // Duration timer
   int _seconds = 0;
@@ -195,11 +198,25 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     }
   }
 
+  void _onConnected() {
+    if (_hasTriggeredConnected) return;
+    final hasRemote = _room?.remoteParticipants.isNotEmpty ?? false;
+    if (hasRemote) {
+      _hasTriggeredConnected = true;
+      widget.onCallConnected?.call();
+    }
+  }
+
   void _setupRoomListeners() {
     if (_room == null) return;
     _roomListener = _room!.createListener();
     _roomListener!
-      ..on<ParticipantConnectedEvent>((_) { if (mounted) setState(() {}); })
+      ..on<ParticipantConnectedEvent>((_) {
+        if (mounted) {
+          setState(() {});
+          _onConnected();
+        }
+      })
       ..on<ParticipantDisconnectedEvent>((_) {
         debugPrint('Participant disconnected - ending call');
         if (mounted) {
@@ -208,6 +225,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
       })
       ..on<TrackSubscribedEvent>((_) { if (mounted) setState(() {}); })
       ..on<TrackUnsubscribedEvent>((_) { if (mounted) setState(() {}); });
+
+    // Handle case where remote participant is already connected
+    _onConnected();
   }
 
   @override

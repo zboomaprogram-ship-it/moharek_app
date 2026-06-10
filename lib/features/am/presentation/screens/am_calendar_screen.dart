@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
-import 'package:moharek_app/shared/services/call_service.dart';
+import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:intl/intl.dart';
 
 class AmCalendarScreen extends ConsumerWidget {

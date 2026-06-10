@@ -239,22 +239,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           recipientName: widget.channelName,
           callerIdentity: profile.id,
           isOutgoing: true,
+          onCallConnected: () async {
+            try {
+              await ref.read(chatNotifierProvider.notifier).sendMessage(
+                widget.channelId,
+                isVideo
+                    ? '📹 ${l10n.callStarted(l10n.startVideoCall)}'
+                    : '📞 ${l10n.callStarted(l10n.startVoiceCall)}',
+                messageType: 'system', // System message type avoids double push notifications
+              );
+              ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+            } catch (e) {
+              debugPrint('Error sending call connected message: $e');
+            }
+          },
         ),
       ),
     );
-
-    if (mounted) {
-      ref
-          .read(chatNotifierProvider.notifier)
-          .sendMessage(
-            widget.channelId,
-            isVideo
-                ? '📹 ${l10n.callStarted(l10n.startVideoCall)}'
-                : '📞 ${l10n.callStarted(l10n.startVoiceCall)}',
-            messageType: isVideo ? 'video_call' : 'voice_call',
-          );
-      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
-    }
   }
 
   Future<void> _handleVoiceRecording(VoiceRecordingResult recording) async {

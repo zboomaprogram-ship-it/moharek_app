@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
-import 'package:moharek_app/shared/services/call_service.dart';
+import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 final _meetingsForProject = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {

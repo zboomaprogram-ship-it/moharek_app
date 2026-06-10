@@ -59,7 +59,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
     if (mounted) setState(fn);
   }
 
-  Future<void> _startRecording() async {
+  Future<void> _startRecording({bool isTap = false}) async {
     try {
       await widget.recorderService.startRecording();
       if (!mounted) return;
@@ -67,7 +67,7 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
       
       _safeState(() {
         _isRecording = true;
-        _isLocked = false;
+        _isLocked = isTap;
         _isCancelling = false;
         _dragOffset = 0;
         _seconds = 0;
@@ -234,10 +234,12 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
       );
     }
 
-    if (_isRecording && _isLocked) {
-      // Locked recording state: Send button
+    if (_isRecording) {
+      // Recording state (both locked and active): Send button
       return GestureDetector(
         onTap: () => _stopRecording(send: true),
+        onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
+        onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),
         child: Container(
           width: 48,
           height: 48,
@@ -250,18 +252,13 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
       );
     }
 
-    // Default: Mic button (idle or long pressing)
+    // Default: Mic button (idle)
     return GestureDetector(
       onTap: () {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.holdToRecord),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        // Tap starts recording in locked mode (Tap-to-record)
+        _startRecording(isTap: true);
       },
-      onLongPressStart: (_) => _startRecording(),
+      onLongPressStart: (_) => _startRecording(isTap: false),
       onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
       onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),
       child: _buildMicButton(),
