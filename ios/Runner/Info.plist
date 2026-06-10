@@ -39,11 +39,11 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>NSCameraUsageDescription</key>
-		<string>$(PRODUCT_NAME) needs camera access for video calls.</string>
+		<string>Moharek requires access to the camera to capture video during video calls and to take photos to send in chat.</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>$(PRODUCT_NAME) needs microphone access for voice calls and recording.</string>
+		<string>Moharek requires access to the microphone to record and send voice messages in chat, and to transmit your voice during audio and video calls.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>$(PRODUCT_NAME) needs photo library access to upload profile pictures and attachments.</string>
+		<string>Moharek requires access to the photo library to upload profile pictures and send photos or attachments in chat.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>
@@ -51,7 +51,7 @@
 			<string>voip</string>
 		</array>
 		<key>NSBluetoothAlwaysUsageDescription</key>
-		<string>$(PRODUCT_NAME) needs bluetooth access for audio routing during calls.</string>
+		<string>Moharek requires Bluetooth access to connect to wireless headsets and microphones for audio routing during voice and video calls.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 		<key>UIStatusBarHidden</key>

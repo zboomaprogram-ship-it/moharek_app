@@ -252,6 +252,15 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
 
     // Default: Mic button (idle or long pressing)
     return GestureDetector(
+      onTap: () {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.holdToRecord),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
       onLongPressStart: (_) => _startRecording(),
       onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
       onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),

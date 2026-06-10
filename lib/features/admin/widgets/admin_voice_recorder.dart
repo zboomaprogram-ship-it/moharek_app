@@ -110,6 +110,15 @@ class _AdminVoiceRecorderState extends ConsumerState<AdminVoiceRecorder> {
           ),
           const SizedBox(height: 40),
           GestureDetector(
+            onTap: () {
+              final isAr = Localizations.localeOf(context).languageCode == 'ar';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isAr ? 'اضغط مطولاً للتسجيل' : 'Please press and hold the button to record.'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
             onLongPressStart: (_) => _startRecording(),
             onLongPressEnd: (_) => _stopRecording(),
             child: Container(
