@@ -166,7 +166,14 @@ class MoharekApp extends ConsumerWidget {
       builder: (context, child) {
         Widget content = CallSignalListener(child: child!);
         if (kIsWeb) {
-          content = SelectionArea(child: content);
+          final webContent = content;
+          content = Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => SelectionArea(child: webContent),
+              ),
+            ],
+          );
         }
         return Directionality(
           textDirection: locale.languageCode == 'ar'

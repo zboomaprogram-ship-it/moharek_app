@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
+import 'package:moharek_app/features/calls/services/call_notification_service.dart';
+import 'package:proximity_sensor/proximity_sensor.dart' if (dart.library.html) 'package:moharek_app/core/stubs/proximity_sensor_stub.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkit_stub.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ActiveCallScreen extends StatefulWidget {
   final Room? room; // Null if outgoing call initiated from this device
@@ -57,6 +61,8 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   void initState() {
     super.initState();
 
+    CallNotificationService.isCallActive = true;
+
     _isSpeakerOn = (widget.callType == 'video');
 
     if (widget.callType == 'voice') {
@@ -80,6 +86,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
       // Initialize speakerphone routing
       try {
         Helper.setSpeakerphoneOn(_isSpeakerOn);
+        _room?.setSpeakerOn(_isSpeakerOn);
+        if (widget.callType == 'voice' && !kIsWeb) {
+          _enableProximitySensor(!_isSpeakerOn);
+        }
       } catch (e) {
         debugPrint('Warning: Failed to initialize speakerphone routing: $e');
       }
@@ -91,6 +101,15 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && !_isConnectingRoom) setState(() => _seconds++);
     });
+  }
+
+  void _enableProximitySensor(bool enable) {
+    if (kIsWeb) return;
+    try {
+      ProximitySensor.setProximityScreenOff(enable);
+    } catch (e) {
+      debugPrint('Error setting proximity sensor: $e');
+    }
   }
 
   Future<void> _initiateOutgoingCall() async {
@@ -151,6 +170,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
       // Initialize speakerphone routing
       try {
         Helper.setSpeakerphoneOn(_isSpeakerOn);
+        room.setSpeakerOn(_isSpeakerOn);
+        if (widget.callType == 'voice' && !kIsWeb) {
+          _enableProximitySensor(!_isSpeakerOn);
+        }
       } catch (e) {
         debugPrint('Warning: Failed to initialize speakerphone routing: $e');
       }
@@ -177,13 +200,22 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     _roomListener = _room!.createListener();
     _roomListener!
       ..on<ParticipantConnectedEvent>((_) { if (mounted) setState(() {}); })
-      ..on<ParticipantDisconnectedEvent>((_) { if (mounted) setState(() {}); })
+      ..on<ParticipantDisconnectedEvent>((_) {
+        debugPrint('Participant disconnected - ending call');
+        if (mounted) {
+          _hangUp();
+        }
+      })
       ..on<TrackSubscribedEvent>((_) { if (mounted) setState(() {}); })
       ..on<TrackUnsubscribedEvent>((_) { if (mounted) setState(() {}); });
   }
 
   @override
   void dispose() {
+    CallNotificationService.isCallActive = false;
+    if (widget.callType == 'voice' && !kIsWeb) {
+      _enableProximitySensor(false);
+    }
     _timer?.cancel();
     _signalSub?.cancel();
     _roomListener?.dispose();
@@ -228,6 +260,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
           if (!_isVideoOff) {
             _isSpeakerOn = true;
             Helper.setSpeakerphoneOn(true);
+            _room?.setSpeakerOn(true);
+            if (widget.callType == 'voice' && !kIsWeb) {
+              _enableProximitySensor(false);
+            }
           }
         });
       }
@@ -240,6 +276,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     try {
       final target = !_isSpeakerOn;
       await Helper.setSpeakerphoneOn(target);
+      await _room?.setSpeakerOn(target);
+      if (widget.callType == 'voice' && !kIsWeb) {
+        _enableProximitySensor(!target);
+      }
       if (mounted) setState(() => _isSpeakerOn = target);
     } catch (e) {
       debugPrint('Error toggling speaker: $e');
@@ -256,34 +296,60 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     }
   }
 
-  void _hangUp() async {
+  void _hangUp() {
     if (_isHangingUp) return;
     _isHangingUp = true;
+
+    CallNotificationService.isCallActive = false;
+    if (widget.callType == 'voice' && !kIsWeb) {
+      _enableProximitySensor(false);
+    }
 
     _timer?.cancel();
     _signalSub?.cancel();
 
-    if (widget.isOutgoing) {
-      if (_outgoingSignalId != null) {
-        await _signalService.declineCall(_outgoingSignalId!);
+    // Exit immediately so that screen pops without waiting for network/LiveKit cleanup
+    _safeExit();
+
+    // Perform cleanup asynchronously in the background
+    _cleanupCall();
+  }
+
+  Future<void> _cleanupCall() async {
+    final signalId = widget.isOutgoing ? _outgoingSignalId : widget.incomingSignalId;
+    try {
+      if (signalId != null) {
+        final hasRemote = _room?.remoteParticipants.isNotEmpty ?? false;
+        // If it was an active call (has remote) or we are the callee, mark as ended. Otherwise, decline it.
+        if (hasRemote || !widget.isOutgoing) {
+          await _signalService.endCall(signalId);
+        } else {
+          await _signalService.declineCall(signalId);
+        }
       }
-    } else {
-      if (widget.incomingSignalId != null) {
-        await _signalService.endCall(widget.incomingSignalId!);
+    } catch (e) {
+      debugPrint('Error ending call signal: $e');
+    }
+
+    if (!kIsWeb && signalId != null) {
+      try {
+        await FlutterCallkitIncoming.endCall(signalId);
+      } catch (e) {
+        debugPrint('Error ending native CallKit UI: $e');
       }
     }
 
-    if (_room != null) {
-      final roomToDispose = _room!;
-      _room = null;
-      _roomListener?.dispose();
-      _roomListener = null;
-      await roomToDispose.disconnect();
-      await roomToDispose.dispose();
-    }
-
-    if (mounted) {
-      _safeExit();
+    try {
+      if (_room != null) {
+        final roomToDispose = _room!;
+        _room = null;
+        _roomListener?.dispose();
+        _roomListener = null;
+        await roomToDispose.disconnect();
+        await roomToDispose.dispose();
+      }
+    } catch (e) {
+      debugPrint('Error disconnecting/disposing LiveKit room: $e');
     }
   }
 

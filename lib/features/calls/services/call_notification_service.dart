@@ -14,6 +14,15 @@ class CallNotificationService {
   static final _signalService = CallSignalService();
   static bool _isInitialized = false;
 
+  // Track call states globally
+  static bool isCallActive = false;
+  static final Set<String> _acceptedCallIds = {};
+  static final Set<String> _processedCallIds = {};
+
+  static bool isCallAccepted(String uuid) {
+    return _acceptedCallIds.contains(uuid);
+  }
+
   static void init() {
     if (kIsWeb) return; // CallKeep not supported on web
     if (_isInitialized) return;
@@ -39,7 +48,11 @@ class CallNotificationService {
       } else if (event is CallEventActionCallDecline) {
         _handleDeclineCall(event.id);
       } else if (event is CallEventActionCallEnded) {
-        _handleDeclineCall(event.id);
+        if (_acceptedCallIds.contains(event.id)) {
+          _handleEndCall(event.id);
+        } else {
+          _handleDeclineCall(event.id);
+        }
       }
     });
   }
@@ -47,6 +60,16 @@ class CallNotificationService {
   /// Called when a push notification with call data is received
   static Future<void> handleIncomingCallPush(Map<String, dynamic> data) async {
     if (kIsWeb) return;
+
+    final signalId = data['id'] as String?;
+    if (signalId == null) return;
+
+    // Prevent showing duplicate notifications for the same call or during an active call
+    if (isCallActive || _processedCallIds.contains(signalId)) {
+      debugPrint('Incoming call push ignored: isCallActive=$isCallActive, alreadyProcessed=${_processedCallIds.contains(signalId)}');
+      return;
+    }
+    _processedCallIds.add(signalId);
 
     // Check if it's iOS and the region is China to bypass CallKit
     if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -58,11 +81,8 @@ class CallNotificationService {
       } catch (_) {}
     }
 
-    final signalId = data['id'] as String?;
     final callerName = data['caller_name'] as String? ?? 'Someone';
     final callType = data['call_type'] as String? ?? 'video';
-    
-    if (signalId == null) return;
 
     // Display the native Incoming Call UI (WhatsApp style)
     final params = CallKitParams(
@@ -88,6 +108,9 @@ class CallNotificationService {
 
   static Future<void> _handleAcceptCall(String uuid) async {
     try {
+      isCallActive = true;
+      _acceptedCallIds.add(uuid);
+
       // 1. Mark as accepted in database
       await _signalService.acceptCall(uuid);
       
@@ -131,7 +154,17 @@ class CallNotificationService {
   }
 
   static Future<void> _handleDeclineCall(String uuid) async {
+    isCallActive = false;
+    _acceptedCallIds.remove(uuid);
+    _processedCallIds.remove(uuid);
     await _signalService.declineCall(uuid);
+  }
+
+  static Future<void> _handleEndCall(String uuid) async {
+    isCallActive = false;
+    _acceptedCallIds.remove(uuid);
+    _processedCallIds.remove(uuid);
+    await _signalService.endCall(uuid);
   }
 
   static Future<void> handleAcceptButtonPush(Map<String, dynamic> data) async {

@@ -76,6 +76,10 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
     _sub?.cancel();
     _sub = _signalService.watchAllIncomingCalls().listen((signals) {
       if (signals.isNotEmpty) {
+        if (CallNotificationService.isCallActive) {
+          debugPrint('CallSignalListener: Call is already active, ignoring stream signal.');
+          return;
+        }
         final signal = signals.first;
         if (_activeSignal == null || _activeSignal!['id'] != signal['id']) {
           setState(() => _activeSignal = signal);
@@ -94,8 +98,10 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
           setState(() => _activeSignal = null);
           
           if (!kIsWeb) {
-            // Mobile: Cancel native incoming UI if caller hung up
-            FlutterCallkitIncoming.endCall(oldSignalId);
+            // Mobile: Cancel native incoming UI if caller hung up, but only if not accepted yet
+            if (!CallNotificationService.isCallAccepted(oldSignalId)) {
+              FlutterCallkitIncoming.endCall(oldSignalId);
+            }
           } else {
             // Web: Remove custom overlay card
             _hideWebIncomingCallOverlay();
