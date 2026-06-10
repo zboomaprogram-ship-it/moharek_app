@@ -12,7 +12,6 @@ import 'package:moharek_app/shared/services/connectivity_service.dart';
 import 'package:moharek_app/shared/models/message.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 import 'package:moharek_app/features/chat/services/voice_recorder_service.dart';
@@ -21,6 +20,7 @@ import 'package:moharek_app/features/chat/widgets/voice_record_button.dart';
 import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 
 final _urlRegExp = RegExp(
   r'((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))',
@@ -556,14 +556,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           decoration: TextDecoration.underline,
         ),
         recognizer: TapGestureRecognizer()
-          ..onTap = () async {
-            final uri = Uri.tryParse(tapUrl);
-            if (uri != null) {
-              try {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } catch (_) {}
-            }
-          },
+          ..onTap = () => openFileInApp(context, tapUrl, 'Link'),
       ));
       lastMatchEnd = match.end;
     }
@@ -708,7 +701,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ],
               if (isImage && msg.fileUrl != null)
                 GestureDetector(
-                onTap: () => launchUrl(Uri.parse(msg.fileUrl!)),
+                onTap: () => openFileInApp(context, msg.fileUrl!, msg.content),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
@@ -728,7 +721,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             // File message
             else if (isFile && msg.fileUrl != null)
               GestureDetector(
-                onTap: () => launchUrl(Uri.parse(msg.fileUrl!)),
+                onTap: () => openFileInApp(context, msg.fileUrl!, msg.content),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(

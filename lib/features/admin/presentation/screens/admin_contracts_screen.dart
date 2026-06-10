@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
 import 'package:moharek_app/core/utils/error_handler.dart';
@@ -304,14 +303,7 @@ class AdminContractsScreen extends ConsumerWidget {
   Future<void> _downloadContract(BuildContext context, Map<String, dynamic> contract) async {
     final fileUrl = contract['file_url'] as String?;
     if (fileUrl != null && fileUrl.isNotEmpty) {
-      final uri = Uri.parse(fileUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح الرابط')));
-        }
-      }
+      await openFileInApp(context, fileUrl, contract['title'] ?? 'عقد');
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يوجد ملف متاح للتحميل')));

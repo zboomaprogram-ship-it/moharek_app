@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 class AdminBillingScreen extends ConsumerWidget {
@@ -233,16 +231,7 @@ class AdminBillingScreen extends ConsumerWidget {
       );
       return;
     }
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح الملف')),
-        );
-      }
-    }
+    await openFileInApp(context, url, 'فاتورة');
   }
 
   Widget _buildStatCard(

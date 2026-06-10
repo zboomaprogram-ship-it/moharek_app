@@ -4,7 +4,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/financials.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 
 class InvoicesScreen extends ConsumerWidget {
   const InvoicesScreen({super.key});
@@ -94,7 +94,7 @@ class InvoicesScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => invoice.paymentLink != null ? _launchURL(invoice.paymentLink!) : null,
+                onPressed: () => invoice.paymentLink != null ? _launchURL(context, invoice.paymentLink!) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryGreen,
                   foregroundColor: Colors.black,
@@ -145,10 +145,7 @@ class InvoicesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _launchURL(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  Future<void> _launchURL(BuildContext context, String url) async {
+    await openFileInApp(context, url, 'Payment');
   }
 }

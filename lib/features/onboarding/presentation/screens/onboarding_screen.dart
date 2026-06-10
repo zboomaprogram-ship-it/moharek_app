@@ -639,7 +639,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Image.asset(
             AppConfig.logoAsset,
             width: 200,
-            color: Colors.white,
             errorBuilder: (c, e, s) => const Icon(
               Icons.rocket_launch,
               size: 80,

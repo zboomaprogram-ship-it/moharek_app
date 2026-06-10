@@ -391,7 +391,7 @@ class _BriefTabState extends ConsumerState<BriefTab> {
                               foregroundColor: Colors.black,
                             ),
                           ),
-                        ] else
+                        ] else if (!isClient)
                           ElevatedButton.icon(
                             onPressed: () =>
                                 setState(() => _isEditingBrief = true),

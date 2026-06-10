@@ -5,7 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 final _approvalsForProject = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, pid) {
@@ -97,10 +97,7 @@ class ApprovalsTab extends ConsumerWidget {
             const SizedBox(height: 8),
             InkWell(
               onTap: () async {
-                final uri = Uri.tryParse(a['file_url'].toString());
-                if (uri != null) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                await openFileInApp(context, a['file_url'].toString(), a['title'] ?? 'طلب');
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,

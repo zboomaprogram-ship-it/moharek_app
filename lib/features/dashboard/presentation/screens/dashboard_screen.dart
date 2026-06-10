@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
-import 'package:moharek_app/features/admin/widgets/admin_activity_feed.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
-import 'package:moharek_app/features/dashboard/presentation/widgets/animated_counter.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/health_score_gauge.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/whats_new_banner.dart';
 import 'package:moharek_app/features/dashboard/presentation/widgets/milestones_feed.dart';
@@ -19,12 +17,11 @@ import 'package:moharek_app/features/dashboard/presentation/widgets/engine_progr
 import 'package:moharek_app/shared/widgets/fade_in_slide.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/core/utils/arabic_formatter.dart';
-import 'package:moharek_app/features/dashboard/presentation/widgets/ai_chat_bottom_sheet.dart';
-import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/widgets/ecom_kpi_section.dart';
 import 'package:moharek_app/features/rabhan/widgets/sales_trend_chart.dart';
 import 'package:moharek_app/features/rabhan/widgets/journey_mini_progress.dart';
+import 'package:moharek_app/features/admin/presentation/widgets/manage_client/brief_tab.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -207,6 +204,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             projectAsync.value != null) ...[
                           (() {
                             final project = projectAsync.value!;
+                            final userRole = profileAsync.valueOrNull?.role;
+                            final isClient = userRole == 'client' || userRole == null;
                             final filled = _countFilledBriefFields(
                               project.clientBrief,
                             );
@@ -220,6 +219,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   total,
                                   l10n,
                                   isAr,
+                                  isClient,
+                                  project.id,
                                 ),
                               );
                             }
@@ -646,6 +647,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     int totalCount,
     AppLocalizations l10n,
     bool isAr,
+    bool isClient,
+    String projectId,
   ) {
     final double percentage = (filledCount / totalCount).clamp(0.0, 1.0);
     return Container(
@@ -671,7 +674,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           borderRadius: BorderRadius.circular(16),
           onTap: () {
             HapticService.light();
-            context.push('/onboarding?edit=true');
+            if (isClient) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Scaffold(
+                    backgroundColor: AppTheme.background,
+                    appBar: AppBar(
+                      title: const Text('عرض بريف المشروع'),
+                      backgroundColor: AppTheme.cardColor,
+                    ),
+                    body: BriefTab(pid: projectId),
+                  ),
+                ),
+              );
+            } else {
+              context.push('/onboarding?edit=true');
+            }
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -695,9 +714,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAr
-                            ? 'أكمل معلومات مشروعك'
-                            : 'Complete Your Project Brief',
+                        isClient
+                            ? (isAr ? 'بريف المشروع' : 'Project Brief')
+                            : (isAr ? 'أكمل معلومات مشروعك' : 'Complete Your Project Brief'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -706,9 +725,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isAr
-                            ? 'يرجى إكمال الحقول المتبقية لتحسين أداء متجرك.'
-                            : 'Please fill the remaining fields to optimize your store.',
+                        isClient
+                            ? (isAr ? 'تصفح معلومات وتفاصيل مشروعك الحالية.' : 'Review your project details and information.')
+                            : (isAr ? 'يرجى إكمال الحقول المتبقية لتحسين أداء متجرك.' : 'Please fill the remaining fields to optimize your store.'),
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 12,

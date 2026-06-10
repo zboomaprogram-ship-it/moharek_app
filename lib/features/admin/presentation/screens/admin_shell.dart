@@ -156,7 +156,6 @@ class AdminSidebar extends ConsumerWidget {
                   AppConfig.logoAsset,
                   height: 64,
                   fit: BoxFit.contain,
-                  color: Colors.white,
                 ),
                 SizedBox(width: 12),
                 Text(

@@ -5,7 +5,7 @@ import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 class ResultsTab extends ConsumerWidget {
@@ -110,10 +110,7 @@ class ResultsTab extends ConsumerWidget {
                   const SizedBox(height: 8),
                   InkWell(
                     onTap: () async {
-                      final uri = Uri.tryParse(r['file_url'].toString());
-                      if (uri != null) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
+                      await openFileInApp(context, r['file_url'].toString(), r['metric_label'] ?? '');
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -733,10 +730,7 @@ class _PerformanceSnapshotsControlState extends ConsumerState<PerformanceSnapsho
                   visualDensity: VisualDensity.compact,
                   tooltip: isAr ? 'عرض لقطة الشاشة' : 'View Screenshot',
                   onPressed: () async {
-                    final uri = Uri.tryParse(currentFileUrl);
-                    if (uri != null) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
+                    await openFileInApp(context, currentFileUrl, isAr ? titleAr : titleEn);
                   },
                 ),
               ],

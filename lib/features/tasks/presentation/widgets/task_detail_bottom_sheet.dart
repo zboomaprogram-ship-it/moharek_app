@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/models/task.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 
 class TaskDetailBottomSheet extends StatelessWidget {
   final ProjectTask task;
@@ -12,7 +12,6 @@ class TaskDetailBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    final theme = Theme.of(context);
 
     // Color-coded priority
     Color priorityColor;
@@ -315,7 +314,7 @@ class TaskDetailBottomSheet extends StatelessWidget {
                           final name = url.split('/').last.split('?').first;
 
                           return GestureDetector(
-                            onTap: () => launchUrl(Uri.parse(url)),
+                            onTap: () => openFileInApp(context, url, name),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),

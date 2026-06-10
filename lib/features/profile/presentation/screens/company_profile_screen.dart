@@ -11,6 +11,9 @@ class CompanyProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectAsync = ref.watch(currentProjectProvider);
+    final profileAsync = ref.watch(profileProvider);
+    final userRole = profileAsync.valueOrNull?.role;
+    final isClient = userRole == 'client' || userRole == null;
 
     return Scaffold(
       appBar: AppBar(
@@ -48,7 +51,7 @@ class CompanyProfileScreen extends ConsumerWidget {
                           builder: (context) => Scaffold(
                             backgroundColor: AppTheme.background,
                             appBar: AppBar(
-                              title: const Text('بريف المشروع'),
+                              title: Text(isClient ? 'عرض بريف المشروع' : 'بريف المشروع'),
                               backgroundColor: AppTheme.cardColor,
                             ),
                             body: BriefTab(pid: project.id),
@@ -56,8 +59,11 @@ class CompanyProfileScreen extends ConsumerWidget {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.edit_note, size: 20),
-                    label: const Text('تعديل بريف المشروع / Brief', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: Icon(isClient ? Icons.visibility : Icons.edit_note, size: 20),
+                    label: Text(
+                      isClient ? 'عرض بريف المشروع / Brief' : 'تعديل بريف المشروع / Brief',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

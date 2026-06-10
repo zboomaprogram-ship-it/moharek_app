@@ -6,6 +6,7 @@ import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/shared/widgets/empty_state.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class FilesScreen extends ConsumerStatefulWidget {
@@ -143,9 +144,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         ),
         trailing: IconButton(
           icon: const Icon(Icons.download_rounded, color: AppTheme.primaryGreen),
-          onPressed: () => _openFile(url),
+          onPressed: () => _openFile(context, url, name),
         ),
-        onTap: () => _openFile(url),
+        onTap: () => _openFile(context, url, name),
       ),
     );
   }
@@ -187,11 +188,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     }
   }
 
-  Future<void> _openFile(String? url) async {
+  Future<void> _openFile(BuildContext context, String? url, String title) async {
     if (url == null) return;
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    await openFileInApp(context, url, title);
   }
 }

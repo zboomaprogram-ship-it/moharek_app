@@ -10,7 +10,6 @@ import 'package:moharek_app/features/admin/data/admin_providers.dart';
 import 'package:moharek_app/shared/services/chat_provider.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/message.dart';
-import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 import 'package:moharek_app/features/chat/services/voice_recorder_service.dart';
 import 'package:moharek_app/features/chat/services/voice_upload_service.dart';
@@ -19,7 +18,7 @@ import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
 
@@ -513,14 +512,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           decoration: TextDecoration.underline,
         ),
         recognizer: TapGestureRecognizer()
-          ..onTap = () async {
-            final uri = Uri.tryParse(tapUrl);
-            if (uri != null) {
-              try {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } catch (_) {}
-            }
-          },
+          ..onTap = () => openFileInApp(context, tapUrl, 'Link'),
       ));
       lastMatchEnd = match.end;
     }
@@ -560,7 +552,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
       );
     } else if ((isFile) && msg.fileUrl != null) {
       content = GestureDetector(
-        onTap: () => launchUrl(Uri.parse(msg.fileUrl!)),
+        onTap: () => openFileInApp(context, msg.fileUrl!, msg.content),
         child: Row(
           children: [
             Icon(
@@ -780,33 +772,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     );
   }
 
-  void _showConvertTaskMenu(BuildContext context, ChatMessage msg) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.task_alt, color: AppTheme.primaryGreen),
-              title: const Text(
-                'حوّل إلى مهمة',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showTaskModal(context, msg);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _showTaskModal(BuildContext context, ChatMessage sourceMsg) {
     final titleController = TextEditingController();

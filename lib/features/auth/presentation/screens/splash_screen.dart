@@ -105,7 +105,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                 AppConfig.logoAsset,
                 height: 280,
                 fit: BoxFit.contain,
-                color: Colors.white,
               ),
               const SizedBox(height: 24),
               Text(

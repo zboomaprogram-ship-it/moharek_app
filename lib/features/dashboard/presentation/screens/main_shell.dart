@@ -322,7 +322,6 @@ class _MainShellState extends ConsumerState<MainShell> {
             AppConfig.logoAsset,
             height: 120,
             fit: BoxFit.contain,
-            color: Colors.white,
           ),
           const SizedBox(height: 12),
           Text(

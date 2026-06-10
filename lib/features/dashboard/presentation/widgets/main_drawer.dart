@@ -59,7 +59,6 @@ class MainDrawer extends ConsumerWidget {
                     height: 50,
                     width: 50,
                     fit: BoxFit.contain,
-                    color: Colors.white,
                   ),
                   title: AppConfig.flavorName == 'rabhan'
                       ? (isAr ? 'نظام النمو' : 'Growth System')

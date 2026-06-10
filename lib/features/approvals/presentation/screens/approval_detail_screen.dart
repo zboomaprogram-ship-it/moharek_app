@@ -6,6 +6,7 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/widgets/pdf_viewer_screen.dart';
 import 'package:moharek_app/shared/widgets/image_viewer_screen.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -175,47 +176,7 @@ class ApprovalDetailScreen extends ConsumerWidget {
     final isPdf = lowerUrl.endsWith('.pdf');
 
     return GestureDetector(
-      onTap: () async {
-        if (isImage) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ImageViewerScreen(
-                url: fileUrl,
-                title: approval.title,
-              ),
-            ),
-          );
-        } else if (isPdf) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PdfViewerScreen(
-                url: fileUrl,
-                title: approval.title,
-              ),
-            ),
-          );
-        } else {
-          final uri = Uri.tryParse(fileUrl);
-          if (uri != null) {
-            try {
-              final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-              if (!launched && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Could not open file URL: $fileUrl')),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error opening file: $e')),
-                );
-              }
-            }
-          }
-        }
-      },
+      onTap: () => openFileInApp(context, fileUrl, approval.title),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

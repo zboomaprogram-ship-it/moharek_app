@@ -5,7 +5,7 @@ import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/models/financials.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/shared/widgets/shimmer_placeholders.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 import 'package:moharek_app/features/rabhan/providers/package_provider.dart';
 import 'package:moharek_app/features/rabhan/models/package_model.dart';
 import 'package:moharek_app/core/utils/error_handler.dart';
@@ -162,7 +162,7 @@ class BillingScreen extends ConsumerWidget {
           ),
           if (isUnpaid && invoice.paymentLink != null)
             ElevatedButton(
-              onPressed: () => _launchPayment(invoice.paymentLink!),
+              onPressed: () => openFileInApp(context, invoice.paymentLink!, 'Payment'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 foregroundColor: Colors.black,
@@ -200,10 +200,5 @@ class BillingScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _launchPayment(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
+
 }

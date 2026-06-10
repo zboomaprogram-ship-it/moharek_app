@@ -10,7 +10,7 @@ import 'package:moharek_app/core/utils/arabic_formatter.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/widgets/rabhan_results_view.dart';
 
-import 'package:url_launcher/url_launcher.dart';
+import 'package:moharek_app/shared/utils/file_helper.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
@@ -213,10 +213,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> with SingleTicker
     if (hasAttachment) {
       return InkWell(
         onTap: () async {
-          final uri = Uri.tryParse(metric.fileUrl!);
-          if (uri != null) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
+          await openFileInApp(context, metric.fileUrl!, metric.metricLabel ?? metric.metricName);
         },
         borderRadius: BorderRadius.circular(16),
         child: cardContent,

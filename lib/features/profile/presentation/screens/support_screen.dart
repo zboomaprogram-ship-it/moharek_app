@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
@@ -147,7 +148,9 @@ class SupportScreen extends StatelessWidget {
   }
 
   Future<void> _launchWhatsApp() async {
-    final url = Uri.parse('https://wa.me/966500000000'); // Sample number
+    final whatsappNumber = AppConfig.complaintsWhatsapp;
+    final cleanNumber = whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '');
+    final url = Uri.parse('https://wa.me/$cleanNumber');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
