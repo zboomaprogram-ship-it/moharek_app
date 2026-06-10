@@ -61,41 +61,83 @@ class CallSignalService {
         });
   }
 
-  /// Listen for ALL incoming calls for the current user (across all projects)
-  /// NOTE: We intentionally do NOT use .eq('status', 'ringing') on the stream
-  /// because .stream().eq() fails if the column doesn't exist in the DB schema,
-  /// causing an unhandled exception that crashes all Realtime subscriptions.
-  /// Instead we stream all recent call_signals and filter in-memory.
+  /// Fetch project IDs where the current user is client or account manager.
+  Future<Set<String>> _fetchMyProjectIds() async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) return {};
+    try {
+      final rows = await _supabase
+          .from('projects')
+          .select('id')
+          .or('client_id.eq.$currentUserId,account_manager_id.eq.$currentUserId');
+      return {for (final r in rows as List) r['id'] as String};
+    } catch (e) {
+      debugPrint('fetchMyProjectIds error: $e');
+      return {};
+    }
+  }
+
+  /// Listen for incoming calls ONLY for projects the current user belongs to.
+  /// Filters to calls where this user is the client or account manager of the project,
+  /// preventing call notifications from leaking to unrelated users.
   Stream<List<Map<String, dynamic>>> watchAllIncomingCalls() {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return const Stream.empty();
 
-    return _supabase
-        .from('call_signals')
-        .stream(primaryKey: ['id'])
-        .map((data) {
-          final cutoff = DateTime.now().toUtc().subtract(const Duration(seconds: 35));
-          return data
-              .where((s) {
-                final callerId = s['caller_id'] as String?;
-                final status = s['status'] as String?;
-                final createdAtStr = s['created_at'] as String?;
-                // Only show ringing calls that aren't ours and are recent
-                if (callerId == currentUserId) return false;
-                if (status != null && status != 'ringing') return false;
-                if (createdAtStr == null) return false;
-                try {
-                  final createdAt = DateTime.parse(createdAtStr).toUtc();
-                  return createdAt.isAfter(cutoff);
-                } catch (_) {
-                  return false;
-                }
-              })
-              .toList();
-        })
-        .handleError((e) {
-          debugPrint('watchAllIncomingCalls stream error (non-fatal): $e');
-        });
+    // Use an async* generator so we can await the project IDs before streaming.
+    late StreamController<List<Map<String, dynamic>>> controller;
+    controller = StreamController<List<Map<String, dynamic>>>(
+      onCancel: () => controller.close(),
+    );
+
+    () async {
+      // Fetch projects this user belongs to once at subscription time.
+      final myProjectIds = await _fetchMyProjectIds();
+      debugPrint('watchAllIncomingCalls: watching ${myProjectIds.length} project(s): $myProjectIds');
+
+      final sub = _supabase
+          .from('call_signals')
+          .stream(primaryKey: ['id'])
+          .map((data) {
+            final cutoff = DateTime.now().toUtc().subtract(const Duration(seconds: 35));
+            return data
+                .where((s) {
+                  final callerId = s['caller_id'] as String?;
+                  final projectId = s['project_id'] as String?;
+                  final status = s['status'] as String?;
+                  final createdAtStr = s['created_at'] as String?;
+                  // Must not be our own call
+                  if (callerId == currentUserId) return false;
+                  // Must be for a project we belong to
+                  if (projectId == null || !myProjectIds.contains(projectId)) return false;
+                  // Must be ringing
+                  if (status != null && status != 'ringing') return false;
+                  if (createdAtStr == null) return false;
+                  try {
+                    final createdAt = DateTime.parse(createdAtStr).toUtc();
+                    return createdAt.isAfter(cutoff);
+                  } catch (_) {
+                    return false;
+                  }
+                })
+                .toList();
+          })
+          .listen(
+            (filtered) {
+              if (!controller.isClosed) controller.add(filtered);
+            },
+            onError: (e) {
+              debugPrint('watchAllIncomingCalls stream error (non-fatal): $e');
+            },
+          );
+
+      controller.onCancel = () {
+        sub.cancel();
+        controller.close();
+      };
+    }();
+
+    return controller.stream;
   }
 
   /// Accept a call

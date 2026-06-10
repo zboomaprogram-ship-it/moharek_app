@@ -32,14 +32,17 @@ class NotificationService {
     });
 
     // ── Foreground notification handler ────────────────────────────────────
+    // Always suppress the intrusive in-app popup for ALL notification types.
+    // Push notifications still arrive and ring normally when the app is backgrounded.
     OneSignal.Notifications.addForegroundWillDisplayListener((event) {
-      debugPrint('🔔 [OneSignal] Foreground notification: ${event.notification.title}');
       final data = event.notification.additionalData;
+      debugPrint('🔔 [OneSignal] Foreground notification suppressed: ${event.notification.title}');
       if (data != null && data['type'] == 'call') {
-        event.preventDefault();
+        // For call notifications, hand off to CallNotificationService instead of showing a popup.
         CallNotificationService.handleIncomingCallPush(data);
       }
-      // For all other notifications, display them normally (don't preventDefault)
+      // Always prevent the in-app banner — it is annoying during active use.
+      event.preventDefault();
     });
 
     // ── Notification click handler ─────────────────────────────────────────
