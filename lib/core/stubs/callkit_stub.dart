@@ -1,0 +1,113 @@
+class FlutterCallkitIncoming {
+  static Future<void> showCallkitIncoming(dynamic params) async {}
+  static Future<void> showMissCallNotification(dynamic params) async {}
+  static Future<void> endCall(String uuid) async {}
+  static Future<void> endAllCalls() async {}
+  static Stream<CallEvent> get onEvent => const Stream.empty();
+}
+
+class CallKitParams {
+  final String? id;
+  final String? nameCaller;
+  final String? appName;
+  final String? avatar;
+  final String? handle;
+  final int? type;
+  final int? duration;
+  final String? textAccept;
+  final String? textDecline;
+  final dynamic missedCallNotification;
+  final Map<String, dynamic>? extra;
+  final Map<String, dynamic>? headers;
+  final AndroidParams? android;
+  final IOSParams? ios;
+
+  const CallKitParams({
+    this.id,
+    this.nameCaller,
+    this.appName,
+    this.avatar,
+    this.handle,
+    this.type,
+    this.duration,
+    this.textAccept,
+    this.textDecline,
+    this.missedCallNotification,
+    this.extra,
+    this.headers,
+    this.android,
+    this.ios,
+  });
+}
+
+class AndroidParams {
+  final bool? isCustomNotification;
+  final bool? isShowLogo;
+  final String? ringtonePath;
+  final String? backgroundColor;
+  final String? actionColor;
+  final String? textColor;
+  final String? incomingCallNotificationChannelName;
+  final String? missedCallNotificationChannelName;
+
+  const AndroidParams({
+    this.isCustomNotification,
+    this.isShowLogo,
+    this.ringtonePath,
+    this.backgroundColor,
+    this.actionColor,
+    this.textColor,
+    this.incomingCallNotificationChannelName,
+    this.missedCallNotificationChannelName,
+  });
+}
+
+class IOSParams {
+  final String? iconName;
+  final String? handleType;
+  final bool? supportsVideo;
+  final int? maximumCallGroups;
+  final int? maximumCallsPerCallGroup;
+  final String? audioSessionMode;
+  final bool? audioSessionActive;
+  final bool? supportsDTMF;
+  final bool? supportsHolding;
+
+  const IOSParams({
+    this.iconName,
+    this.handleType,
+    this.supportsVideo,
+    this.maximumCallGroups,
+    this.maximumCallsPerCallGroup,
+    this.audioSessionMode,
+    this.audioSessionActive,
+    this.supportsDTMF,
+    this.supportsHolding,
+  });
+}
+
+abstract class CallEvent {
+  const CallEvent();
+  String get eventName;
+}
+
+class CallEventActionCallAccept extends CallEvent {
+  final String id;
+  const CallEventActionCallAccept(this.id);
+  @override
+  String get eventName => '';
+}
+
+class CallEventActionCallDecline extends CallEvent {
+  final String id;
+  const CallEventActionCallDecline(this.id);
+  @override
+  String get eventName => '';
+}
+
+class CallEventActionCallEnded extends CallEvent {
+  final String id;
+  const CallEventActionCallEnded(this.id);
+  @override
+  String get eventName => '';
+}

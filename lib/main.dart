@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:ui' as ui;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:moharek_app/firebase_options.dart' as moharek_firebase;
 import 'package:moharek_app/rabhan_firebase_options.dart' as rabhan_firebase;
@@ -16,7 +15,6 @@ import 'package:moharek_app/core/config/moharek_config.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
 import 'package:moharek_app/core/providers/locale_provider.dart';
-import 'package:flutter_callkeep/flutter_callkeep.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkeep_stub.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/calls/widgets/call_signal_listener.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -89,41 +87,7 @@ void main() async {
   timeago.setLocaleMessages('ar', timeago.ArMessages());
   timeago.setLocaleMessages('en', timeago.EnMessages());
 
-  // Initialize CallKeep for background call handling
-  if (!kIsWeb) {
-    try {
-      // Dynamic compliance with Apple Guideline 5 (Legal - CallKit in China)
-      // CallKit is prohibited on iOS in China.
-      bool isChinaIOS = false;
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        try {
-          final country = ui.PlatformDispatcher.instance.locale.countryCode?.toUpperCase();
-          if (country == 'CN') {
-            isChinaIOS = true;
-            debugPrint('China locale detected on iOS. CallKit configuration bypassed.');
-          }
-        } catch (_) {}
-      }
 
-      if (!isChinaIOS) {
-        CallKeep.instance.configure(CallKeepConfig(
-          appName: AppConfig.appName,
-          android: CallKeepAndroidConfig(
-            logo: "ic_launcher", // Standard launcher icon
-            incomingCallNotificationChannelName: '${AppConfig.appName} Calls',
-            missedCallNotificationChannelName: 'Missed Calls',
-          ),
-          ios: CallKeepIosConfig(
-            iconName: 'ic_launcher',
-            handleType: CallKitHandleType.generic,
-            isVideoSupported: true,
-          ),
-        ));
-      }
-    } catch (e) {
-      debugPrint('CallKeep Configuration Error: $e');
-    }
-  }
 
   // Pre-initialize SharedPreferences for SafeLocalStorage
   SharedPreferences? prefs;

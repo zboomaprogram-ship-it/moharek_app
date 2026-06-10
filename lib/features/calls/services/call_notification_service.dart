@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
-import 'package:flutter_callkeep/flutter_callkeep.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkit_stub.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkit_stub.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
 import 'package:moharek_app/core/router/app_router.dart';
+import 'package:moharek_app/core/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,18 +30,18 @@ class CallNotificationService {
 
     _isInitialized = true;
 
-    // Set the handler for CallKeep events (Accept/Decline from native UI)
-    CallKeep.instance.handler = CallEventHandler(
-      onCallAccepted: (CallEvent event) {
-        _handleAcceptCall(event.uuid);
-      },
-      onCallEnded: (CallEvent event) {
-        _handleDeclineCall(event.uuid);
-      },
-      onCallDeclined: (CallEvent event) {
-        _handleDeclineCall(event.uuid);
-      },
-    );
+    // Set the handler for CallKit events (Accept/Decline from native UI)
+    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) {
+      if (event == null) return;
+
+      if (event is CallEventActionCallAccept) {
+        _handleAcceptCall(event.id);
+      } else if (event is CallEventActionCallDecline) {
+        _handleDeclineCall(event.id);
+      } else if (event is CallEventActionCallEnded) {
+        _handleDeclineCall(event.id);
+      }
+    });
   }
 
   /// Called when a push notification with call data is received
@@ -63,14 +65,25 @@ class CallNotificationService {
     if (signalId == null) return;
 
     // Display the native Incoming Call UI (WhatsApp style)
-    await CallKeep.instance.displayIncomingCall(
-      CallEvent(
-        uuid: signalId,
-        callerName: callerName,
-        handle: callerName,
-        hasVideo: callType == 'video',
+    final params = CallKitParams(
+      id: signalId,
+      nameCaller: callerName,
+      appName: AppConfig.appName,
+      handle: callerName,
+      type: callType == 'video' ? 1 : 0, // 0: audio, 1: video
+      duration: 30000,
+      android: AndroidParams(
+        isCustomNotification: true,
+        backgroundColor: '#0955fa',
+        incomingCallNotificationChannelName: '${AppConfig.appName} Calls',
+      ),
+      ios: const IOSParams(
+        handleType: 'generic',
+        supportsVideo: true,
       ),
     );
+
+    await FlutterCallkitIncoming.showCallkitIncoming(params);
   }
 
   static Future<void> _handleAcceptCall(String uuid) async {

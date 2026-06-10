@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_callkeep/flutter_callkeep.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart' if (dart.library.html) 'package:moharek_app/core/stubs/callkit_stub.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/widgets/incoming_call_overlay.dart';
 import 'package:moharek_app/features/calls/services/call_service.dart';
@@ -95,7 +95,7 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
           
           if (!kIsWeb) {
             // Mobile: Cancel native incoming UI if caller hung up
-            CallKeep.instance.endCall(oldSignalId);
+            FlutterCallkitIncoming.endCall(oldSignalId);
           } else {
             // Web: Remove custom overlay card
             _hideWebIncomingCallOverlay();

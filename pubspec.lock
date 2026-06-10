@@ -430,22 +430,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.1"
-  flutter_callkeep:
+  flutter_callkit_incoming:
     dependency: "direct main"
     description:
-      name: flutter_callkeep
-      sha256: "27e4755e57059b3e6ecf0c8aaf65b47c7c7190f86d33c017a8158826571902dc"
+      name: flutter_callkit_incoming
+      sha256: "83beeb7b85bcdf9b410c724dba4b54bbc588f5723efe075fd4b53b162b32a014"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
-  flutter_callkeep_platform_interface:
-    dependency: transitive
-    description:
-      name: flutter_callkeep_platform_interface
-      sha256: da6d0e46f166cd7fb205590fb9bbc4ccb57e08b8365c4ef6ee00c131b39d169d
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
+    version: "3.1.1"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:

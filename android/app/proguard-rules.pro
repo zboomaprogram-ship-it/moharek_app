@@ -24,3 +24,6 @@
 -dontwarn com.google.android.play.core.**
 -dontwarn com.google.android.gms.internal.**
 -dontwarn com.google.android.gms.common.**
+
+# Flutter Callkit Incoming
+-keep class com.hiennv.flutter_callkit_incoming.** { *; }
