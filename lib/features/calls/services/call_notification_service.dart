@@ -154,7 +154,7 @@ class CallNotificationService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowFullLockedScreen: true,
-        isFullScreen: true,
+        isFullScreen: false,
         isImportant: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
