@@ -10,6 +10,7 @@ import 'package:moharek_app/core/config/app_config.dart';
 import 'package:flutter/material.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CallNotificationService {
   static final _signalService = CallSignalService();
@@ -156,6 +157,7 @@ class CallNotificationService {
         isFullScreen: true,
         isImportant: true,
         isShowLogo: false,
+        ringtonePath: 'system_ringtone_default',
         backgroundColor: flavor == 'rabhan' ? '#181A20' : '#080B12',
         actionColor: flavor == 'rabhan' ? '#4CAF50' : '#2EE59D',
         incomingCallNotificationChannelName: '$appName Calls',
@@ -166,6 +168,7 @@ class CallNotificationService {
       ios: const IOSParams(
         handleType: 'generic',
         supportsVideo: true,
+        ringtonePath: 'system_ringtone_default',
       ),
     );
 
@@ -207,6 +210,28 @@ class CallNotificationService {
     }
   }
 
+  static Future<void> _waitForAuthSession() async {
+    final client = Supabase.instance.client;
+    if (client.auth.currentSession != null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasToken = prefs.containsKey('supabase.auth.token');
+      if (!hasToken) {
+        debugPrint('📞 [CallKit] No saved Supabase session token found, skipping auth wait.');
+        return;
+      }
+    } catch (_) {}
+
+    debugPrint('📞 [CallKit] Waiting for Supabase session to restore...');
+    int retries = 0;
+    while (client.auth.currentSession == null && retries < 20) { // Wait up to 5 seconds
+      await Future.delayed(const Duration(milliseconds: 250));
+      retries++;
+    }
+    debugPrint('📞 [CallKit] Session wait complete. Session exists: ${client.auth.currentSession != null}');
+  }
+
   static Future<void> _handleAcceptCall(String uuid) async {
     // Guard against double-accept
     if (_acceptedCallIds.contains(uuid)) {
@@ -219,6 +244,10 @@ class CallNotificationService {
     try {
       isCallActive = true;
       _acceptedCallIds.add(uuid);
+
+      // Wait for session to restore BEFORE running any database query or joining the call.
+      // This is crucial for cold starts when the user accepts from the killed state.
+      await _waitForAuthSession();
 
       // 1. Mark as accepted in database
       await _signalService.acceptCall(uuid);
@@ -249,12 +278,14 @@ class CallNotificationService {
         return;
       }
 
-      // Wait for the app router to be fully mounted BEFORE joining the call
-      // LiveKit requires the Activity to be fully initialized to access camera/mic
+      // Wait for the app router to be fully mounted AND app lifecycle to be resumed.
+      // LiveKit requires the Activity to be fully resumed (foreground) to access camera/mic.
       int retries = 0;
-      while (rootNavigatorKey.currentState == null || !rootNavigatorKey.currentState!.mounted) {
+      while (rootNavigatorKey.currentState == null || 
+             !rootNavigatorKey.currentState!.mounted ||
+             WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
         if (retries > 40) { // Wait up to 10 seconds
-          debugPrint('📞 [CallKit] Navigation failed: rootNavigatorKey is not mounted after 10s');
+          debugPrint('📞 [CallKit] Navigation or Resume failed: rootNavigatorKey not mounted or app not resumed after 10s');
           _cleanupCallState(uuid);
           return;
         }
