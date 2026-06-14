@@ -152,9 +152,9 @@ class CallNotificationService {
       type: callType == 'video' ? 1 : 0,
       duration: 30000,
       android: AndroidParams(
-        isCustomNotification: true,
+        isCustomNotification: false,
         isShowFullLockedScreen: true,
-        isFullScreen: false,
+        isFullScreen: true,
         isImportant: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
