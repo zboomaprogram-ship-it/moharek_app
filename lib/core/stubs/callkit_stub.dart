@@ -84,6 +84,7 @@ class IOSParams {
   final bool? audioSessionActive;
   final bool? supportsDTMF;
   final bool? supportsHolding;
+  final String? ringtonePath;
 
   const IOSParams({
     this.iconName,
@@ -95,6 +96,7 @@ class IOSParams {
     this.audioSessionActive,
     this.supportsDTMF,
     this.supportsHolding,
+    this.ringtonePath,
   });
 }
 
