@@ -76,34 +76,54 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
     _sub?.cancel();
     _sub = _signalService.watchAllIncomingCalls().listen((signals) {
       if (signals.isNotEmpty) {
+        // Don't show anything if a call is already active
         if (CallNotificationService.isCallActive) {
-          debugPrint('CallSignalListener: Call is already active, ignoring stream signal.');
+          debugPrint('📞 [SignalListener] Call already active, ignoring stream signal.');
           return;
         }
+
         final signal = signals.first;
+        final signalId = signal['id'] as String?;
+
+        // Don't process a signal that was already handled via the native CallKit path
+        if (signalId != null && CallNotificationService.isCallAccepted(signalId)) {
+          debugPrint('📞 [SignalListener] Signal $signalId already accepted via native path, skipping.');
+          return;
+        }
+
+        // Don't re-show a call the user already declined
+        if (signalId != null && CallNotificationService.isCallDeclined(signalId)) {
+          debugPrint('📞 [SignalListener] Signal $signalId already declined, skipping.');
+          return;
+        }
+
         if (_activeSignal == null || _activeSignal!['id'] != signal['id']) {
           setState(() => _activeSignal = signal);
           
           if (!kIsWeb) {
-            // Mobile: Display native incoming calling UI (ConnectionService/CallKit)
+            // Mobile: trigger the native full-screen incoming call UI.
+            // The native UI handles both foreground and background.
             CallNotificationService.handleIncomingCallPush(signal);
           } else {
-            // Web: Show custom overlay card
+            // Web: show custom overlay card (CallKit not available on web)
             _showWebIncomingCallOverlay(signal);
           }
         }
       } else {
+        // No ringing signals — if we had an active signal, clean up
         if (_activeSignal != null) {
-          final oldSignalId = _activeSignal!['id'];
+          final oldSignalId = _activeSignal!['id'] as String?;
           setState(() => _activeSignal = null);
           
-          if (!kIsWeb) {
-            // Mobile: Cancel native incoming UI if caller hung up, but only if not accepted yet
-            if (!CallNotificationService.isCallAccepted(oldSignalId)) {
+          if (!kIsWeb && oldSignalId != null) {
+            // Mobile: dismiss native incoming call UI if caller hung up,
+            // but only if the call was NOT already accepted (don't kill active calls)
+            if (!CallNotificationService.isCallAccepted(oldSignalId) &&
+                !CallNotificationService.isCallDeclined(oldSignalId)) {
+              debugPrint('📞 [SignalListener] Caller hung up — dismissing native call UI for $oldSignalId');
               FlutterCallkitIncoming.endCall(oldSignalId);
             }
-          } else {
-            // Web: Remove custom overlay card
+          } else if (kIsWeb) {
             _hideWebIncomingCallOverlay();
           }
         }
@@ -121,14 +141,19 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
   void _onAccept() async {
     if (_activeSignal == null) return;
     final signal = _activeSignal!;
-    final signalId = signal['id'];
-    final roomName = signal['room_name'];
-    final callType = signal['call_type'];
+    final signalId = signal['id'] as String?;
+    final roomName = signal['room_name'] as String?;
+    final callType = signal['call_type'] as String? ?? 'video';
+
+    if (signalId == null || roomName == null) return;
 
     setState(() => _activeSignal = null);
     if (kIsWeb) {
       _hideWebIncomingCallOverlay();
     }
+
+    // Mark as accepted so duplicate events are ignored
+    CallNotificationService.isCallActive = true;
 
     await _signalService.acceptCall(signalId);
 
@@ -154,18 +179,23 @@ class _CallSignalListenerState extends ConsumerState<CallSignalListener> {
         ),
       );
     } catch (e) {
-      debugPrint('Error joining call: $e');
+      debugPrint('📞 [SignalListener] Error joining call: $e');
+      CallNotificationService.isCallActive = false;
     }
   }
 
   void _onDecline() async {
     if (_activeSignal == null) return;
-    final signalId = _activeSignal!['id'];
+    final signalId = _activeSignal!['id'] as String?;
     setState(() => _activeSignal = null);
+
     if (kIsWeb) {
       _hideWebIncomingCallOverlay();
     }
-    await _signalService.declineCall(signalId);
+
+    if (signalId != null) {
+      await _signalService.declineCall(signalId);
+    }
   }
 
   @override

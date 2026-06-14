@@ -14,11 +14,13 @@ import 'package:moharek_app/core/config/moharek_config.dart';
 
 import 'package:moharek_app/shared/services/data_providers.dart';
 import 'package:moharek_app/shared/services/notification_service.dart';
+import 'package:moharek_app/features/calls/services/call_notification_service.dart';
 import 'package:moharek_app/core/providers/locale_provider.dart';
 import 'package:moharek_app/l10n/app_localizations.dart';
 import 'package:moharek_app/features/calls/widgets/call_signal_listener.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:permission_handler/permission_handler.dart';
 
 class SafeLocalStorage extends LocalStorage {
   final _inMemoryStore = <String, String>{};
@@ -87,12 +89,25 @@ void main() async {
   timeago.setLocaleMessages('ar', timeago.ArMessages());
   timeago.setLocaleMessages('en', timeago.EnMessages());
 
-
-
+  if (!kIsWeb) {
+    try {
+      await [
+        Permission.camera, 
+        Permission.microphone,
+        Permission.systemAlertWindow,
+        Permission.notification,
+      ].request();
+    } catch (e) {
+      debugPrint('Permission request error: $e');
+    }
+  }
   // Pre-initialize SharedPreferences for SafeLocalStorage
   SharedPreferences? prefs;
   try {
-    prefs = await SharedPreferences.getInstance();
+    final nonNullPrefs = await SharedPreferences.getInstance();
+    prefs = nonNullPrefs;
+    await nonNullPrefs.setString('app_flavor', AppConfig.flavorName);
+    debugPrint('🔔 [Main] Saved app_flavor: ${AppConfig.flavorName}');
   } catch (e) {
     debugPrint('SharedPreferences initialization error: $e');
   }
@@ -125,10 +140,18 @@ void main() async {
     ),
   );
 
+  // Check for calls that were accepted while the app was killed or in background.
+  // We await this BEFORE runApp so the call state is marked synchronously
+  // and the CallSignalListener doesn't try to show a duplicate UI.
+  if (!kIsWeb) {
+    await CallNotificationService.checkForPendingAcceptedCall();
+  }
+
   runApp(
     UncontrolledProviderScope(container: container, child: const MoharekApp()),
   );
 }
+
 
 class MoharekApp extends ConsumerWidget {
   const MoharekApp({super.key});
@@ -137,8 +160,8 @@ class MoharekApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Link User ID with OneSignal for targeted notifications (mobile only)
     if (!kIsWeb) {
-      ref.listen(profileProvider, (previous, next) {
-        next.whenData((profile) {
+      ref.watch(profileProvider).whenData((profile) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           if (profile != null) {
             NotificationService.setExternalUserId(profile.id);
           } else {

@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import * as jose from 'https://deno.land/x/jose@v4.14.4/index.ts'
+import admin from 'npm:firebase-admin@12.1.0'
 
 // ── Secrets ─────────────────────────────────────────────────────────────────
 // Both flavors share the same Supabase project but have SEPARATE OneSignal apps.
@@ -109,11 +111,66 @@ async function sendToOneSignal(
     })
     const result = await resp.json()
     const success = !result.errors && (result.recipients > 0 || result.id)
-    console.log(`[send-notification] OneSignal ${appId.substring(0, 8)}… → recipients:${result.recipients ?? '?'} errors:${JSON.stringify(result.errors ?? null)}`)
+    console.log(`[send-notification] OneSignal ${appId.substring(0, 8)}… → response: ${JSON.stringify(result)}`)
     return { appId, success, result }
   } catch (err) {
     console.error(`[send-notification] OneSignal ${appId.substring(0, 8)}… fetch error:`, err)
     return { appId, success: false, result: { error: String(err) } }
+  }
+}
+
+// ── Send to Apple APNs (PushKit) ──────────────────────────────────────────────
+async function sendToAPNs(
+  deviceToken: string,
+  payload: Record<string, any>,
+  bundleId: string
+): Promise<{ success: boolean; result: any }> {
+  try {
+    const p8Key = Deno.env.get('APPLE_VOIP_KEY')?.trim()
+    const teamId = Deno.env.get('APPLE_TEAM_ID')?.trim()
+    const keyId = Deno.env.get('APPLE_KEY_ID')?.trim()
+
+    if (!p8Key || !teamId || !keyId) {
+      console.warn(`[send-notification] Missing Apple APNs credentials. Ensure APPLE_VOIP_KEY, APPLE_TEAM_ID, and APPLE_KEY_ID are set in Secrets.`)
+      return { success: false, result: { error: 'Missing credentials' } }
+    }
+
+    // Parse the private key
+    const privateKey = await jose.importPKCS8(p8Key, 'ES256')
+
+    // Create the JWT
+    const jwt = await new jose.SignJWT({})
+      .setProtectedHeader({ alg: 'ES256', kid: keyId })
+      .setIssuer(teamId)
+      .setIssuedAt()
+      .sign(privateKey)
+
+    // Send HTTP/2 request to Apple Push Notification service (Production)
+    // Deno fetch supports HTTP/2 automatically
+    const apnsUrl = `https://api.push.apple.com/3/device/${deviceToken}`
+    
+    const response = await fetch(apnsUrl, {
+      method: 'POST',
+      headers: {
+        'authorization': `bearer ${jwt}`,
+        'apns-topic': `${bundleId}.voip`, // VoIP topic is bundle ID + .voip
+        'apns-push-type': 'voip',
+        'apns-priority': '10',
+      },
+      body: JSON.stringify({ aps: payload, ...payload }),
+    })
+
+    if (response.ok) {
+      console.log(`[send-notification] APNs VoIP push sent successfully to ${deviceToken.substring(0, 8)}...`)
+      return { success: true, result: await response.text() }
+    } else {
+      const errorText = await response.text()
+      console.error(`[send-notification] APNs error: ${response.status} ${errorText}`)
+      return { success: false, result: { error: errorText } }
+    }
+  } catch (err) {
+    console.error(`[send-notification] APNs exception:`, err)
+    return { success: false, result: { error: String(err) } }
   }
 }
 
@@ -211,7 +268,7 @@ serve(async (req) => {
       );
     }
 
-    // Fetch user profile
+    // Fetch base user profile (this should always succeed)
     const { data: userData, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, preferred_language, onesignal_player_id')
@@ -225,6 +282,17 @@ serve(async (req) => {
     if (!userData) {
       console.warn(`[send-notification] No profile for user ${targetId} — skipping push`)
       return new Response(JSON.stringify({ skipped: true, reason: 'no_profile' }), { headers: corsHeaders })
+    }
+
+    // Attempt to fetch new token columns (may fail if SQL migration hasn't been run)
+    const { data: extraData } = await supabase
+      .from('profiles')
+      .select('fcm_token, apns_voip_token')
+      .eq('id', targetId)
+      .maybeSingle()
+      
+    if (extraData) {
+      Object.assign(userData, extraData)
     }
 
     const lang: 'ar' | 'en' = userData.preferred_language === 'en' ? 'en' : 'ar'
@@ -262,13 +330,11 @@ serve(async (req) => {
       sharedPayload.priority = 10
       sharedPayload.ttl = 30
       sharedPayload.content_available = true
-      sharedPayload.buttons = lang === 'ar' ? [
-        { id: 'accept', text: 'قبول' },
-        { id: 'reject', text: 'رفض' }
-      ] : [
-        { id: 'accept', text: 'Accept' },
-        { id: 'reject', text: 'Reject' }
-      ];
+      
+      // Remove headings and contents to make it a silent background push for CallKit
+      delete sharedPayload.headings;
+      delete sharedPayload.contents;
+      
     } else {
       sharedPayload.priority = 7
     }
@@ -309,7 +375,9 @@ serve(async (req) => {
 
     // ── Strategy A: Target by stored Player ID (most reliable) ─────────────
     if (userData.onesignal_player_id) {
-      const playerTargeting = { include_player_ids: [userData.onesignal_player_id] }
+      const playerTargeting = { 
+        include_subscription_ids: [userData.onesignal_player_id]
+      }
       const res = await sendToOneSignal(creds.appId, creds.apiKey, playerTargeting, sharedPayload);
       results.push(res);
     } else {
@@ -320,6 +388,64 @@ serve(async (req) => {
       }
       const res = await sendToOneSignal(creds.appId, creds.apiKey, externalTargeting, sharedPayload);
       results.push(res);
+    }
+
+    // ── Strategy C: Silent VoIP Push (Apple PushKit / Android FCM) ─────────
+    if (isCall) {
+      console.log(`[send-notification] Attempting silent background push for VoIP...`);
+      
+      // 1. Android FCM (Native Background Wakeup for CallKit)
+      if (userData.fcm_token) {
+        console.log(`[send-notification] FCM token found for ${targetId}. Sending direct Firebase data push...`);
+        try {
+          const serviceAccountStr = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')?.trim()
+          if (!serviceAccountStr) {
+            console.warn('[send-notification] WARNING: FIREBASE_SERVICE_ACCOUNT secret is missing! Cannot send FCM push.');
+          } else {
+            // Initialize Firebase Admin if not already initialized
+            if (!admin.apps.length) {
+              const serviceAccount = JSON.parse(serviceAccountStr)
+              admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+              })
+            }
+            
+            // Send data-only payload to FCM. This bypasses OneSignal and directly 
+            // wakes up the Flutter FirebaseMessaging.onBackgroundMessage isolate!
+            const fcmPayload = {
+              token: userData.fcm_token,
+              data: {
+                id: String(sharedPayload.data.id || ''),
+                type: 'call',
+                call_type: String(sharedPayload.data.call_type || 'voice'),
+                caller_name: String(sharedPayload.data.caller_name || 'Admin'),
+                room_name: String(record?.room_name || ''),
+              },
+              android: {
+                priority: 'high' as const,
+              }
+            };
+            
+            const fcmRes = await admin.messaging().send(fcmPayload)
+            console.log(`[send-notification] FCM data push success: ${fcmRes}`)
+            results.push({ success: true, result: fcmRes })
+          }
+        } catch (fcmErr) {
+          console.error(`[send-notification] FCM push failed:`, fcmErr)
+          results.push({ success: false, result: { error: String(fcmErr) } })
+        }
+      }
+
+      // 2. Apple APNs (PushKit)
+      if (userData.apns_voip_token) {
+        // We assume the bundle ID is com.zbooma.moharek (adjust if flavor is Rabhan)
+        const bundleId = SUPABASE_URL.includes('pyzheqwypoaazpmpgiuq') || Deno.env.get('APP_FLAVOR')?.trim().toLowerCase() === 'rabhan'
+          ? 'com.zbooma.rabhan' 
+          : 'com.zbooma.moharek';
+          
+        const apnsRes = await sendToAPNs(userData.apns_voip_token, sharedPayload, bundleId);
+        results.push(apnsRes);
+      }
     }
 
     const anySuccess = results.some(r => r.success)

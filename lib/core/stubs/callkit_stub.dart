@@ -4,10 +4,12 @@ class FlutterCallkitIncoming {
   static Future<void> endCall(String uuid) async {}
   static Future<void> endAllCalls() async {}
   static Stream<CallEvent> get onEvent => const Stream.empty();
+  static Future<String?> getDevicePushTokenVoIP() async => null;
+  static Future<List<CallKitParams>> activeCalls() async => [];
 }
 
 class CallKitParams {
-  final String? id;
+  final String id;
   final String? nameCaller;
   final String? appName;
   final String? avatar;
@@ -23,7 +25,7 @@ class CallKitParams {
   final IOSParams? ios;
 
   const CallKitParams({
-    this.id,
+    this.id = '',
     this.nameCaller,
     this.appName,
     this.avatar,
@@ -49,6 +51,11 @@ class AndroidParams {
   final String? textColor;
   final String? incomingCallNotificationChannelName;
   final String? missedCallNotificationChannelName;
+  final bool? isShowFullLockedScreen;
+  final bool? isFullScreen;
+  final bool? isImportant;
+  final String? textAccept;
+  final String? textDecline;
 
   const AndroidParams({
     this.isCustomNotification,
@@ -59,6 +66,11 @@ class AndroidParams {
     this.textColor,
     this.incomingCallNotificationChannelName,
     this.missedCallNotificationChannelName,
+    this.isShowFullLockedScreen,
+    this.isFullScreen,
+    this.isImportant,
+    this.textAccept,
+    this.textDecline,
   });
 }
 
@@ -111,3 +123,11 @@ class CallEventActionCallEnded extends CallEvent {
   @override
   String get eventName => '';
 }
+
+class CallEventActionCallTimeout extends CallEvent {
+  final String id;
+  const CallEventActionCallTimeout(this.id);
+  @override
+  String get eventName => '';
+}
+

@@ -1,9 +1,12 @@
 import Flutter
 import UIKit
 import AVFoundation
+import CallKit
+import PushKit
+import flutter_callkit_incoming
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, PKPushRegistryDelegate {
   private var recorder: AVAudioRecorder?
   private var lastFilePath: URL?
   
@@ -37,7 +40,33 @@ import AVFoundation
     })
     
     GeneratedPluginRegistrant.register(with: self)
+    
+    // Setup VoIP Push Registry for CallKit background wake
+    let mainQueue = DispatchQueue.main
+    let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
+    voipRegistry.delegate = self
+    voipRegistry.desiredPushTypes = [PKPushType.voIP]
+    
+    // Setup for Missed call notifications (iOS 10+)
+    if #available(iOS 10.0, *) {
+      UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
+    }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+  
+  // Handle incoming VoIP push credentials (this feeds the token back to the Dart plugin)
+  func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
+      // The flutter_callkit_incoming plugin will automatically read this token
+      // when we call getDevicePushTokenVoIP() in Dart.
+      let token = credentials.token
+      print("VoIP Token received: \(token)")
+  }
+  
+  // Handle incoming push payload (this triggers the CallKit UI when app is killed)
+  func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+      // Let the flutter_callkit_incoming plugin handle the payload and show the CallKit UI
+      completion()
   }
   
   private func startRecording(path: String, result: @escaping FlutterResult) {

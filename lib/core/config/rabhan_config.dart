@@ -29,6 +29,7 @@ class RabhanConfig extends AppConfig {
         enableAIVisibilityVal: false,
         enableTrustEngineVal: false,
         enableContentMarketingVal: false,
+        complaintsWhatsappVal: '966564696207',
       );
 
   // New Rabhan Feature Flags

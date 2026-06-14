@@ -29,7 +29,9 @@ class SupportScreen extends StatelessWidget {
               context,
               icon: Icons.chat_bubble_outline,
               title: isAr ? 'المحادثة الفورية' : 'Live Chat',
-              subtitle: isAr ? 'تحدث مع مدير حسابك مباشرة' : 'Talk to your account manager',
+              subtitle: isAr
+                  ? 'تحدث مع مدير حسابك مباشرة'
+                  : 'Talk to your account manager',
               color: AppTheme.primaryGreen,
               onTap: () {
                 HapticService.light();
@@ -42,7 +44,9 @@ class SupportScreen extends StatelessWidget {
               context,
               icon: Icons.chat_outlined,
               title: 'WhatsApp Support',
-              subtitle: isAr ? 'دعم سريع عبر واتساب' : 'Quick support via WhatsApp',
+              subtitle: isAr
+                  ? 'دعم سريع عبر واتساب'
+                  : 'Quick support via WhatsApp',
               color: const Color(0xFF25D366),
               onTap: () => _launchWhatsApp(),
             ),
@@ -58,12 +62,31 @@ class SupportScreen extends StatelessWidget {
             const SizedBox(height: 40),
             Text(
               isAr ? 'الأسئلة الشائعة' : 'Frequently Asked Questions',
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
-            _buildFaqItem(isAr ? 'كيف أتابع نتائج حملاتي؟' : 'How do I track my campaign results?', isAr),
-            _buildFaqItem(isAr ? 'كيف يمكنني طلب اجتماع جديد؟' : 'How can I request a new meeting?', isAr),
-            _buildFaqItem(isAr ? 'متى يتم تحديث استراتيجية النمو؟' : 'When is the growth strategy updated?', isAr),
+            _buildFaqItem(
+              isAr
+                  ? 'كيف أتابع نتائج حملاتي؟'
+                  : 'How do I track my campaign results?',
+              isAr,
+            ),
+            _buildFaqItem(
+              isAr
+                  ? 'كيف يمكنني طلب اجتماع جديد؟'
+                  : 'How can I request a new meeting?',
+              isAr,
+            ),
+            _buildFaqItem(
+              isAr
+                  ? 'متى يتم تحديث استراتيجية النمو؟'
+                  : 'When is the growth strategy updated?',
+              isAr,
+            ),
           ],
         ),
       ),
@@ -76,18 +99,25 @@ class SupportScreen extends StatelessWidget {
       children: [
         Text(
           isAr ? 'كيف يمكننا مساعدتك اليوم؟' : 'How can we help you today?',
-          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
-          isAr ? 'فريق الدعم الفني ومدراء الحسابات متاحون لمساعدتك في أي وقت' : 'Our support team and account managers are available to help you anytime',
+          isAr
+              ? 'فريق الدعم الفني ومدراء الحسابات متاحون لمساعدتك في أي وقت'
+              : 'Our support team and account managers are available to help you anytime',
           style: const TextStyle(color: Colors.grey, fontSize: 14),
         ),
       ],
     );
   }
 
-  Widget _buildSupportOption(BuildContext context, {
+  Widget _buildSupportOption(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -119,9 +149,19 @@ class SupportScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -140,7 +180,10 @@ class SupportScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        title: Text(question, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        title: Text(
+          question,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
         trailing: const Icon(Icons.add, color: Colors.grey, size: 20),
         onTap: () {},
       ),
