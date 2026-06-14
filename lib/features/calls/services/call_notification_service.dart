@@ -223,12 +223,9 @@ class CallNotificationService {
       // 1. Mark as accepted in database
       await _signalService.acceptCall(uuid);
 
-      // 2. Dismiss the native CallKit notification banner
-      try {
-        await FlutterCallkitIncoming.endCall(uuid);
-      } catch (e) {
-        debugPrint('📞 [CallKit] Warning: could not dismiss native UI: $e');
-      }
+      // Do NOT call endCall(uuid) here! CallKit naturally handles the accepted state.
+      // Calling endCall tells the OS to terminate the active call session, which
+      // drops the microphone and can cause the OS to send the app to the background.
 
       // 3. Fetch signal details to join room
       final response = await Supabase.instance.client
