@@ -252,6 +252,19 @@ class CallNotificationService {
         return;
       }
 
+      // Wait for the app router to be fully mounted BEFORE joining the call
+      // LiveKit requires the Activity to be fully initialized to access camera/mic
+      int retries = 0;
+      while (rootNavigatorKey.currentState == null || !rootNavigatorKey.currentState!.mounted) {
+        if (retries > 40) { // Wait up to 10 seconds
+          debugPrint('📞 [CallKit] Navigation failed: rootNavigatorKey is not mounted after 10s');
+          _cleanupCallState(uuid);
+          return;
+        }
+        await Future.delayed(const Duration(milliseconds: 250));
+        retries++;
+      }
+
       // 4. Join the call
       final callService = CallService();
       final user = Supabase.instance.client.auth.currentUser;
@@ -272,18 +285,6 @@ class CallNotificationService {
   }
 
   static Future<void> _navigateToCallScreen(dynamic room, String callType, String uuid) async {
-    // Wait for the app router to be fully mounted (handles cold-start case)
-    int retries = 0;
-    while (rootNavigatorKey.currentState == null || !rootNavigatorKey.currentState!.mounted) {
-      if (retries > 40) { // Wait up to 10 seconds
-        debugPrint('📞 [CallKit] Navigation failed: rootNavigatorKey is not mounted after 10s');
-        _cleanupCallState(uuid);
-        return;
-      }
-      await Future.delayed(const Duration(milliseconds: 250));
-      retries++;
-    }
-
     try {
       rootNavigatorKey.currentState?.push(
         MaterialPageRoute(
