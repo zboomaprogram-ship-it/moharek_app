@@ -102,7 +102,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
 
     // Start call timer
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && !_isConnectingRoom) setState(() => _seconds++);
+      if (mounted && !_isConnectingRoom && _hasTriggeredConnected) setState(() => _seconds++);
     });
   }
 
@@ -386,6 +386,10 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   }
 
   String get _durationLabel {
+    if (widget.isOutgoing && !_hasTriggeredConnected) {
+      final isAr = Localizations.localeOf(context).languageCode == 'ar';
+      return isAr ? 'جاري الاتصال...' : 'Ringing...';
+    }
     final m = (_seconds ~/ 60).toString().padLeft(2, '0');
     final s = (_seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';

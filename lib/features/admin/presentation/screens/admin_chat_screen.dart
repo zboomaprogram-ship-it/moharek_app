@@ -272,6 +272,10 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   // ── Start LiveKit call ────────────────────────────────────────────────────
   Future<void> _startCall(bool isVideo) async {
     final client = ref.read(supabaseClientProvider);
+    final profile = ref.read(profileProvider).valueOrNull;
+    final adminName = profile?.fullName ?? 'Admin';
+    final adminRole = profile?.role ?? 'admin';
+    final callerName = '$adminName ($adminRole)';
 
     // Push the active call screen immediately in outgoing/ringing mode
     Navigator.of(context).push(
@@ -279,7 +283,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         builder: (_) => ActiveCallScreen(
           callType: isVideo ? 'video' : 'voice',
           projectId: widget.projectId,
-          callerName: 'Admin',
+          callerName: callerName,
           recipientName: widget.clientName,
           callerIdentity: client.auth.currentUser!.id,
           isOutgoing: true,
