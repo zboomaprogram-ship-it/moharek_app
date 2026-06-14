@@ -55,18 +55,39 @@ import flutter_callkit_incoming
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
   
-  // Handle incoming VoIP push credentials (this feeds the token back to the Dart plugin)
+  // Handle incoming VoIP push credentials
   func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
-      // The flutter_callkit_incoming plugin will automatically read this token
-      // when we call getDevicePushTokenVoIP() in Dart.
-      let token = credentials.token
-      print("VoIP Token received: \(token)")
+      let tokenString = credentials.token.map { String(format: "%02.2hhx", $0) }.joined()
+      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP(tokenString)
+      print("VoIP Token received: \(tokenString)")
   }
   
   // Handle incoming push payload (this triggers the CallKit UI when app is killed)
   func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
-      // Let the flutter_callkit_incoming plugin handle the payload and show the CallKit UI
-      completion()
+      if let data = payload.dictionaryPayload["data"] as? [String: Any],
+         let id = data["id"] as? String {
+          
+          let callerName = data["caller_name"] as? String ?? "Unknown Caller"
+          let callType = data["call_type"] as? String ?? "video"
+          
+          let args: [String: Any] = [
+              "id": id,
+              "nameCaller": callerName,
+              "appName": "Moharek",
+              "handle": callerName,
+              "type": callType == "video" ? 1 : 0,
+              "duration": 30000,
+              "extra": data
+          ]
+          
+          let callData = flutter_callkit_incoming.Data(args: args)
+          SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(callData, fromPushKit: true)
+      }
+      
+      // Delay completion slightly so CallKit has time to present the UI
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+          completion()
+      }
   }
   
   private func startRecording(path: String, result: @escaping FlutterResult) {
