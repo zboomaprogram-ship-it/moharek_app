@@ -154,7 +154,7 @@ class CallNotificationService {
       android: AndroidParams(
         isCustomNotification: true,
         isShowFullLockedScreen: true,
-        isFullScreen: false,
+        isFullScreen: true,
         isImportant: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
@@ -168,6 +168,10 @@ class CallNotificationService {
       ios: const IOSParams(
         handleType: 'generic',
         supportsVideo: true,
+        maximumCallGroups: 2,
+        maximumCallsPerCallGroup: 1,
+        audioSessionMode: 'default',
+        audioSessionActive: true,
         ringtonePath: 'system_ringtone_default',
       ),
     );

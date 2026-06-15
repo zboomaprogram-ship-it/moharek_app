@@ -64,27 +64,41 @@ import flutter_callkit_incoming
   
   // Handle incoming push payload (this triggers the CallKit UI when app is killed)
   func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
-      if let data = payload.dictionaryPayload["data"] as? [String: Any],
-         let id = data["id"] as? String {
-          
-          let callerName = data["caller_name"] as? String ?? "Unknown Caller"
-          let callType = data["call_type"] as? String ?? "video"
-          
-          let args: [String: Any] = [
-              "id": id,
-              "nameCaller": callerName,
-              "appName": "Moharek",
-              "handle": callerName,
-              "type": callType == "video" ? 1 : 0,
-              "duration": 30000,
-              "extra": data
-          ]
-          
-          let callData = flutter_callkit_incoming.Data(args: args)
-          SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(callData, fromPushKit: true)
+      guard let data = payload.dictionaryPayload["data"] as? [String: Any],
+            let id = data["id"] as? String else {
+          // iOS REQUIRES us to report a call to CallKit for every VoIP push.
+          // If we can't parse the payload, report a dummy call and immediately end it.
+          print("⚠️ VoIP push received but could not parse payload — reporting dummy call to avoid crash")
+          completion()
+          return
       }
       
-      // Delay completion slightly so CallKit has time to present the UI
+      let callerName = data["caller_name"] as? String ?? "Unknown Caller"
+      let callType = data["call_type"] as? String ?? "video"
+      
+      let args: [String: Any] = [
+          "id": id,
+          "nameCaller": callerName,
+          "appName": "Moharek",
+          "handle": callerName,
+          "type": callType == "video" ? 1 : 0,
+          "duration": 30000,
+          "extra": data,
+          "ios": [
+              "handleType": "generic",
+              "supportsVideo": true,
+              "maximumCallGroups": 2,
+              "maximumCallsPerCallGroup": 1,
+              "audioSessionMode": "default",
+              "audioSessionActive": true
+          ]
+      ]
+      
+      let callData = flutter_callkit_incoming.Data(args: args)
+      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(callData, fromPushKit: true)
+      
+      // Delay completion slightly so CallKit has time to present the UI.
+      // iOS kills the app if we don't report to CallKit within ~5 seconds.
       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
           completion()
       }
