@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:moharek_app/features/calls/services/call_signal_service.dart';
 import 'package:moharek_app/features/calls/screens/active_call_screen.dart';
@@ -78,6 +79,27 @@ class CallService {
         await room.localParticipant?.setMicrophoneEnabled(true);
       } catch (e) {
         debugPrint('Warning: Failed to enable microphone: $e');
+      }
+
+      // Initialize speakerphone routing based on call type (video call -> speaker on, voice call -> speaker off)
+      try {
+        if (!kIsWeb) {
+          await Hardware.instance.setSpeakerphoneOn(isVideo);
+          await room.setSpeakerOn(isVideo);
+          await Helper.setSpeakerphoneOn(isVideo);
+
+          // ChatGPT/Community fix: iOS CallKit can override audio settings if they are applied 
+          // before its native AVAudioSession is fully activated. We wait and re-apply.
+          Future.delayed(const Duration(milliseconds: 1500), () async {
+            try {
+              await Hardware.instance.setSpeakerphoneOn(isVideo);
+              await room.setSpeakerOn(isVideo);
+              await Helper.setSpeakerphoneOn(isVideo);
+            } catch (_) {}
+          });
+        }
+      } catch (e) {
+        debugPrint('Warning: Failed to initialize speakerphone routing in joinCall: $e');
       }
 
       return room;
