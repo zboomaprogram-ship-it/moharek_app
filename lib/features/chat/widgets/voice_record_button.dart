@@ -238,7 +238,10 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
       // Recording state (both locked and active): Send button
       return GestureDetector(
         onTap: () => _stopRecording(send: true),
-        onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
+        onLongPressEnd: (_) {
+          if (_isLocked) return;
+          _stopRecording(send: !_isCancelling);
+        },
         onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),
         child: Container(
           width: 48,
@@ -259,7 +262,10 @@ class _VoiceRecordButtonState extends State<VoiceRecordButton>
         _startRecording(isTap: true);
       },
       onLongPressStart: (_) => _startRecording(isTap: false),
-      onLongPressEnd: (_) => _stopRecording(send: !_isCancelling),
+      onLongPressEnd: (_) {
+        if (_isLocked) return;
+        _stopRecording(send: !_isCancelling);
+      },
       onLongPressMoveUpdate: (details) => _onDragUpdate(details.offsetFromOrigin),
       child: _buildMicButton(),
     );
