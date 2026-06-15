@@ -165,12 +165,12 @@ class CallNotificationService {
         textAccept: 'قبول',
         textDecline: 'رفض',
       ),
-      ios: const IOSParams(
+      ios: IOSParams(
         handleType: 'generic',
-        supportsVideo: true,
+        supportsVideo: callType == 'video',
         maximumCallGroups: 2,
         maximumCallsPerCallGroup: 1,
-        audioSessionMode: 'videoChat',
+        audioSessionMode: 'default',
         audioSessionActive: true,
         ringtonePath: 'system_ringtone_default',
       ),
@@ -249,14 +249,16 @@ class CallNotificationService {
       isCallActive = true;
       _acceptedCallIds.add(uuid);
 
-      // IMMEDIATELY dismiss the native CallKit incoming call UI.
-      // This is critical — if we don't end it, the native UI stays on screen
-      // and conflicts with Flutter's rendering, causing crashes.
-      try {
-        await FlutterCallkitIncoming.endCall(uuid);
-        debugPrint('📞 [CallKit] Native incoming call UI dismissed for $uuid');
-      } catch (e) {
-        debugPrint('📞 [CallKit] Warning: could not dismiss native call UI: $e');
+      // IMMEDIATELY dismiss the native CallKit incoming call UI on Android.
+      // On iOS, we MUST NOT end the call, otherwise the CallKit session drops and background audio fails.
+      // The native OS manages the active call UI automatically on iOS.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await FlutterCallkitIncoming.endCall(uuid);
+          debugPrint('📞 [CallKit] Native incoming call UI dismissed for $uuid');
+        } catch (e) {
+          debugPrint('📞 [CallKit] Warning: could not dismiss native call UI: $e');
+        }
       }
 
       // Wait for session to restore BEFORE running any database query or joining the call.
@@ -301,22 +303,7 @@ class CallNotificationService {
         return;
       }
 
-      // Wait for the app router to be fully mounted.
-      // Don't check lifecycleState — on Android the app may still be in "inactive"
-      // state momentarily after accepting from a notification.
-      int retries = 0;
-      while (rootNavigatorKey.currentState == null || 
-             !rootNavigatorKey.currentState!.mounted) {
-        if (retries > 40) { // Wait up to 10 seconds
-          debugPrint('📞 [CallKit] Navigation failed: rootNavigatorKey not mounted after 10s');
-          _cleanupCallState(uuid);
-          return;
-        }
-        await Future.delayed(const Duration(milliseconds: 250));
-        retries++;
-      }
-
-      // 3. Join the call
+      // 3. Join the call IMMEDIATELY so background audio works on iOS lock screen
       final callService = CallService();
       final user = Supabase.instance.client.auth.currentUser;
 
@@ -327,12 +314,28 @@ class CallNotificationService {
         isVideo: callType == 'video',
       );
 
-      // 4. Navigate to call screen
-      _navigateToCallScreen(room, callType ?? 'video', uuid);
+      // Wait for the app router to be fully mounted before navigating.
+      // If the app is in the background, this might take a while (until the user opens the app).
+      _waitForNavigationAndPush(room, callType ?? 'video', uuid);
     } catch (e) {
       debugPrint('📞 [CallKit] Error handling accepted call: $e');
       _cleanupCallState(uuid);
     }
+  }
+
+  static Future<void> _waitForNavigationAndPush(dynamic room, String callType, String uuid) async {
+    int retries = 0;
+    while (rootNavigatorKey.currentState == null || 
+           !rootNavigatorKey.currentState!.mounted) {
+      if (retries > 120) { // Wait up to 30 seconds for the user to open the app
+        debugPrint('📞 [CallKit] Navigation timeout: app stayed in background too long. UI not pushed.');
+        return; // Don't end the call, just skip pushing the UI. The background audio is still active!
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+      retries++;
+    }
+
+    _navigateToCallScreen(room, callType, uuid);
   }
 
   static Future<void> _navigateToCallScreen(dynamic room, String callType, String uuid) async {
