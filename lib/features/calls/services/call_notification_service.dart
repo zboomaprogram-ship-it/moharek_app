@@ -152,9 +152,9 @@ class CallNotificationService {
       type: callType == 'video' ? 1 : 0,
       duration: 30000,
       android: AndroidParams(
-        isCustomNotification: false,
+        isCustomNotification: true,
         isShowFullLockedScreen: true,
-        isFullScreen: true,
+        isFullScreen: false,
         isImportant: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
@@ -245,18 +245,37 @@ class CallNotificationService {
       isCallActive = true;
       _acceptedCallIds.add(uuid);
 
+      // IMMEDIATELY dismiss the native CallKit incoming call UI.
+      // This is critical — if we don't end it, the native UI stays on screen
+      // and conflicts with Flutter's rendering, causing crashes.
+      try {
+        await FlutterCallkitIncoming.endCall(uuid);
+        debugPrint('📞 [CallKit] Native incoming call UI dismissed for $uuid');
+      } catch (e) {
+        debugPrint('📞 [CallKit] Warning: could not dismiss native call UI: $e');
+      }
+
       // Wait for session to restore BEFORE running any database query or joining the call.
       // This is crucial for cold starts when the user accepts from the killed state.
       await _waitForAuthSession();
 
+      // Check if we have a valid Supabase session
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        debugPrint('📞 [CallKit] No Supabase session after wait — cannot join call');
+        _cleanupCallState(uuid);
+        return;
+      }
+
       // 1. Mark as accepted in database
-      await _signalService.acceptCall(uuid);
+      try {
+        await _signalService.acceptCall(uuid);
+      } catch (e) {
+        debugPrint('📞 [CallKit] Warning: could not mark call as accepted in DB: $e');
+        // Continue anyway — the important thing is joining the room
+      }
 
-      // Do NOT call endCall(uuid) here! CallKit naturally handles the accepted state.
-      // Calling endCall tells the OS to terminate the active call session, which
-      // drops the microphone and can cause the OS to send the app to the background.
-
-      // 3. Fetch signal details to join room
+      // 2. Fetch signal details to join room
       final response = await Supabase.instance.client
           .from('call_signals')
           .select()
@@ -278,14 +297,14 @@ class CallNotificationService {
         return;
       }
 
-      // Wait for the app router to be fully mounted AND app lifecycle to be resumed.
-      // LiveKit requires the Activity to be fully resumed (foreground) to access camera/mic.
+      // Wait for the app router to be fully mounted.
+      // Don't check lifecycleState — on Android the app may still be in "inactive"
+      // state momentarily after accepting from a notification.
       int retries = 0;
       while (rootNavigatorKey.currentState == null || 
-             !rootNavigatorKey.currentState!.mounted ||
-             WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+             !rootNavigatorKey.currentState!.mounted) {
         if (retries > 40) { // Wait up to 10 seconds
-          debugPrint('📞 [CallKit] Navigation or Resume failed: rootNavigatorKey not mounted or app not resumed after 10s');
+          debugPrint('📞 [CallKit] Navigation failed: rootNavigatorKey not mounted after 10s');
           _cleanupCallState(uuid);
           return;
         }
@@ -293,7 +312,7 @@ class CallNotificationService {
         retries++;
       }
 
-      // 4. Join the call
+      // 3. Join the call
       final callService = CallService();
       final user = Supabase.instance.client.auth.currentUser;
 
@@ -304,7 +323,7 @@ class CallNotificationService {
         isVideo: callType == 'video',
       );
 
-      // 5. Navigate to call screen
+      // 4. Navigate to call screen
       _navigateToCallScreen(room, callType ?? 'video', uuid);
     } catch (e) {
       debugPrint('📞 [CallKit] Error handling accepted call: $e');

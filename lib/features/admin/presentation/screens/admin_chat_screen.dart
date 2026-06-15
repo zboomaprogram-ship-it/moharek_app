@@ -275,7 +275,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     final profile = ref.read(profileProvider).valueOrNull;
     final adminName = profile?.fullName ?? 'Admin';
     final adminRole = profile?.role ?? 'admin';
-    final callerName = '$adminName ($adminRole)';
+    final callerName = '$adminName {$adminRole}';
 
     // Push the active call screen immediately in outgoing/ringing mode
     Navigator.of(context).push(

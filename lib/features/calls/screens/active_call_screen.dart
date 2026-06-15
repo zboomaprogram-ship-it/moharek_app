@@ -46,6 +46,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   bool _isSpeakerOn = false;
   bool _isConnectingRoom = true;
   bool _hasTriggeredConnected = false;
+  DateTime? _connectedAt;
 
   // Duration timer
   int _seconds = 0;
@@ -102,7 +103,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
 
     // Start call timer
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && !_isConnectingRoom && _hasTriggeredConnected) setState(() => _seconds++);
+      if (mounted && !_isConnectingRoom && _hasTriggeredConnected && _connectedAt != null) {
+        setState(() => _seconds = DateTime.now().difference(_connectedAt!).inSeconds);
+      }
     });
   }
 
@@ -203,6 +206,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     final hasRemote = _room?.remoteParticipants.isNotEmpty ?? false;
     if (hasRemote) {
       _hasTriggeredConnected = true;
+      _connectedAt = DateTime.now();
       widget.onCallConnected?.call();
     }
   }
