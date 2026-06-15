@@ -175,8 +175,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
 
       // Initialize speakerphone routing
       try {
-        Helper.setSpeakerphoneOn(_isSpeakerOn);
-        room.setSpeakerOn(_isSpeakerOn);
+        Hardware.instance.setSpeakerphoneOn(_isSpeakerOn);
         if (widget.callType == 'voice' && !kIsWeb) {
           _enableProximitySensor(!_isSpeakerOn);
         }
@@ -269,22 +268,23 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     try {
       final nextVideoState = !_isVideoOff;
       if (nextVideoState) {
+        // nextVideoState is true means we want to turn the video OFF.
+        await p.setCameraEnabled(false);
+      } else {
+        // nextVideoState is false means we want to turn the video ON.
         await p.setCameraEnabled(
           true,
           cameraCaptureOptions: const CameraCaptureOptions(
             params: VideoParametersPresets.h720_169,
           ),
         );
-      } else {
-        await p.setCameraEnabled(false);
       }
       if (mounted) {
         setState(() {
           _isVideoOff = nextVideoState;
           if (!_isVideoOff) {
             _isSpeakerOn = true;
-            Helper.setSpeakerphoneOn(true);
-            _room?.setSpeakerOn(true);
+            Hardware.instance.setSpeakerphoneOn(true);
             if (widget.callType == 'voice' && !kIsWeb) {
               _enableProximitySensor(false);
             }
@@ -299,8 +299,7 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
   void _toggleSpeaker() async {
     try {
       final target = !_isSpeakerOn;
-      await Helper.setSpeakerphoneOn(target);
-      await _room?.setSpeakerOn(target);
+      await Hardware.instance.setSpeakerphoneOn(target);
       if (widget.callType == 'voice' && !kIsWeb) {
         _enableProximitySensor(!target);
       }

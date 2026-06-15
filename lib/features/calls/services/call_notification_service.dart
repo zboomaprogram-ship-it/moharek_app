@@ -170,7 +170,7 @@ class CallNotificationService {
         supportsVideo: true,
         maximumCallGroups: 2,
         maximumCallsPerCallGroup: 1,
-        audioSessionMode: 'default',
+        audioSessionMode: 'videoChat',
         audioSessionActive: true,
         ringtonePath: 'system_ringtone_default',
       ),
