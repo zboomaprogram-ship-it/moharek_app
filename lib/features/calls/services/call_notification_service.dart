@@ -153,8 +153,8 @@ class CallNotificationService {
       duration: 30000,
       android: AndroidParams(
         isCustomNotification: false,
-        isShowFullLockedScreen: true,
-        isFullScreen: true,
+        isShowFullLockedScreen: false,
+        isFullScreen: false,
         isImportant: true,
         isShowLogo: false,
         ringtonePath: 'system_ringtone_default',
