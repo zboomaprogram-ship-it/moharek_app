@@ -152,7 +152,7 @@ class CallNotificationService {
       type: callType == 'video' ? 1 : 0,
       duration: 30000,
       android: AndroidParams(
-        isCustomNotification: false,
+        isCustomNotification: true,
         isShowFullLockedScreen: false,
         isFullScreen: false,
         isImportant: true,
