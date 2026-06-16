@@ -228,33 +228,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           })(),
                         ],
 
-                        // WhatsNew & Contract alerts — not relevant for Rabhan e-commerce clients
-                        if (AppConfig.flavorName != 'rabhan') ...[
-                          if (profile?.lastSeenAt != null)
-                            FadeInSlide(
-                              delay: const Duration(milliseconds: 200),
-                              child: WhatsNewBanner(
-                                updates: _calculateWhatsNew(
-                                  profile!.lastSeenAt!,
-                                  activityAsync.asData?.value ?? [],
-                                  isAr,
-                                ),
+                        // WhatsNew & Contract alerts
+                        if (profile?.lastSeenAt != null)
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 200),
+                            child: WhatsNewBanner(
+                              updates: _calculateWhatsNew(
+                                profile!.lastSeenAt!,
+                                activityAsync.asData?.value ?? [],
+                                isAr,
                               ),
                             ),
+                          ),
 
-                          // Pending contract alert
-                          if (contractsAsync.hasValue) ...[
-                            if (contractsAsync.value!
-                                .where((c) => c.status == 'pending')
-                                .isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: FadeInSlide(
-                                  delay: const Duration(milliseconds: 250),
-                                  child: _buildContractAlert(context, l10n),
-                                ),
+                        // Pending contract alert
+                        if (contractsAsync.hasValue) ...[
+                          if (contractsAsync.value!
+                              .where((c) => c.status == 'pending')
+                              .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: FadeInSlide(
+                                delay: const Duration(milliseconds: 250),
+                                child: _buildContractAlert(context, l10n),
                               ),
-                          ],
+                            ),
                         ],
 
                         // Approvals Alert
@@ -500,21 +498,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           const SizedBox(height: 24),
                         ],
 
-                        // Milestones Feed — not relevant for Rabhan e-commerce clients
-                        if (AppConfig.flavorName != 'rabhan')
-                          milestonesAsync.when(
-                            data: (milestones) => Column(
-                              children: [
-                                FadeInSlide(
-                                  delay: const Duration(milliseconds: 500),
-                                  child: MilestonesFeed(milestones: milestones),
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-                            ),
-                            loading: () => const SizedBox.shrink(),
-                            error: (_, __) => const SizedBox.shrink(),
+                        // Milestones Feed
+                        milestonesAsync.when(
+                          data: (milestones) => Column(
+                            children: [
+                              FadeInSlide(
+                                delay: const Duration(milliseconds: 500),
+                                child: MilestonesFeed(milestones: milestones),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
                           ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
 
                         if (AppConfig.flavorName != 'rabhan') ...[
                           FadeInSlide(
