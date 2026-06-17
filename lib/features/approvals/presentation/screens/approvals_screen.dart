@@ -147,7 +147,7 @@ class ApprovalsScreen extends ConsumerWidget {
                         context,
                         ref,
                         approval,
-                        'needs_edit',
+                        'changes_requested',
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.redAccent,

@@ -127,11 +127,21 @@ class RabhanMetricsTab extends ConsumerWidget {
     final impressionsCtrl = TextEditingController(text: m?['impressions']?.toString() ?? '');
     final clicksCtrl = TextEditingController(text: m?['clicks']?.toString() ?? '');
     final cartCtrl = TextEditingController(text: m?['add_to_cart']?.toString() ?? '');
-    
+    final summaryCtrl = TextEditingController(); // We fetch the latest below if needed, or leave blank for a new summary
+
     DateTime start = m?['period_start'] != null ? DateTime.parse(m!['period_start']) : DateTime.now().subtract(const Duration(days: 30));
     DateTime end = m?['period_end'] != null ? DateTime.parse(m!['period_end']) : DateTime.now();
     bool isPub = m?['is_published'] ?? true;
     bool saving = false;
+
+    // Optional: Pre-fill summary if editing...
+    if (isEditing) {
+      ref.read(supabaseClientProvider).from('rabhan_weekly_summaries').select('summary_text').eq('project_id', pid).order('created_at', ascending: false).limit(1).maybeSingle().then((val) {
+        if (val != null && val['summary_text'] != null) {
+          summaryCtrl.text = val['summary_text'];
+        }
+      });
+    }
 
     showDialog(
       context: context,
@@ -171,6 +181,10 @@ class RabhanMetricsTab extends ConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                const Text('ملخص الأداء الأسبوعي (AI)', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                const SizedBox(height: 6),
+                _field(summaryCtrl, 'اكتب ملخص أو ملاحظات عن أداء المتجر هنا...', TextInputType.multiline, maxLines: 4),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -270,6 +284,13 @@ class RabhanMetricsTab extends ConsumerWidget {
                     await client.from('ecom_metrics').insert(payload);
                   }
 
+                  if (summaryCtrl.text.trim().isNotEmpty) {
+                    await client.from('rabhan_weekly_summaries').insert({
+                      'project_id': pid,
+                      'summary_text': summaryCtrl.text.trim(),
+                    });
+                  }
+
                   ref.invalidate(projectMetricsHistoryProvider(pid));
                   ref.invalidate(latestMetricsProvider(pid));
                   if (ctx.mounted) Navigator.pop(ctx);
@@ -320,10 +341,11 @@ class RabhanMetricsTab extends ConsumerWidget {
     }
   }
 
-  Widget _field(TextEditingController ctrl, String hint, TextInputType type) {
+  Widget _field(TextEditingController ctrl, String hint, TextInputType type, {int maxLines = 1}) {
     return TextField(
       controller: ctrl,
       keyboardType: type,
+      maxLines: maxLines,
       style: const TextStyle(color: Colors.white, fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,

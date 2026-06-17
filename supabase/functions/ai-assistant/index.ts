@@ -65,6 +65,11 @@ serve(async (req) => {
     });
 
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0]) {
+      throw new Error(data.error?.message || 'Failed to get a valid response from Groq API. Please check your API key.');
+    }
+    
     const text = data.choices[0].message.content;
 
     return new Response(

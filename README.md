@@ -21,7 +21,6 @@ Please refer to `lib/core/config/app_config.dart` for application configuration.
 rahaban supabase pass:r92Ok2LvkcwImqTS
 os_v2_app_ay5cg7n37ffkzb4r55pfo5jiahjdar625s2exs5v7ynfaorrrrun7r4wiixnimq3vgjdxyfjlsfszrangkwvcy4i5rt52zyg3xlpc2q
 
-
 Account	role Bugs and new features :
 1.the account need to add the subscription packge to a new clinet and the deatiles of the subscription and apper it to the user 
 2.the chat screen odf the web dashbaord  should be working like the chat screen of the app 

@@ -244,6 +244,43 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     }
   }
 
+  // ── Send video ───────────────────────────────────────────────────────────
+  Future<void> _sendVideo() async {
+    setState(() => _showAttachMenu = false);
+    final picker = ImagePicker();
+    final video = await picker.pickVideo(
+      source: ImageSource.gallery,
+    );
+    if (video == null) return;
+
+    final bytes = await video.readAsBytes();
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${video.name}';
+    final client = ref.read(supabaseClientProvider);
+    final channelId = widget.channelId;
+
+    try {
+      final url = await WordPressUploadService.uploadBytes(bytes, fileName);
+      final actions = ref.read(adminActionsProvider);
+      await actions.sendChatMessage({
+        'channel_id': channelId,
+        'sender_id': client.auth.currentUser!.id,
+        'content': '🎥 فيديو',
+        'message_type': 'video',
+        'file_url': url,
+      });
+      ref.read(chatMessagesProvider(widget.channelId).notifier).refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في رفع الفيديو: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // ── Send voice message ────────────────────────────────────────────────────
   Future<void> _handleVoiceRecording(VoiceRecordingResult recording) async {
     final client = ref.read(supabaseClientProvider);
@@ -540,6 +577,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
     final isFile = msg.messageType == 'file';
     final isImage = msg.messageType == 'image';
     final isVoice = msg.messageType == 'voice';
+    final isVideo = msg.messageType == 'video';
     final isCall =
         msg.messageType == 'video_call' || msg.messageType == 'voice_call';
 
@@ -556,13 +594,13 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
         borderRadius: BorderRadius.circular(8),
         child: Image.network(msg.fileUrl!, width: 200, fit: BoxFit.cover),
       );
-    } else if ((isFile) && msg.fileUrl != null) {
+    } else if ((isFile || isVideo) && msg.fileUrl != null) {
       content = GestureDetector(
         onTap: () => openFileInApp(context, msg.fileUrl!, msg.content),
         child: Row(
           children: [
             Icon(
-              Icons.attach_file,
+              isVideo ? Icons.play_circle_fill : Icons.attach_file,
               size: 16,
               color: isMe ? Colors.black54 : Colors.white54,
             ),
@@ -922,18 +960,22 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
   Widget _buildAttachMenu() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      width: double.infinity,
       color: AppTheme.cardColor,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+        spacing: 16,
+        runSpacing: 16,
         children: [
           _attachOption(Icons.image, 'صورة', Colors.purple, _sendImage),
+          _attachOption(Icons.videocam, 'فيديو', Colors.orange, _sendVideo),
           _attachOption(
             Icons.insert_drive_file,
             'ملف',
             AppTheme.primaryBlue,
             _sendFile,
           ),
-          _attachOption(Icons.videocam, 'مكالمة فيديو', Colors.teal, () {
+          _attachOption(Icons.video_call, 'مكالمة فيديو', Colors.teal, () {
             setState(() => _showAttachMenu = false);
             _startCall(true);
           }),

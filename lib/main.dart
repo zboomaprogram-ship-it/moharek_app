@@ -89,18 +89,6 @@ void main() async {
   timeago.setLocaleMessages('ar', timeago.ArMessages());
   timeago.setLocaleMessages('en', timeago.EnMessages());
 
-  if (!kIsWeb) {
-    try {
-      await [
-        Permission.camera, 
-        Permission.microphone,
-        Permission.systemAlertWindow,
-        Permission.notification,
-      ].request();
-    } catch (e) {
-      debugPrint('Permission request error: $e');
-    }
-  }
   // Pre-initialize SharedPreferences for SafeLocalStorage
   SharedPreferences? prefs;
   try {

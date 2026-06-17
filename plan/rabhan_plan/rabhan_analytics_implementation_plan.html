@@ -1,0 +1,317 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.plan { padding: 1.5rem 0; }
+.header { margin-bottom: 2rem; }
+.header h1 { font-size: 20px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 6px; }
+.header p { font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; }
+.phase { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); margin-bottom: 1.25rem; overflow: hidden; }
+.phase-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+.phase-badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.ph-1 { background: var(--color-background-info); color: var(--color-text-info); }
+.ph-2 { background: var(--color-background-success); color: var(--color-text-success); }
+.ph-3 { background: var(--color-background-warning); color: var(--color-text-warning); }
+.ph-4 { background: var(--color-background-danger); color: var(--color-text-danger); }
+.phase-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+.phase-meta { font-size: 12px; color: var(--color-text-secondary); }
+.phase-body { padding: 0; }
+.screen { border-bottom: 0.5px solid var(--color-border-tertiary); }
+.screen:last-child { border-bottom: none; }
+.screen-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+.screen-icon { font-size: 18px; color: var(--color-text-secondary); }
+.screen-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.screen-sub { font-size: 12px; color: var(--color-text-secondary); margin-right: auto; }
+.features { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 14px; }
+.feat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+.feat-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.feat-desc { font-size: 11px; color: var(--color-text-secondary); line-height: 1.5; }
+.feat-icon { font-size: 14px; }
+.complexity-row { display: flex; align-items: center; gap: 8px; padding: 0 16px 14px; }
+.complexity-label { font-size: 11px; color: var(--color-text-secondary); white-space: nowrap; }
+.complexity-bar { flex: 1; height: 4px; background: var(--color-border-tertiary); border-radius: 2px; }
+.complexity-fill { height: 100%; border-radius: 2px; }
+.c-info { background: var(--color-text-info); }
+.c-success { background: var(--color-text-success); }
+.c-warning { background: var(--color-text-warning); }
+.c-danger { background: var(--color-text-danger); }
+.insight-box { margin: 0 16px 14px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; border-left: 3px solid var(--color-text-info); }
+.insight-box.warn { border-left-color: var(--color-text-warning); }
+.insight-title { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.insight-text { font-size: 12px; color: var(--color-text-primary); line-height: 1.55; }
+.tech-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 14px; }
+.tech-pill { font-size: 11px; padding: 3px 9px; border: 0.5px solid var(--color-border-secondary); border-radius: 12px; color: var(--color-text-secondary); }
+.section-divider { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.6px; padding: 0 16px 8px; }
+.priority-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 0 16px 14px; }
+.priority-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 12px; text-align: center; }
+.priority-num { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.priority-label { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+</style>
+
+<div class="plan">
+  <div class="header">
+    <h1>Rabhan analytics screen — implementation plan</h1>
+    <p>4 phases to build a client-facing analytics experience matching the dark green luxury aesthetic shown in the mockup. Covers data architecture, UI components, real-time features, and PDF report vault.</p>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge ph-1">Phase 1 · Foundation</span>
+      <span class="phase-title">KPI snapshot + 6 engine health scores</span>
+      <span class="phase-meta">Weeks 1–2</span>
+    </div>
+    <div class="phase-body">
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-chart-bar screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">Live KPI cards</span>
+          <span class="screen-sub">Top of analytics screen</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-cash feat-icon" aria-hidden="true"></i>Financials row</div>
+            <div class="feat-desc">Total sales (SAR), net profit, and ad spend in a scrollable horizontal chip row. Each card shows delta vs. last period.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-trending-up feat-icon" aria-hidden="true"></i>Efficiency row</div>
+            <div class="feat-desc">ROAS, conversion rate, and CTR. Color-coded: green if above target, amber if within 10% below, red if critically off.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-shopping-cart feat-icon" aria-hidden="true"></i>Volume row</div>
+            <div class="feat-desc">Orders count, impressions, clicks, and add-to-carts. Collapsed by default, expandable inline.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-calendar feat-icon" aria-hidden="true"></i>Period picker</div>
+            <div class="feat-desc">Last 7d / 30d / 90d / custom range. All cards and charts re-fetch on change. Persist selection per client in local state.</div>
+          </div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title">Design note</div>
+          <div class="insight-text">Match the home screen's dark green (#0A2818) card surface with gold (#C9A84C) accent for positive deltas — keeps the luxury aesthetic consistent across screens.</div>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-engine screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">6 Growth Engines panel</span>
+          <span class="screen-sub">Below KPI cards</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-circle-check feat-icon" aria-hidden="true"></i>Engine health ring</div>
+            <div class="feat-desc">Circular progress ring (0–100%) per engine. Tap opens a bottom sheet with the exact tasks Rabhan is doing to improve that engine.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-grid feat-icon" aria-hidden="true"></i>3×2 engine grid</div>
+            <div class="feat-desc">Store · Product · Ads · Sales Page · Operations · Analytics. Each tile shows engine name, score, and a one-line status ("On track" / "Needs attention").</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-notes feat-icon" aria-hidden="true"></i>Task drill-down</div>
+            <div class="feat-desc">Bottom sheet lists active tasks for that engine: task name, assignee, status pill, and last-updated timestamp.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-history feat-icon" aria-hidden="true"></i>Score history sparkline</div>
+            <div class="feat-desc">Mini sparkline in each tile showing score trend over last 30 days. No axes — just the shape of progress.</div>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-pill">react-native-svg for rings</span>
+          <span class="tech-pill">Animated.Value for ring fill</span>
+          <span class="tech-pill">Bottom sheet modal</span>
+          <span class="tech-pill">Firestore real-time listener</span>
+        </div>
+      </div>
+
+      <div class="complexity-row">
+        <span class="complexity-label">Phase complexity</span>
+        <div class="complexity-bar"><div class="complexity-fill c-info" style="width:35%"></div></div>
+        <span class="complexity-label" style="color:var(--color-text-info)">Medium</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge ph-2">Phase 2 · Charts</span>
+      <span class="phase-title">Sales trend + campaign tracking</span>
+      <span class="phase-meta">Weeks 3–4</span>
+    </div>
+    <div class="phase-body">
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-chart-line screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">Sales trend chart</span>
+          <span class="screen-sub">Matches home screen mini-chart, but full-width</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-chart-area feat-icon" aria-hidden="true"></i>Area chart</div>
+            <div class="feat-desc">Full-width area chart with dark green fill and gold stroke — replicates the aesthetic from the home screen. Touch to inspect a specific date's value.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-git-compare feat-icon" aria-hidden="true"></i>Overlay comparison</div>
+            <div class="feat-desc">Toggle a ghost line for the previous period (dashed, 40% opacity). Lets the client visually verify growth without needing to read numbers.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-tag feat-icon" aria-hidden="true"></i>Metric switcher</div>
+            <div class="feat-desc">Chip row to switch the chart between Sales, Profit, ROAS, and Orders. Chart animates on switch (Reanimated layout transition).</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-clock feat-icon" aria-hidden="true"></i>Granularity toggle</div>
+            <div class="feat-desc">Daily / Weekly / Monthly grouping. Collapses noisy daily data into smoother weekly view for cleaner storytelling.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-speakerphone screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">Active campaigns list</span>
+          <span class="screen-sub">Scrollable below chart</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-brand-meta feat-icon" aria-hidden="true"></i>Campaign card</div>
+            <div class="feat-desc">Platform badge (Meta / TikTok / Google), campaign name, status pill (Active / Paused), budget bar (spent vs. allocated), and key stats: clicks, conversions, ROAS.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-filter feat-icon" aria-hidden="true"></i>Platform filter</div>
+            <div class="feat-desc">Filter chips at top of list: All · Meta · TikTok · Google. Filters apply instantly on the rendered list, no refetch needed.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-arrows-sort feat-icon" aria-hidden="true"></i>Sort options</div>
+            <div class="feat-desc">Sort by ROAS, spend, or conversions. Useful when client has 10+ active campaigns.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-external-link feat-icon" aria-hidden="true"></i>Deep link to ad manager</div>
+            <div class="feat-desc">Each card has a subtle "View in Meta / TikTok" link that opens the native ad manager — gives power users the escape hatch they want.</div>
+          </div>
+        </div>
+        <div class="insight-box warn">
+          <div class="insight-title">Architecture decision</div>
+          <div class="insight-text">Pull campaign data from Meta Marketing API + TikTok Ads API server-side every 15 minutes and cache in Firestore. Don't call ad APIs client-side — rate limits and token management are painful on mobile.</div>
+        </div>
+        <div class="complexity-row">
+          <span class="complexity-label">Phase complexity</span>
+          <div class="complexity-bar"><div class="complexity-fill c-success" style="width:55%"></div></div>
+          <span class="complexity-label" style="color:var(--color-text-success)">Medium-high</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge ph-3">Phase 3 · Reports vault</span>
+      <span class="phase-title">PDF hub + formal document delivery</span>
+      <span class="phase-meta">Weeks 5–6</span>
+    </div>
+    <div class="phase-body">
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-file-text screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">Reports vault screen</span>
+          <span class="screen-sub">Third tab or section within analytics</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-folders feat-icon" aria-hidden="true"></i>Report categories</div>
+            <div class="feat-desc">Monthly reports · Weekly campaigns · Competitor analysis · Strategy docs. Horizontal filter chips, reports list below.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-file-download feat-icon" aria-hidden="true"></i>PDF card</div>
+            <div class="feat-desc">Each report shows: type badge, title, upload date, account manager name, file size. Single tap previews inline. Long press to download.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-bell feat-icon" aria-hidden="true"></i>Push notification trigger</div>
+            <div class="feat-desc">When AM uploads a report, Firebase FCM sends a push: "Ahmed uploaded your April monthly report. Tap to view." Notification deep-links directly to that PDF.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-eye feat-icon" aria-hidden="true"></i>Read receipts</div>
+            <div class="feat-desc">AM dashboard shows whether client has opened each report and when. Creates accountability and natural follow-up triggers for the AM.</div>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-pill">Firebase Storage for PDFs</span>
+          <span class="tech-pill">react-native-pdf</span>
+          <span class="tech-pill">FCM push triggers</span>
+          <span class="tech-pill">Firestore read-receipt flag</span>
+          <span class="tech-pill">Signed download URLs</span>
+        </div>
+      </div>
+      <div class="complexity-row">
+        <span class="complexity-label">Phase complexity</span>
+        <div class="complexity-bar"><div class="complexity-fill c-warning" style="width:42%"></div></div>
+        <span class="complexity-label" style="color:var(--color-text-warning)">Medium</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-header">
+      <span class="phase-badge ph-4">Phase 4 · Intelligence layer</span>
+      <span class="phase-title">AI-generated insight summaries</span>
+      <span class="phase-meta">Weeks 7–8</span>
+    </div>
+    <div class="phase-body">
+      <div class="screen">
+        <div class="screen-header">
+          <i class="ti ti-sparkles screen-icon" aria-hidden="true"></i>
+          <span class="screen-name">Weekly AI summary card</span>
+          <span class="screen-sub">Pinned at top of analytics screen</span>
+        </div>
+        <div class="features">
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-robot feat-icon" aria-hidden="true"></i>Plain-Arabic summary</div>
+            <div class="feat-desc">3–4 sentence narrative generated by LLM from raw KPI data. "This week sales grew 18% driven by your summer campaign. ROAS improved to 4.6x. One campaign is underspending — Rabhan will investigate."</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-alert-triangle feat-icon" aria-hidden="true"></i>Anomaly alerts</div>
+            <div class="feat-desc">Detect unusual dips or spikes in any metric vs. trailing 7-day average. Surface as inline alert within the summary card with a brief explanation.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-message-circle feat-icon" aria-hidden="true"></i>Ask your data</div>
+            <div class="feat-desc">A text input in the analytics screen: "Why did conversions drop on Thursday?" — routes to a Claude API call with the client's last 30 days of data as context.</div>
+          </div>
+          <div class="feat">
+            <div class="feat-title"><i class="ti ti-refresh feat-icon" aria-hidden="true"></i>Auto-refresh cadence</div>
+            <div class="feat-desc">Summary regenerates every Monday at 6 AM local time via a Cloud Function scheduled trigger. Client sees the latest summary on their Monday morning check-in.</div>
+          </div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title">Strategic value</div>
+          <div class="insight-text">This is the differentiation layer. Most agency apps are static dashboards. A client who gets a plain-Arabic weekly narrative they can actually read — without needing to interpret charts — will stay far longer.</div>
+        </div>
+        <div class="complexity-row">
+          <span class="complexity-label">Phase complexity</span>
+          <div class="complexity-bar"><div class="complexity-fill c-danger" style="width:75%"></div></div>
+          <span class="complexity-label" style="color:var(--color-text-danger)">High</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary metrics -->
+  <div style="margin-top: 1.5rem;">
+    <div class="section-divider">Delivery overview</div>
+    <div class="priority-grid">
+      <div class="priority-card">
+        <div class="priority-num">4</div>
+        <div class="priority-label">major screens</div>
+      </div>
+      <div class="priority-card">
+        <div class="priority-num">8</div>
+        <div class="priority-label">weeks total</div>
+      </div>
+      <div class="priority-card">
+        <div class="priority-num">22</div>
+        <div class="priority-label">feature items</div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -533,16 +533,17 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
     );
   }
 
-  // ─── TAB 4: ANALYTICS ─────────────────────────────────────────────────────
   Widget _buildAnalyticsTab(String projectId, bool isAr) {
     final metricsAsync = ref.watch(latestMetricsProvider(projectId));
     final enginesAsync = ref.watch(growthEnginesProvider(projectId));
+    final summaryAsync = ref.watch(projectWeeklySummaryProvider(projectId));
 
     return RefreshIndicator(
       color: RabhanTheme.primaryGreen,
       onRefresh: () async {
         ref.invalidate(latestMetricsProvider(projectId));
         ref.invalidate(growthEnginesProvider(projectId));
+        ref.invalidate(projectWeeklySummaryProvider(projectId));
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -550,6 +551,62 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── AI SUMMARY CARD (PHASE 4) ─────────────────────────────────
+            summaryAsync.when(
+              data: (summary) {
+                if (summary == null || summary.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: RabhanTheme.primaryGreen.withAlpha(50)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: RabhanTheme.primaryGreen.withAlpha(10),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_awesome, color: RabhanTheme.primaryGreen, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            isAr ? 'ملخص الأداء الأسبوعي (AI)' : 'Weekly AI Insight Summary',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        summary,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.only(bottom: 24),
+                child: Center(child: CircularProgressIndicator(color: RabhanTheme.primaryGreen)),
+              ),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+
             // ── SECTION 1: Real Ecom KPIs ─────────────────────────────
             metricsAsync.when(
               loading: () => const LinearProgressIndicator(color: RabhanTheme.primaryGreen),

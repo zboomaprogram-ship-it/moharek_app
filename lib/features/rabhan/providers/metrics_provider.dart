@@ -18,3 +18,19 @@ final projectMetricsHistoryProvider = FutureProvider.family<List<Map<String, dyn
       .order('period_end', ascending: false);
   return List<Map<String, dynamic>>.from(response);
 });
+
+final projectWeeklySummaryProvider = FutureProvider.family<String?, String>((ref, projectId) async {
+  final client = ref.watch(supabaseClientProvider);
+  try {
+    final response = await client
+        .from('rabhan_weekly_summaries')
+        .select('summary_text')
+        .eq('project_id', projectId)
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return response?['summary_text'] as String?;
+  } catch (e) {
+    return null;
+  }
+});

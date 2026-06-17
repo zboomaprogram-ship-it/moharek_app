@@ -285,12 +285,18 @@ serve(async (req) => {
     }
 
     // Attempt to fetch new token columns (may fail if SQL migration hasn't been run)
-    const { data: extraData } = await supabase
+    const { data: extraData, error: extraError } = await supabase
       .from('profiles')
-      .select('fcm_token, apns_voip_token')
+      .select('fcm_token')
       .eq('id', targetId)
       .maybeSingle()
       
+    if (extraError) {
+      console.error('[send-notification] ❌ Error fetching tokens from profiles:', extraError)
+    } else {
+      console.log(`[send-notification] ℹ️ extraData for ${targetId}:`, JSON.stringify(extraData))
+    }
+
     if (extraData) {
       Object.assign(userData, extraData)
     }
@@ -343,51 +349,32 @@ serve(async (req) => {
 
     const results: any[] = []
 
-    // ── OneSignal Credentials Resolution ─────────────────────────────────────────
-    // Identify if this request originates from Rabhan vs Moharek to prevent duplicate pushes.
-    const getOneSignalCredentials = () => {
-      const isRabhan = SUPABASE_URL.includes('pyzheqwypoaazpmpgiuq') || 
-                       Deno.env.get('APP_FLAVOR')?.trim().toLowerCase() === 'rabhan';
-      
-      if (isRabhan) {
-        const appId = RABHAN_ONESIGNAL_APP_ID || Deno.env.get('ONESIGNAL_APP_ID')?.trim();
-        const apiKey = RABHAN_ONESIGNAL_API_KEY || Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
-        if (appId && apiKey) return { appId, apiKey };
-      } else {
-        const appId = MOHAREK_ONESIGNAL_APP_ID || Deno.env.get('ONESIGNAL_APP_ID')?.trim();
-        const apiKey = MOHAREK_ONESIGNAL_API_KEY || Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
-        if (appId && apiKey) return { appId, apiKey };
+    // ── OneSignal: Send to BOTH Apps (Users are partitioned by external_user_id or player_id) ──
+    const sendToAllOneSignalApps = async (targeting: any) => {
+      // 1. Try Moharek OneSignal
+      const moharekAppId = MOHAREK_ONESIGNAL_APP_ID || Deno.env.get('ONESIGNAL_APP_ID')?.trim();
+      const moharekApiKey = MOHAREK_ONESIGNAL_API_KEY || Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
+      if (moharekAppId && moharekApiKey) {
+        results.push(await sendToOneSignal(moharekAppId, moharekApiKey, targeting, sharedPayload));
       }
-
-      // Final fallback to whatever default env vars are present
-      const appId = Deno.env.get('ONESIGNAL_APP_ID')?.trim();
-      const apiKey = Deno.env.get('ONESIGNAL_REST_API_KEY')?.trim();
-      if (appId && apiKey) return { appId, apiKey };
-
-      return null;
+      
+      // 2. Try Rabhan OneSignal
+      const rabhanAppId = RABHAN_ONESIGNAL_APP_ID;
+      const rabhanApiKey = RABHAN_ONESIGNAL_API_KEY;
+      if (rabhanAppId && rabhanApiKey) {
+        results.push(await sendToOneSignal(rabhanAppId, rabhanApiKey, targeting, sharedPayload));
+      }
     };
 
-    const creds = getOneSignalCredentials();
-    if (!creds) {
-      console.error('[send-notification] Error: No OneSignal credentials found');
-      return new Response(JSON.stringify({ error: 'OneSignal credentials not found' }), { status: 500 });
-    }
-
-    // ── Strategy A: Target by stored Player ID (most reliable) ─────────────
+    // ── Strategy A: Target by stored Player ID ─────────────
     if (userData.onesignal_player_id) {
-      const playerTargeting = { 
-        include_subscription_ids: [userData.onesignal_player_id]
-      }
-      const res = await sendToOneSignal(creds.appId, creds.apiKey, playerTargeting, sharedPayload);
-      results.push(res);
+      await sendToAllOneSignalApps({ include_subscription_ids: [userData.onesignal_player_id] });
     } else {
-      // ── Strategy B: Target by External User ID (fallback) ──────────────────
-      const externalTargeting = {
+      // ── Strategy B: Target by External User ID ──────────────────
+      await sendToAllOneSignalApps({
         include_external_user_ids: [targetId],
         channel_for_external_user_ids: 'push',
-      }
-      const res = await sendToOneSignal(creds.appId, creds.apiKey, externalTargeting, sharedPayload);
-      results.push(res);
+      });
     }
 
     // ── Strategy C: Silent VoIP Push (Apple PushKit / Android FCM) ─────────
@@ -398,20 +385,12 @@ serve(async (req) => {
       if (userData.fcm_token) {
         console.log(`[send-notification] FCM token found for ${targetId}. Sending direct Firebase data push...`);
         try {
-          const serviceAccountStr = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')?.trim()
-          if (!serviceAccountStr) {
-            console.warn('[send-notification] WARNING: FIREBASE_SERVICE_ACCOUNT secret is missing! Cannot send FCM push.');
+          const moharekSAStr = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')?.trim()
+          const rabhanSAStr = Deno.env.get('RABHAN_FIREBASE_SERVICE_ACCOUNT')?.trim()
+          
+          if (!moharekSAStr && !rabhanSAStr) {
+            console.warn('[send-notification] WARNING: No FIREBASE_SERVICE_ACCOUNT secrets found! Cannot send FCM push.');
           } else {
-            // Initialize Firebase Admin if not already initialized
-            if (!admin.apps.length) {
-              const serviceAccount = JSON.parse(serviceAccountStr)
-              admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount)
-              })
-            }
-            
-            // Send data-only payload to FCM. This bypasses OneSignal and directly 
-            // wakes up the Flutter FirebaseMessaging.onBackgroundMessage isolate!
             const fcmPayload = {
               token: userData.fcm_token,
               data: {
@@ -421,30 +400,55 @@ serve(async (req) => {
                 caller_name: String(sharedPayload.data.caller_name || 'Admin'),
                 room_name: String(record?.room_name || ''),
               },
-              android: {
-                priority: 'high' as const,
-              }
+              android: { priority: 'high' as const }
             };
-            
-            const fcmRes = await admin.messaging().send(fcmPayload)
-            console.log(`[send-notification] FCM data push success: ${fcmRes}`)
-            results.push({ success: true, result: fcmRes })
+
+            let sentFCM = false;
+
+            // Try Moharek first
+            if (moharekSAStr) {
+               if (!admin.apps.find(a => a?.name === '[DEFAULT]')) {
+                  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(moharekSAStr)) });
+               }
+               try {
+                 const fcmRes = await admin.messaging().send(fcmPayload);
+                 console.log(`[send-notification] Moharek FCM push success: ${fcmRes}`);
+                 results.push({ success: true, result: fcmRes, app: 'moharek' });
+                 sentFCM = true;
+               } catch (e) {
+                 console.log(`[send-notification] Moharek FCM push failed: ${e}`);
+               }
+            }
+
+            // If Moharek failed (likely wrong token for this project), try Rabhan
+            if (!sentFCM && rabhanSAStr) {
+               if (!admin.apps.find(a => a?.name === 'rabhan')) {
+                  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(rabhanSAStr)) }, 'rabhan');
+               }
+               try {
+                 const fcmRes = await admin.app('rabhan').messaging().send(fcmPayload);
+                 console.log(`[send-notification] Rabhan FCM push success: ${fcmRes}`);
+                 results.push({ success: true, result: fcmRes, app: 'rabhan' });
+               } catch (e) {
+                 console.log(`[send-notification] Rabhan FCM push failed: ${e}`);
+               }
+            }
           }
         } catch (fcmErr) {
-          console.error(`[send-notification] FCM push failed:`, fcmErr)
+          console.error(`[send-notification] FCM push failed completely:`, fcmErr)
           results.push({ success: false, result: { error: String(fcmErr) } })
         }
       }
 
       // 2. Apple APNs (PushKit)
       if (userData.apns_voip_token) {
-        // We assume the bundle ID is com.zbooma.moharek (adjust if flavor is Rabhan)
-        const bundleId = SUPABASE_URL.includes('pyzheqwypoaazpmpgiuq') || Deno.env.get('APP_FLAVOR')?.trim().toLowerCase() === 'rabhan'
-          ? 'com.zbooma.rabhan' 
-          : 'com.zbooma.moharek';
-          
-        const apnsRes = await sendToAPNs(userData.apns_voip_token, sharedPayload, bundleId);
-        results.push(apnsRes);
+        // We will just try both bundles!
+        const bundles = ['com.zbooma.moharek', 'com.zbooma.rabhan'];
+        for (const bundleId of bundles) {
+          const apnsRes = await sendToAPNs(userData.apns_voip_token, sharedPayload, bundleId);
+          results.push(apnsRes);
+          if (apnsRes.success) break;
+        }
       }
     }
 

@@ -99,6 +99,15 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: ShimmerLoading.aiMessage(),
               ),
+            if (state.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  state.error!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             _buildInputArea(isAr),
           ],
         ),

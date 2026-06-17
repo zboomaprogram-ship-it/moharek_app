@@ -109,6 +109,18 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
     });
   }
 
+  Future<void> _startRingingTimeout() async {
+    await Future.delayed(const Duration(seconds: 60));
+    if (mounted && _room == null) {
+      if (_outgoingSignalId != null) {
+        try {
+          await _signalService.timeoutCall(_outgoingSignalId!);
+        } catch (_) {}
+      }
+      _safeExit();
+    }
+  }
+
   void _enableProximitySensor(bool enable) {
     if (kIsWeb) return;
     try {
@@ -131,6 +143,9 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> {
         return;
       }
       setState(() => _outgoingSignalId = signalId);
+      
+      // Start 60-second ringing timeout
+      _startRingingTimeout();
 
       // 2. Watch signal status
       _signalSub = _signalService.watchSignal(signalId).listen((signal) async {

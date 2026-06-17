@@ -225,7 +225,7 @@ class ApprovalDetailScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () => _showFeedbackDialog(context, ref, 'needs_edit'),
+                onPressed: () => _showFeedbackDialog(context, ref, 'changes_requested'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.redAccent,
                   side: const BorderSide(color: Colors.redAccent),

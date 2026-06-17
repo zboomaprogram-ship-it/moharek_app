@@ -20,17 +20,12 @@ class VoiceUploadService {
     final fileName = 'voice_${projectId}_${channelId}_${DateTime.now().millisecondsSinceEpoch}.m4a';
     String publicUrl = '';
 
-    if (kIsWeb) {
-      // On web, upload to Supabase Storage 'files' bucket to bypass CORS limitations on the WordPress server
-      if (recording.fileBytes != null) {
-        final storagePath = 'voice/$fileName';
-        await _supabase.storage.from('files').uploadBinary(storagePath, recording.fileBytes!);
-        publicUrl = _supabase.storage.from('files').getPublicUrl(storagePath);
-      } else {
-        throw Exception('VoiceUploadService: Voice bytes are null on web');
-      }
-    } else {
-      // Mobile/Desktop — read file bytes using dart:io
+    if (recording.fileBytes != null) {
+      publicUrl = await WordPressUploadService.uploadBytes(
+        recording.fileBytes!,
+        fileName,
+      );
+    } else if (!kIsWeb && recording.filePath.isNotEmpty) {
       final bytes = await file_io.readFileBytes(recording.filePath);
       if (bytes != null) {
         publicUrl = await WordPressUploadService.uploadBytes(
@@ -40,6 +35,8 @@ class VoiceUploadService {
       } else {
         throw Exception('VoiceUploadService: Could not read voice file bytes');
       }
+    } else {
+       throw Exception('VoiceUploadService: No voice data available');
     }
 
     // Insert message row

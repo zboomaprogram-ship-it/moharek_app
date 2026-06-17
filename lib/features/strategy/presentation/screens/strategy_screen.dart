@@ -573,6 +573,115 @@ class StrategyScreen extends ConsumerWidget {
         'ar': 'التحليلات والتتبع: إعداد GA4، تتبع التحويلات، وتتبع الأحداث.'
       },
     ],
+    // ── Rabhan E-Commerce Engines ─────────────────────────────────────────
+    'store': [
+      {
+        'en': 'UI/UX Optimization: Improve navigation, structure, and overall layout.',
+        'ar': 'تحسين تجربة المستخدم (UI/UX): تحسين التنقل، الهيكلة، والتصميم العام.'
+      },
+      {
+        'en': 'Speed Optimization: Ensure fast page load times on all devices.',
+        'ar': 'تحسين السرعة: ضمان أوقات تحميل سريعة للصفحات على جميع الأجهزة.'
+      },
+      {
+        'en': 'Mobile Responsiveness: Deliver a seamless mobile shopping experience.',
+        'ar': 'التوافق مع الجوال: تقديم تجربة تسوق سلسة ومريحة عبر الجوال.'
+      },
+      {
+        'en': 'Payment Integration: Set up secure and diverse payment gateways.',
+        'ar': 'بوابات الدفع: إعداد بوابات دفع إلكترونية متعددة وآمنة.'
+      },
+    ],
+    'product': [
+      {
+        'en': 'Product Descriptions: Write compelling and SEO-friendly copy.',
+        'ar': 'وصف المنتجات: كتابة نصوص جذابة ومحسنة لمحركات البحث.'
+      },
+      {
+        'en': 'High-Quality Imagery: Produce professional photos and demo videos.',
+        'ar': 'صور عالية الجودة: إنتاج صور وفيديوهات توضيحية احترافية.'
+      },
+      {
+        'en': 'Pricing Strategy: Implement competitive pricing and discounts.',
+        'ar': 'استراتيجية التسعير: تطبيق تسعير تنافسي وعروض خصومات.'
+      },
+      {
+        'en': 'Inventory Management: Ensure real-time accurate stock tracking.',
+        'ar': 'إدارة المخزون: ضمان تتبع دقيق ولحظي للمخزون.'
+      },
+    ],
+    'ads': [
+      {
+        'en': 'Campaign Strategy: Define target audience, budget, and goals.',
+        'ar': 'استراتيجية الحملات: تحديد الجمهور المستهدف، الميزانية، والأهداف.'
+      },
+      {
+        'en': 'Ad Creatives: Design high-converting banners and engaging videos.',
+        'ar': 'التصميم الإعلاني: تصميم لافتات وفيديوهات جذابة وعالية التحويل.'
+      },
+      {
+        'en': 'Platform Setup: Integrate Meta, Google, TikTok pixels and APIs.',
+        'ar': 'تجهيز المنصات: ربط بيكسل وواجهات (APIs) ميتا، جوجل، وتيك توك.'
+      },
+      {
+        'en': 'ROAS Optimization: Monitor, tweak, and improve Return on Ad Spend.',
+        'ar': 'تحسين العائد (ROAS): مراقبة، تعديل، وتحسين العائد على الإنفاق الإعلاني.'
+      },
+    ],
+    'sales_page': [
+      {
+        'en': 'Landing Page Design: Build high-converting, highly-focused layouts.',
+        'ar': 'تصميم صفحات الهبوط: بناء تصاميم مركزة ومخصصة لرفع معدل التحويل.'
+      },
+      {
+        'en': 'Offer Creation: Craft irresistible bundles and strategic upsells.',
+        'ar': 'صناعة العروض: ابتكار باقات عروض لا تقاوم وصفقات بديلة (Upsells).'
+      },
+      {
+        'en': 'Trust Signals: Display authentic reviews, guarantees, and social proof.',
+        'ar': 'إشارات الثقة: عرض التقييمات الحقيقية، الضمانات، والإثبات الاجتماعي.'
+      },
+      {
+        'en': 'A/B Testing: Continuously test headlines and CTAs for better conversions.',
+        'ar': 'اختبارات A/B: اختبار مستمر للعناوين ودعوات اتخاذ الإجراء لتحسين التحويل.'
+      },
+    ],
+    'operations': [
+      {
+        'en': 'Order Fulfillment: Streamline picking, packing, and dispatch processes.',
+        'ar': 'تجهيز الطلبات: تبسيط عمليات الانتقاء والتغليف وتجهيز الشحنات.'
+      },
+      {
+        'en': 'Shipping & Logistics: Integrate with fast, reliable delivery partners.',
+        'ar': 'الشحن واللوجستيات: الربط مع شركاء توصيل موثوقين وسريعين.'
+      },
+      {
+        'en': 'Customer Support: Set up efficient handling for queries and returns.',
+        'ar': 'خدمة العملاء: إعداد نظام لمعالجة فعالة للاستفسارات والمرتجعات.'
+      },
+      {
+        'en': 'Automation Workflows: Implement automated emails and SMS alerts.',
+        'ar': 'أتمتة العمليات: تطبيق رسائل بريد إلكتروني وتنبيهات نصية تلقائية.'
+      },
+    ],
+    'analytics': [
+      {
+        'en': 'Tracking Setup: Properly configure GA4, Tag Manager, and Conversion APIs.',
+        'ar': 'إعداد التتبع: التكوين الصحيح لـ GA4، إدارة العلامات، وواجهات التحويل.'
+      },
+      {
+        'en': 'Dashboard Creation: Build live performance monitoring dashboards.',
+        'ar': 'إنشاء لوحات القيادة: بناء لوحات لمراقبة الأداء والمبيعات المباشرة.'
+      },
+      {
+        'en': 'Data Analysis: Identify user bottlenecks, drop-offs, and opportunities.',
+        'ar': 'تحليل البيانات: تحديد الاختناقات، نقاط انسحاب العملاء، وفرص النمو.'
+      },
+      {
+        'en': 'Reporting: Generate automated weekly and monthly growth reports.',
+        'ar': 'التقارير: توليد تقارير آلية أسبوعية وشهرية لقياس النمو.'
+      },
+    ],
   };
 }
 

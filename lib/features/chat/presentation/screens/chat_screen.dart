@@ -21,6 +21,7 @@ import 'package:moharek_app/features/chat/widgets/voice_message_bubble.dart';
 import 'package:moharek_app/shared/widgets/shimmer_loading.dart';
 import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/shared/utils/file_helper.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 
 final _urlRegExp = RegExp(
   r'((https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))',
@@ -169,6 +170,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await _uploadAndSend(image.name, bytes, image.path, 'image');
   }
 
+  Future<void> _sendVideo() async {
+    setState(() => _showAttachMenu = false);
+    final picker = ImagePicker();
+    final video = await picker.pickVideo(
+      source: ImageSource.gallery,
+    );
+    if (video == null) return;
+    final bytes = await video.readAsBytes();
+    await _uploadAndSend(video.name, bytes, video.path, 'video');
+  }
+
+
   Future<void> _uploadAndSend(
     String fileName,
     Uint8List? bytes,
@@ -181,30 +194,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final storageName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
     try {
+      String url = '';
       if (bytes != null) {
-        await client.storage
-            .from('files')
-            .uploadBinary('chat/$storageName', bytes);
+        url = await WordPressUploadService.uploadBytes(bytes, storageName);
       } else if (path != null) {
         final file = File(path);
         if (await file.exists()) {
           final fileBytes = await file.readAsBytes();
-          await client.storage
-              .from('files')
-              .uploadBinary('chat/$storageName', fileBytes);
+          url = await WordPressUploadService.uploadBytes(fileBytes, storageName);
         } else {
           throw Exception('File does not exist at path: $path');
         }
       } else {
         throw Exception('No file data or path available');
       }
-      final url = client.storage
-          .from('files')
-          .getPublicUrl('chat/$storageName');
+
       await client.from('messages').insert({
         'channel_id': channelId,
         'sender_id': client.auth.currentUser!.id,
-        'content': type == 'image' ? '📷 ${l10n.photoLabel}' : '📎 $fileName',
+        'content': type == 'image' ? '📷 ${l10n.photoLabel}' : type == 'video' ? '🎥 ${l10n.localeName == 'ar' ? 'فيديو' : 'Video'}' : '📎 $fileName',
         'message_type': type,
         'file_url': url,
       });
@@ -216,6 +224,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             content: Text(
               AppLocalizations.of(context)!.uploadFailed(e.toString()),
             ),
+
             backgroundColor: Colors.red,
           ),
         );
@@ -632,6 +641,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isImage = msg.messageType == 'image';
     final isFile = msg.messageType == 'file';
     final isVoice = msg.messageType == 'voice';
+    final isVideo = msg.messageType == 'video';
     final isVideoCall = msg.messageType == 'video_call';
     final isVoiceCall = msg.messageType == 'voice_call';
     final isCall = isVideoCall || isVoiceCall;
@@ -719,8 +729,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ),
               )
-            // File message
-            else if (isFile && msg.fileUrl != null)
+            // File or Video message
+            else if ((isFile || isVideo) && msg.fileUrl != null)
               GestureDetector(
                 onTap: () => openFileInApp(context, msg.fileUrl!, msg.content),
                 child: Container(
@@ -735,7 +745,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.insert_drive_file,
+                        isVideo ? Icons.play_circle_fill : Icons.insert_drive_file,
                         size: 20,
                         color: isMe ? Colors.black54 : AppTheme.primaryBlue,
                       ),
@@ -829,30 +839,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      width: double.infinity,
       color: AppTheme.cardColor,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Wrap(
+        alignment: WrapAlignment.spaceEvenly,
+        spacing: 16,
+        runSpacing: 16,
         children: [
           _attachOption(Icons.image, l10n.photo, Colors.purple, _sendImage),
-          _attachOption(
-            Icons.insert_drive_file,
-            l10n.files,
-            AppTheme.primaryBlue,
-            _sendFile,
-          ),
-          _attachOption(Icons.videocam, l10n.startVideoCall, Colors.teal, () {
+          _attachOption(Icons.videocam, l10n.localeName == 'ar' ? 'فيديو' : 'Video', Colors.orange, _sendVideo),
+          _attachOption(Icons.insert_drive_file, l10n.files, AppTheme.primaryBlue, _sendFile),
+          _attachOption(Icons.video_call, l10n.startVideoCall, Colors.teal, () {
             setState(() => _showAttachMenu = false);
             _startCall(true);
           }),
-          _attachOption(
-            Icons.call,
-            l10n.startVoiceCall,
-            AppTheme.primaryGreen,
-            () {
-              setState(() => _showAttachMenu = false);
-              _startCall(false);
-            },
-          ),
+          _attachOption(Icons.call, l10n.startVoiceCall, AppTheme.primaryGreen, () {
+            setState(() => _showAttachMenu = false);
+            _startCall(false);
+          }),
         ],
       ),
     );

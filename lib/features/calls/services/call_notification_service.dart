@@ -174,6 +174,10 @@ class CallNotificationService {
         audioSessionActive: true,
         ringtonePath: 'system_ringtone_default',
       ),
+      callingNotification: const NotificationParams(
+        showNotification: false,
+        isShowCallback: false,
+      ),
     );
 
     await FlutterCallkitIncoming.showCallkitIncoming(params);
@@ -249,17 +253,9 @@ class CallNotificationService {
       isCallActive = true;
       _acceptedCallIds.add(uuid);
 
-      // IMMEDIATELY dismiss the native CallKit incoming call UI on Android.
-      // On iOS, we MUST NOT end the call, otherwise the CallKit session drops and background audio fails.
-      // The native OS manages the active call UI automatically on iOS.
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        try {
-          await FlutterCallkitIncoming.endCall(uuid);
-          debugPrint('📞 [CallKit] Native incoming call UI dismissed for $uuid');
-        } catch (e) {
-          debugPrint('📞 [CallKit] Warning: could not dismiss native call UI: $e');
-        }
-      }
+      // We no longer manually end the call on Android, as the plugin handles dismissal 
+      // of the incoming call UI automatically. Manually calling endCall triggers 
+      // an ACTION_CALL_ENDED event which breaks the flow.
 
       // Wait for session to restore BEFORE running any database query or joining the call.
       // This is crucial for cold starts when the user accepts from the killed state.
@@ -272,6 +268,9 @@ class CallNotificationService {
         _cleanupCallState(uuid);
         return;
       }
+      
+      final currentUserId = session.user.id;
+      debugPrint('📞 [CallKit] Executing _handleAcceptCall as user: $currentUserId');
 
       // 1. Mark as accepted in database
       try {
@@ -289,7 +288,25 @@ class CallNotificationService {
           .maybeSingle();
 
       if (response == null) {
-        debugPrint('📞 [CallKit] _handleAcceptCall: signal $uuid not found in DB');
+        debugPrint('📞 [CallKit] _handleAcceptCall: signal $uuid not found in DB for user $currentUserId');
+        if (rootNavigatorKey.currentContext != null) {
+          ScaffoldMessenger.of(rootNavigatorKey.currentContext!).showSnackBar(
+            SnackBar(
+              content: Text('خطأ: المكالمة غير موجودة. تأكد من أنك مسجل بالحساب الصحيح.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        _cleanupCallState(uuid);
+        return;
+      }
+
+      final status = response['status'] as String?;
+      if (status != 'ringing' && status != 'active') {
+        debugPrint('📞 [CallKit] _handleAcceptCall: signal $uuid is already $status, aborting and ending native call');
+        try {
+          await FlutterCallkitIncoming.endCall(uuid);
+        } catch (_) {}
         _cleanupCallState(uuid);
         return;
       }
@@ -319,6 +336,11 @@ class CallNotificationService {
       _waitForNavigationAndPush(room, callType ?? 'video', uuid);
     } catch (e) {
       debugPrint('📞 [CallKit] Error handling accepted call: $e');
+      if (rootNavigatorKey.currentContext != null) {
+        ScaffoldMessenger.of(rootNavigatorKey.currentContext!).showSnackBar(
+          SnackBar(content: Text('Call Error: $e'), backgroundColor: Colors.red),
+        );
+      }
       _cleanupCallState(uuid);
     }
   }
@@ -326,6 +348,7 @@ class CallNotificationService {
   static Future<void> _waitForNavigationAndPush(dynamic room, String callType, String uuid) async {
     int retries = 0;
     while (rootNavigatorKey.currentState == null || 
+
            !rootNavigatorKey.currentState!.mounted) {
       if (retries > 120) { // Wait up to 30 seconds for the user to open the app
         debugPrint('📞 [CallKit] Navigation timeout: app stayed in background too long. UI not pushed.');
@@ -340,6 +363,10 @@ class CallNotificationService {
 
   static Future<void> _navigateToCallScreen(dynamic room, String callType, String uuid) async {
     try {
+      // Add a short delay to ensure GoRouter has finished its initial redirect (e.g. to /dashboard)
+      // otherwise GoRouter's declarative stack will wipe out this imperative push!
+      await Future.delayed(const Duration(milliseconds: 1500));
+      
       rootNavigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (_) => ActiveCallScreen(

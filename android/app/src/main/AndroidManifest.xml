@@ -77,6 +77,13 @@
         <meta-data
             android:name="onesignal_app_id"
             android:value="234d893b-ca81-493d-9afd-6a287a69b27e" />
+
+        <!-- Override CallkitNotificationService to remove microphone/camera which causes SecurityException on Android 14+ when permissions are not granted yet -->
+        <service
+            android:name="com.hiennv.flutter_callkit_incoming.CallkitNotificationService"
+            android:foregroundServiceType="shortService"
+            tools:replace="android:foregroundServiceType"
+            android:exported="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

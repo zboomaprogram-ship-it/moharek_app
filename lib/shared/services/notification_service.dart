@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart'; // Required for WidgetsFlutterBinding
 import 'package:moharek_app/core/config/app_config.dart';
@@ -28,7 +29,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // launches (via CallNotificationService.init() and checkForPendingAcceptedCall()).
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (message.data['type'] == 'call') {
+  Map<String, dynamic> data = message.data;
+  if (data.containsKey('custom')) {
+    try {
+      final customStr = data['custom'] as String;
+      final customJson = jsonDecode(customStr) as Map<String, dynamic>;
+      if (customJson.containsKey('a')) {
+        data = customJson['a'] as Map<String, dynamic>;
+      }
+    } catch (_) {}
+  }
+
+  if (data['type'] == 'call') {
     debugPrint('🔔 [FCM Background] Incoming call push received — showing CallKit UI');
 
     // Load the flavor from SharedPreferences so we can use the right colors/name.

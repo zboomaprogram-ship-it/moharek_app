@@ -745,6 +745,7 @@ CREATE TRIGGER trigger_project_created
   EXECUTE FUNCTION public.on_project_created();
 
 -- Helper views/functions for metrics
+DROP FUNCTION IF EXISTS public.get_latest_metrics(uuid);
 CREATE OR REPLACE FUNCTION public.get_latest_metrics(p_project_id uuid)
 RETURNS TABLE (
   total_sales numeric, prev_sales numeric,

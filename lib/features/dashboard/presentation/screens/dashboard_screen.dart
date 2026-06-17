@@ -200,7 +200,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             children: [
 
                         // Brief completion reminder card
-                        if (projectAsync.hasValue &&
+                        if (AppConfig.flavorName != 'rabhan' &&
+                            projectAsync.hasValue &&
                             projectAsync.value != null) ...[
                           (() {
                             final project = projectAsync.value!;
