@@ -18,7 +18,8 @@ class CallKitParams {
   final int? duration;
   final String? textAccept;
   final String? textDecline;
-  final dynamic missedCallNotification;
+  final NotificationParams? missedCallNotification;
+  final NotificationParams? callingNotification;
   final Map<String, dynamic>? extra;
   final Map<String, dynamic>? headers;
   final AndroidParams? android;
@@ -35,10 +36,29 @@ class CallKitParams {
     this.textAccept,
     this.textDecline,
     this.missedCallNotification,
+    this.callingNotification,
     this.extra,
     this.headers,
     this.android,
     this.ios,
+  });
+}
+
+class NotificationParams {
+  final bool? showNotification;
+  final int? count;
+  final String? subtitle;
+  final String? callbackText;
+  final bool? isShowLogo;
+  final bool? isShowCallback;
+
+  const NotificationParams({
+    this.showNotification,
+    this.count,
+    this.subtitle,
+    this.callbackText,
+    this.isShowLogo,
+    this.isShowCallback,
   });
 }
 
