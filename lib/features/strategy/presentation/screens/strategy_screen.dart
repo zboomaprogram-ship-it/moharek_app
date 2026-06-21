@@ -11,6 +11,10 @@ import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/rabhan/screens/rabhan_strategy_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
+
 class StrategyScreen extends ConsumerWidget {
   const StrategyScreen({super.key});
 
@@ -76,7 +80,7 @@ class StrategyScreen extends ConsumerWidget {
                           );
                         return Column(
                           children: stages
-                              .map((s) => _buildJourneyItem(s, isAr))
+                              .map((s) => _buildJourneyItem(context, s, isAr))
                               .toList(),
                         );
                       },
@@ -121,7 +125,9 @@ class StrategyScreen extends ConsumerWidget {
                         ),
                         GrowthEngineCard(
                           type: 'ai_visibility',
-                          label: isAr ? 'محرك الظهور في AI' : 'AI Visibility Engine',
+                          label: isAr
+                              ? 'محرك الظهور في AI'
+                              : 'AI Visibility Engine',
                           engines: engines,
                           icon: Icons.smart_toy,
                           color: Colors.purple,
@@ -159,59 +165,78 @@ class StrategyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildJourneyItem(JourneyStage stage, bool isAr) {
+  Widget _buildJourneyItem(
+    BuildContext context,
+    JourneyStage stage,
+    bool isAr,
+  ) {
     final bool isCompleted = stage.status == 'completed';
     final bool isInProgress = stage.status == 'in_progress';
+    final bool isResults = stage.stageName == 'results';
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
+    return InkWell(
+      onTap: isResults ? () => GoRouter.of(context).go('/results') : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isCompleted
-                    ? AppTheme.primaryGreen
-                    : (isInProgress ? AppTheme.primaryBlue : Colors.white10),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white10),
-              ),
-              child: isCompleted
-                  ? const Icon(Icons.check, size: 10, color: Colors.black)
-                  : null,
+            Column(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? AppTheme.primaryGreen
+                        : (isInProgress
+                              ? AppTheme.primaryBlue
+                              : Colors.white10),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: isCompleted
+                      ? const Icon(Icons.check, size: 10, color: Colors.black)
+                      : null,
+                ),
+                Container(width: 2, height: 40, color: Colors.white10),
+              ],
             ),
-            Container(width: 2, height: 40, color: Colors.white10),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getStageLabel(stage.stageName, isAr),
+                    style: TextStyle(
+                      color: isCompleted
+                          ? Colors.white
+                          : (isInProgress
+                                ? AppTheme.primaryBlue
+                                : Colors.white38),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (stage.stageDescription != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        stage.stageDescription!,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _getStageLabel(stage.stageName, isAr),
-                style: TextStyle(
-                  color: isCompleted
-                      ? Colors.white
-                      : (isInProgress ? AppTheme.primaryBlue : Colors.white38),
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (stage.stageDescription != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    stage.stageDescription!,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -426,260 +451,337 @@ class StrategyScreen extends ConsumerWidget {
     'content': [
       {
         'en': 'Keyword Research: Target primary, secondary & LSI keywords.',
-        'ar': 'البحث عن الكلمات المفتاحية: استهداف الكلمات الأساسية والثانوية وLSI.'
+        'ar':
+            'البحث عن الكلمات المفتاحية: استهداف الكلمات الأساسية والثانوية وLSI.',
       },
       {
         'en': 'Optimize On-Page Elements: Title, Meta Description, H1–H6, URL.',
-        'ar': 'تحسين العناصر داخل الصفحة: العناوين، الأوصاف التعريفية، وسوم H1-H6، والروابط.'
+        'ar':
+            'تحسين العناصر داخل الصفحة: العناوين، الأوصاف التعريفية، وسوم H1-H6، والروابط.',
       },
       {
-        'en': 'Content Quality: Original, in-depth, useful, and intent-focused content.',
-        'ar': 'جودة المحتوى: محتوى أصلي، متعمق، مفيد وموجه لنية بحث المستخدم.'
+        'en':
+            'Content Quality: Original, in-depth, useful, and intent-focused content.',
+        'ar': 'جودة المحتوى: محتوى أصلي، متعمق، مفيد وموجه لنية بحث المستخدم.',
       },
       {
-        'en': 'Semantic SEO: Add related terms & entities (Entity SEO / Knowledge Graph).',
-        'ar': 'سيو دلالي (Semantic SEO): إضافة مصطلحات وكيانات ذات صلة (Entity SEO).'
+        'en':
+            'Semantic SEO: Add related terms & entities (Entity SEO / Knowledge Graph).',
+        'ar':
+            'سيو دلالي (Semantic SEO): إضافة مصطلحات وكيانات ذات صلة (Entity SEO).',
       },
       {
-        'en': 'Readability: Short paragraphs, bullet points, scannable structure.',
-        'ar': 'سهولة القراءة: فقرات قصيرة، نقاط تعداد، وهيكل سهل التصفح.'
+        'en':
+            'Readability: Short paragraphs, bullet points, scannable structure.',
+        'ar': 'سهولة القراءة: فقرات قصيرة، نقاط تعداد، وهيكل سهل التصفح.',
       },
       {
-        'en': 'Media Optimization: Compress images, use descriptive filenames & Alt Text.',
-        'ar': 'تحسين الوسائط: ضغط الصور، استخدام أسماء ملفات وصفية ونصوص بديلة (Alt Text).'
+        'en':
+            'Media Optimization: Compress images, use descriptive filenames & Alt Text.',
+        'ar':
+            'تحسين الوسائط: ضغط الصور، استخدام أسماء ملفات وصفية ونصوص بديلة (Alt Text).',
       },
       {
-        'en': 'Internal Linking: Link relevant pages with keyword-rich anchor text.',
-        'ar': 'الربط الداخلي: ربط الصفحات ذات الصلة بنصوص مرساة غنية بالكلمات المفتاحية.'
+        'en':
+            'Internal Linking: Link relevant pages with keyword-rich anchor text.',
+        'ar':
+            'الربط الداخلي: ربط الصفحات ذات الصلة بنصوص مرساة غنية بالكلمات المفتاحية.',
       },
       {
-        'en': 'Content Freshness: Update content regularly to maintain rankings.',
-        'ar': 'تحديث المحتوى: تحديث المحتوى بانتظام للحفاظ على التصنيفات.'
+        'en':
+            'Content Freshness: Update content regularly to maintain rankings.',
+        'ar': 'تحديث المحتوى: تحديث المحتوى بانتظام للحفاظ على التصنيفات.',
       },
     ],
     'seo': [
       {
         'en': 'Technical Audit: Fix crawl errors, redirects, and broken links.',
-        'ar': 'التدقيق التقني: إصلاح أخطاء الزحف، التوجيهات، والروابط المعطلة.'
+        'ar': 'التدقيق التقني: إصلاح أخطاء الزحف، التوجيهات، والروابط المعطلة.',
       },
       {
-        'en': 'URL Structure: Clean, short, keyword-optimized, canonicalized URLs.',
-        'ar': 'بنية الروابط: روابط نظيفة، قصيرة، محسنة للكلمات المفتاحية، ومحددة أساسياً (Canonical).'
+        'en':
+            'URL Structure: Clean, short, keyword-optimized, canonicalized URLs.',
+        'ar':
+            'بنية الروابط: روابط نظيفة، قصيرة، محسنة للكلمات المفتاحية، ومحددة أساسياً (Canonical).',
       },
       {
-        'en': 'Site Speed: Optimize Core Web Vitals (LCP, INP, CLS) and page speed.',
-        'ar': 'سرعة الموقع: تحسين مؤشرات أداء الويب الأساسية (Core Web Vitals) وسرعة الصفحة.'
+        'en':
+            'Site Speed: Optimize Core Web Vitals (LCP, INP, CLS) and page speed.',
+        'ar':
+            'سرعة الموقع: تحسين مؤشرات أداء الويب الأساسية (Core Web Vitals) وسرعة الصفحة.',
       },
       {
-        'en': 'Mobile Optimization: Ensure mobile-first design & responsiveness.',
-        'ar': 'التوافق مع الجوال: ضمان تصميم مستجيب ومتوافق مع الجوال أولاً.'
+        'en':
+            'Mobile Optimization: Ensure mobile-first design & responsiveness.',
+        'ar': 'التوافق مع الجوال: ضمان تصميم مستجيب ومتوافق مع الجوال أولاً.',
       },
       {
-        'en': 'Robots.txt & Sitemap.xml: Submit and keep updated in Google Search Console.',
-        'ar': 'ملفات Robots.txt و Sitemap.xml: تقديمها وتحديثها في Google Search Console.'
+        'en':
+            'Robots.txt & Sitemap.xml: Submit and keep updated in Google Search Console.',
+        'ar':
+            'ملفات Robots.txt و Sitemap.xml: تقديمها وتحديثها في Google Search Console.',
       },
       {
         'en': 'Structured Data (Schema): Implement relevant schema markup.',
-        'ar': 'البيانات المنظمة (Schema): تطبيق ترميز المخطط المناسب.'
+        'ar': 'البيانات المنظمة (Schema): تطبيق ترميز المخطط المناسب.',
       },
       {
         'en': 'Indexation: Check index coverage and fix indexing issues.',
-        'ar': 'الفهرسة: التحقق من تغطية الفهرسة وإصلاح مشاكل الفهرسة.'
+        'ar': 'الفهرسة: التحقق من تغطية الفهرسة وإصلاح مشاكل الفهرسة.',
       },
       {
         'en': 'Monitoring: Track performance in Google Search Console.',
-        'ar': 'المراقبة: تتبع الأداء والظهور في Google Search Console.'
+        'ar': 'المراقبة: تتبع الأداء والظهور في Google Search Console.',
       },
     ],
     'ai_visibility': [
       {
-        'en': 'Create High-Quality, E-E-A-T Driven Content: Experience, Expertise, Authoritativeness, Trust.',
-        'ar': 'إنشاء محتوى عالي الجودة يدعم E-E-A-T: الخبرة، التخصص، الموثوقية، والمصداقية.'
+        'en':
+            'Create High-Quality, E-E-A-T Driven Content: Experience, Expertise, Authoritativeness, Trust.',
+        'ar':
+            'إنشاء محتوى عالي الجودة يدعم E-E-A-T: الخبرة، التخصص، الموثوقية، والمصداقية.',
       },
       {
-        'en': 'FAQ & Q&A Optimization: Answer user questions clearly and concisely.',
-        'ar': 'تحسين الأسئلة الشائعة: الإجابة على أسئلة المستخدمين بوضوح واختصار.'
+        'en':
+            'FAQ & Q&A Optimization: Answer user questions clearly and concisely.',
+        'ar':
+            'تحسين الأسئلة الشائعة: الإجابة على أسئلة المستخدمين بوضوح واختصار.',
       },
       {
-        'en': 'Content Structure: Use headings, bullets, and tables for AI readability.',
-        'ar': 'بنية المحتوى: استخدام العناوين والنقاط والجداول لتسهيل القراءة على نماذج الذكاء الاصطناعي.'
+        'en':
+            'Content Structure: Use headings, bullets, and tables for AI readability.',
+        'ar':
+            'بنية المحتوى: استخدام العناوين والنقاط والجداول لتسهيل القراءة على نماذج الذكاء الاصطناعي.',
       },
       {
-        'en': 'Mentions & Citations: Get mentioned on reputable sites and platforms.',
-        'ar': 'الإشارات والاستشهادات: الحصول على إشارات في مواقع ومنصات موثوقة.'
+        'en':
+            'Mentions & Citations: Get mentioned on reputable sites and platforms.',
+        'ar':
+            'الإشارات والاستشهادات: الحصول على إشارات في مواقع ومنصات موثوقة.',
       },
       {
-        'en': 'Optimize for AI Overviews: Provide clear, direct, and factual answers.',
-        'ar': 'تحسين لنتائج بحث الذكاء الاصطناعي: تقديم إجابات واضحة ومباشرة وحقيقية.'
+        'en':
+            'Optimize for AI Overviews: Provide clear, direct, and factual answers.',
+        'ar':
+            'تحسين لنتائج بحث الذكاء الاصطناعي: تقديم إجابات واضحة ومباشرة وحقيقية.',
       },
       {
-        'en': 'Monitor Brand Presence: Track visibility in AI responses and platforms (ChatGPT, Gemini, Perplexity).',
-        'ar': 'مراقبة حضور العلامة التجارية: تتبع الظهور في إجابات الذكاء الاصطناعي (ChatGPT, Gemini, Perplexity).'
+        'en':
+            'Monitor Brand Presence: Track visibility in AI responses and platforms (ChatGPT, Gemini, Perplexity).',
+        'ar':
+            'مراقبة حضور العلامة التجارية: تتبع الظهور في إجابات الذكاء الاصطناعي (ChatGPT, Gemini, Perplexity).',
       },
     ],
     'trust': [
       {
         'en': 'Secure Website: Enable HTTPS with a valid SSL certificate.',
-        'ar': 'أمان الموقع: تفعيل بروتوكول HTTPS مع شهادة SSL صالحة.'
+        'ar': 'أمان الموقع: تفعيل بروتوكول HTTPS مع شهادة SSL صالحة.',
       },
       {
-        'en': 'Trust Signals: Add About Us, Contact, Privacy Policy, and Terms pages.',
-        'ar': 'إشارات الثقة: إضافة صفحات من نحن، اتصل بنا، سياسة الخصوصية، والشروط والأحكام.'
+        'en':
+            'Trust Signals: Add About Us, Contact, Privacy Policy, and Terms pages.',
+        'ar':
+            'إشارات الثقة: إضافة صفحات من نحن، اتصل بنا، سياسة الخصوصية، والشروط والأحكام.',
       },
       {
-        'en': 'Reviews & Ratings: Showcase customer reviews, testimonials & ratings.',
-        'ar': 'المراجعات والتقييمات: عرض مراجعات العملاء وتوصياتهم وتقييماتهم.'
+        'en':
+            'Reviews & Ratings: Showcase customer reviews, testimonials & ratings.',
+        'ar': 'المراجعات والتقييمات: عرض مراجعات العملاء وتوصياتهم وتقييماتهم.',
       },
       {
-        'en': 'Author & Publisher Info: Add author bios and company credentials.',
-        'ar': 'معلومات الكاتب والناشر: إضافة سيرة ذاتية للمؤلفين ومستندات اعتماد الشركة.'
+        'en':
+            'Author & Publisher Info: Add author bios and company credentials.',
+        'ar':
+            'معلومات الكاتب والناشر: إضافة سيرة ذاتية للمؤلفين ومستندات اعتماد الشركة.',
       },
       {
-        'en': 'Transparent Policies: Clear return, shipping, and refund policies.',
-        'ar': 'سياسات شفافة: سياسات واضحة للاسترجاع، الشحن، واسترداد الأموال.'
+        'en':
+            'Transparent Policies: Clear return, shipping, and refund policies.',
+        'ar': 'سياسات شفافة: سياسات واضحة للاسترجاع، الشحن، واسترداد الأموال.',
       },
       {
-        'en': 'Security & Compliance: Ensure GDPR/CCPA compliance and data protection.',
-        'ar': 'الأمن والامتثال: ضمان الامتثال لمعايير GDPR/CCPA وحماية البيانات.'
+        'en':
+            'Security & Compliance: Ensure GDPR/CCPA compliance and data protection.',
+        'ar':
+            'الأمن والامتثال: ضمان الامتثال لمعايير GDPR/CCPA وحماية البيانات.',
       },
     ],
     'conversion': [
       {
-        'en': 'Landing Page Optimization: Clear value proposition and strong CTA.',
-        'ar': 'تحسين صفحات الهبوط: عرض قيمة واضح ودعوة قوية لاتخاذ إجراء (CTA).'
+        'en':
+            'Landing Page Optimization: Clear value proposition and strong CTA.',
+        'ar':
+            'تحسين صفحات الهبوط: عرض قيمة واضح ودعوة قوية لاتخاذ إجراء (CTA).',
       },
       {
-        'en': 'Product Pages: Unique descriptions, high-quality images, specs, and FAQs.',
-        'ar': 'صفحات المنتجات: أوصاف فريدة، صور عالية الجودة، المواصفات، والأسئلة الشائعة.'
+        'en':
+            'Product Pages: Unique descriptions, high-quality images, specs, and FAQs.',
+        'ar':
+            'صفحات المنتجات: أوصاف فريدة، صور عالية الجودة، المواصفات، والأسئلة الشائعة.',
       },
       {
-        'en': 'User Experience (UX): Easy navigation, search, filters, and site structure.',
-        'ar': 'تجربة المستخدم (UX): سهولة التنقل، البحث، الفلاتر، وهيكل الموقع.'
+        'en':
+            'User Experience (UX): Easy navigation, search, filters, and site structure.',
+        'ar':
+            'تجربة المستخدم (UX): سهولة التنقل، البحث، الفلاتر، وهيكل الموقع.',
       },
       {
         'en': 'Add-to-Cart & Checkout: Simplify steps and reduce friction.',
-        'ar': 'الإضافة للسلة وإتمام الشراء: تبسيط الخطوات وتقليل نقاط الاحتكاك.'
+        'ar':
+            'الإضافة للسلة وإتمام الشراء: تبسيط الخطوات وتقليل نقاط الاحتكاك.',
       },
       {
-        'en': 'Offer Optimization: Discounts, bundles, upsells, and free shipping thresholds.',
-        'ar': 'تحسين العروض: خصومات، حزم منتجات، صفقات بديلة، وحدود الشحن المجاني.'
+        'en':
+            'Offer Optimization: Discounts, bundles, upsells, and free shipping thresholds.',
+        'ar':
+            'تحسين العروض: خصومات، حزم منتجات، صفقات بديلة، وحدود الشحن المجاني.',
       },
       {
         'en': 'A/B Testing: Test headlines, CTAs, layouts, and offers.',
-        'ar': 'اختبارات A/B: اختبار العناوين، دعوات اتخاذ الإجراء، التنسيقات، والعروض.'
+        'ar':
+            'اختبارات A/B: اختبار العناوين، دعوات اتخاذ الإجراء، التنسيقات، والعروض.',
       },
       {
-        'en': 'Analytics & Tracking: Implement GA4, conversion tracking, and event tracking.',
-        'ar': 'التحليلات والتتبع: إعداد GA4، تتبع التحويلات، وتتبع الأحداث.'
+        'en':
+            'Analytics & Tracking: Implement GA4, conversion tracking, and event tracking.',
+        'ar': 'التحليلات والتتبع: إعداد GA4، تتبع التحويلات، وتتبع الأحداث.',
       },
     ],
     // ── Rabhan E-Commerce Engines ─────────────────────────────────────────
     'store': [
       {
-        'en': 'UI/UX Optimization: Improve navigation, structure, and overall layout.',
-        'ar': 'تحسين تجربة المستخدم (UI/UX): تحسين التنقل، الهيكلة، والتصميم العام.'
+        'en':
+            'UI/UX Optimization: Improve navigation, structure, and overall layout.',
+        'ar':
+            'تحسين تجربة المستخدم (UI/UX): تحسين التنقل، الهيكلة، والتصميم العام.',
       },
       {
         'en': 'Speed Optimization: Ensure fast page load times on all devices.',
-        'ar': 'تحسين السرعة: ضمان أوقات تحميل سريعة للصفحات على جميع الأجهزة.'
+        'ar': 'تحسين السرعة: ضمان أوقات تحميل سريعة للصفحات على جميع الأجهزة.',
       },
       {
-        'en': 'Mobile Responsiveness: Deliver a seamless mobile shopping experience.',
-        'ar': 'التوافق مع الجوال: تقديم تجربة تسوق سلسة ومريحة عبر الجوال.'
+        'en':
+            'Mobile Responsiveness: Deliver a seamless mobile shopping experience.',
+        'ar': 'التوافق مع الجوال: تقديم تجربة تسوق سلسة ومريحة عبر الجوال.',
       },
       {
-        'en': 'Payment Integration: Set up secure and diverse payment gateways.',
-        'ar': 'بوابات الدفع: إعداد بوابات دفع إلكترونية متعددة وآمنة.'
+        'en':
+            'Payment Integration: Set up secure and diverse payment gateways.',
+        'ar': 'بوابات الدفع: إعداد بوابات دفع إلكترونية متعددة وآمنة.',
       },
     ],
     'product': [
       {
         'en': 'Product Descriptions: Write compelling and SEO-friendly copy.',
-        'ar': 'وصف المنتجات: كتابة نصوص جذابة ومحسنة لمحركات البحث.'
+        'ar': 'وصف المنتجات: كتابة نصوص جذابة ومحسنة لمحركات البحث.',
       },
       {
-        'en': 'High-Quality Imagery: Produce professional photos and demo videos.',
-        'ar': 'صور عالية الجودة: إنتاج صور وفيديوهات توضيحية احترافية.'
+        'en':
+            'High-Quality Imagery: Produce professional photos and demo videos.',
+        'ar': 'صور عالية الجودة: إنتاج صور وفيديوهات توضيحية احترافية.',
       },
       {
         'en': 'Pricing Strategy: Implement competitive pricing and discounts.',
-        'ar': 'استراتيجية التسعير: تطبيق تسعير تنافسي وعروض خصومات.'
+        'ar': 'استراتيجية التسعير: تطبيق تسعير تنافسي وعروض خصومات.',
       },
       {
         'en': 'Inventory Management: Ensure real-time accurate stock tracking.',
-        'ar': 'إدارة المخزون: ضمان تتبع دقيق ولحظي للمخزون.'
+        'ar': 'إدارة المخزون: ضمان تتبع دقيق ولحظي للمخزون.',
       },
     ],
     'ads': [
       {
         'en': 'Campaign Strategy: Define target audience, budget, and goals.',
-        'ar': 'استراتيجية الحملات: تحديد الجمهور المستهدف، الميزانية، والأهداف.'
+        'ar':
+            'استراتيجية الحملات: تحديد الجمهور المستهدف، الميزانية، والأهداف.',
       },
       {
-        'en': 'Ad Creatives: Design high-converting banners and engaging videos.',
-        'ar': 'التصميم الإعلاني: تصميم لافتات وفيديوهات جذابة وعالية التحويل.'
+        'en':
+            'Ad Creatives: Design high-converting banners and engaging videos.',
+        'ar': 'التصميم الإعلاني: تصميم لافتات وفيديوهات جذابة وعالية التحويل.',
       },
       {
         'en': 'Platform Setup: Integrate Meta, Google, TikTok pixels and APIs.',
-        'ar': 'تجهيز المنصات: ربط بيكسل وواجهات (APIs) ميتا، جوجل، وتيك توك.'
+        'ar': 'تجهيز المنصات: ربط بيكسل وواجهات (APIs) ميتا، جوجل، وتيك توك.',
       },
       {
-        'en': 'ROAS Optimization: Monitor, tweak, and improve Return on Ad Spend.',
-        'ar': 'تحسين العائد (ROAS): مراقبة، تعديل، وتحسين العائد على الإنفاق الإعلاني.'
+        'en':
+            'ROAS Optimization: Monitor, tweak, and improve Return on Ad Spend.',
+        'ar':
+            'تحسين العائد (ROAS): مراقبة، تعديل، وتحسين العائد على الإنفاق الإعلاني.',
       },
     ],
     'sales_page': [
       {
-        'en': 'Landing Page Design: Build high-converting, highly-focused layouts.',
-        'ar': 'تصميم صفحات الهبوط: بناء تصاميم مركزة ومخصصة لرفع معدل التحويل.'
+        'en':
+            'Landing Page Design: Build high-converting, highly-focused layouts.',
+        'ar': 'تصميم صفحات الهبوط: بناء تصاميم مركزة ومخصصة لرفع معدل التحويل.',
       },
       {
-        'en': 'Offer Creation: Craft irresistible bundles and strategic upsells.',
-        'ar': 'صناعة العروض: ابتكار باقات عروض لا تقاوم وصفقات بديلة (Upsells).'
+        'en':
+            'Offer Creation: Craft irresistible bundles and strategic upsells.',
+        'ar':
+            'صناعة العروض: ابتكار باقات عروض لا تقاوم وصفقات بديلة (Upsells).',
       },
       {
-        'en': 'Trust Signals: Display authentic reviews, guarantees, and social proof.',
-        'ar': 'إشارات الثقة: عرض التقييمات الحقيقية، الضمانات، والإثبات الاجتماعي.'
+        'en':
+            'Trust Signals: Display authentic reviews, guarantees, and social proof.',
+        'ar':
+            'إشارات الثقة: عرض التقييمات الحقيقية، الضمانات، والإثبات الاجتماعي.',
       },
       {
-        'en': 'A/B Testing: Continuously test headlines and CTAs for better conversions.',
-        'ar': 'اختبارات A/B: اختبار مستمر للعناوين ودعوات اتخاذ الإجراء لتحسين التحويل.'
+        'en':
+            'A/B Testing: Continuously test headlines and CTAs for better conversions.',
+        'ar':
+            'اختبارات A/B: اختبار مستمر للعناوين ودعوات اتخاذ الإجراء لتحسين التحويل.',
       },
     ],
     'operations': [
       {
-        'en': 'Order Fulfillment: Streamline picking, packing, and dispatch processes.',
-        'ar': 'تجهيز الطلبات: تبسيط عمليات الانتقاء والتغليف وتجهيز الشحنات.'
+        'en':
+            'Order Fulfillment: Streamline picking, packing, and dispatch processes.',
+        'ar': 'تجهيز الطلبات: تبسيط عمليات الانتقاء والتغليف وتجهيز الشحنات.',
       },
       {
-        'en': 'Shipping & Logistics: Integrate with fast, reliable delivery partners.',
-        'ar': 'الشحن واللوجستيات: الربط مع شركاء توصيل موثوقين وسريعين.'
+        'en':
+            'Shipping & Logistics: Integrate with fast, reliable delivery partners.',
+        'ar': 'الشحن واللوجستيات: الربط مع شركاء توصيل موثوقين وسريعين.',
       },
       {
-        'en': 'Customer Support: Set up efficient handling for queries and returns.',
-        'ar': 'خدمة العملاء: إعداد نظام لمعالجة فعالة للاستفسارات والمرتجعات.'
+        'en':
+            'Customer Support: Set up efficient handling for queries and returns.',
+        'ar': 'خدمة العملاء: إعداد نظام لمعالجة فعالة للاستفسارات والمرتجعات.',
       },
       {
-        'en': 'Automation Workflows: Implement automated emails and SMS alerts.',
-        'ar': 'أتمتة العمليات: تطبيق رسائل بريد إلكتروني وتنبيهات نصية تلقائية.'
+        'en':
+            'Automation Workflows: Implement automated emails and SMS alerts.',
+        'ar':
+            'أتمتة العمليات: تطبيق رسائل بريد إلكتروني وتنبيهات نصية تلقائية.',
       },
     ],
     'analytics': [
       {
-        'en': 'Tracking Setup: Properly configure GA4, Tag Manager, and Conversion APIs.',
-        'ar': 'إعداد التتبع: التكوين الصحيح لـ GA4، إدارة العلامات، وواجهات التحويل.'
+        'en':
+            'Tracking Setup: Properly configure GA4, Tag Manager, and Conversion APIs.',
+        'ar':
+            'إعداد التتبع: التكوين الصحيح لـ GA4، إدارة العلامات، وواجهات التحويل.',
       },
       {
-        'en': 'Dashboard Creation: Build live performance monitoring dashboards.',
-        'ar': 'إنشاء لوحات القيادة: بناء لوحات لمراقبة الأداء والمبيعات المباشرة.'
+        'en':
+            'Dashboard Creation: Build live performance monitoring dashboards.',
+        'ar':
+            'إنشاء لوحات القيادة: بناء لوحات لمراقبة الأداء والمبيعات المباشرة.',
       },
       {
-        'en': 'Data Analysis: Identify user bottlenecks, drop-offs, and opportunities.',
-        'ar': 'تحليل البيانات: تحديد الاختناقات، نقاط انسحاب العملاء، وفرص النمو.'
+        'en':
+            'Data Analysis: Identify user bottlenecks, drop-offs, and opportunities.',
+        'ar':
+            'تحليل البيانات: تحديد الاختناقات، نقاط انسحاب العملاء، وفرص النمو.',
       },
       {
-        'en': 'Reporting: Generate automated weekly and monthly growth reports.',
-        'ar': 'التقارير: توليد تقارير آلية أسبوعية وشهرية لقياس النمو.'
+        'en':
+            'Reporting: Generate automated weekly and monthly growth reports.',
+        'ar': 'التقارير: توليد تقارير آلية أسبوعية وشهرية لقياس النمو.',
       },
     ],
   };
@@ -712,11 +814,57 @@ class GrowthEngineCard extends StatefulWidget {
 class _GrowthEngineCardState extends State<GrowthEngineCard> {
   bool _isExpanded = false;
   bool _isUpdating = false;
+  bool _isUploadingFile = false;
+
+  Future<void> _uploadStrategyFile(String taskName) async {
+    final result = await FilePicker.pickFiles(withData: true);
+    if (result == null) return;
+
+    setState(() => _isUploadingFile = true);
+    try {
+      final file = result.files.first;
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+
+      String url = '';
+      if (file.bytes != null) {
+        url = await WordPressUploadService.uploadBytes(file.bytes!, fileName);
+      } else if (file.path != null) {
+        url = await WordPressUploadService.uploadFile(file.path!, fileName);
+      } else {
+        throw Exception('No file data available');
+      }
+
+      final client = Supabase.instance.client;
+      await client.from('files').insert({
+        'project_id': widget.project.id,
+        'name': '${file.name} ($taskName)',
+        'file_url': url,
+        'size_kb': (file.size / 1024).round(),
+        'file_type': 'strategy',
+        'uploaded_by': client.auth.currentUser!.id,
+      });
+
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم رفع الملف بنجاح ✅'),
+            backgroundColor: AppTheme.primaryGreen,
+          ),
+        );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل الرفع: $e'), backgroundColor: Colors.red),
+        );
+    } finally {
+      if (mounted) setState(() => _isUploadingFile = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    
+
     final engine = widget.engines.firstWhere(
       (e) => e.engine == widget.type,
       orElse: () => EngineProgress(
@@ -795,8 +943,12 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: progress,
-                            backgroundColor: Colors.white.withValues(alpha: 0.05),
-                            valueColor: AlwaysStoppedAnimation<Color>(widget.color),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.05,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              widget.color,
+                            ),
                             minHeight: 6,
                           ),
                         ),
@@ -816,7 +968,9 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                         ),
                       ),
                       Icon(
-                        _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
                         color: Colors.white30,
                         size: 20,
                       ),
@@ -837,7 +991,10 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                   if (_isUpdating)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
-                      child: LinearProgressIndicator(color: AppTheme.primaryGreen, minHeight: 2),
+                      child: LinearProgressIndicator(
+                        color: AppTheme.primaryGreen,
+                        minHeight: 2,
+                      ),
                     ),
                   ...steps.map((stepMap) {
                     final enText = stepMap['en']!;
@@ -861,37 +1018,59 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                                       setState(() {
                                         _isUpdating = true;
                                       });
-                                      
-                                      final newChecked = List<String>.from(checkedSteps);
+
+                                      final newChecked = List<String>.from(
+                                        checkedSteps,
+                                      );
                                       if (value == true) {
                                         newChecked.add(enText);
                                       } else {
                                         newChecked.remove(enText);
                                       }
 
-                                      final newPercent = ((newChecked.length / totalSteps) * 100).toInt();
+                                      final newPercent =
+                                          ((newChecked.length / totalSteps) *
+                                                  100)
+                                              .toInt();
 
                                       try {
                                         final client = Supabase.instance.client;
                                         if (engine.id.isNotEmpty) {
-                                          await client.from('engine_progress').update({
-                                            'progress_percent': newPercent,
-                                            'status_notes': jsonEncode(newChecked),
-                                            'updated_at': DateTime.now().toIso8601String(),
-                                          }).eq('id', engine.id);
+                                          await client
+                                              .from('engine_progress')
+                                              .update({
+                                                'progress_percent': newPercent,
+                                                'status_notes': jsonEncode(
+                                                  newChecked,
+                                                ),
+                                                'updated_at': DateTime.now()
+                                                    .toIso8601String(),
+                                              })
+                                              .eq('id', engine.id);
                                         } else {
-                                          await client.from('engine_progress').insert({
-                                            'project_id': widget.project.id,
-                                            'engine': widget.type,
-                                            'progress_percent': newPercent,
-                                            'status_notes': jsonEncode(newChecked),
-                                            'updated_at': DateTime.now().toIso8601String(),
-                                          });
+                                          await client
+                                              .from('engine_progress')
+                                              .insert({
+                                                'project_id': widget.project.id,
+                                                'engine': widget.type,
+                                                'progress_percent': newPercent,
+                                                'status_notes': jsonEncode(
+                                                  newChecked,
+                                                ),
+                                                'updated_at': DateTime.now()
+                                                    .toIso8601String(),
+                                              });
                                         }
                                       } catch (e) {
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Failed to update progress: $e')),
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Failed to update progress: $e',
+                                              ),
+                                            ),
                                           );
                                         }
                                       } finally {
@@ -907,8 +1086,12 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                             Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: Icon(
-                                isChecked ? Icons.check_box : Icons.check_box_outline_blank,
-                                color: isChecked ? widget.color : Colors.white30,
+                                isChecked
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                color: isChecked
+                                    ? widget.color
+                                    : Colors.white30,
                                 size: 20,
                               ),
                             ),
@@ -917,12 +1100,28 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
                             child: Text(
                               displayText,
                               style: TextStyle(
-                                color: isChecked ? Colors.white70 : Colors.white,
+                                color: isChecked
+                                    ? Colors.white70
+                                    : Colors.white,
                                 fontSize: 13,
-                                decoration: isChecked ? TextDecoration.lineThrough : null,
+                                decoration: isChecked
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                           ),
+                          if (isEditable)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.attach_file,
+                                color: Colors.white54,
+                                size: 20,
+                              ),
+                              onPressed: _isUploadingFile
+                                  ? null
+                                  : () => _uploadStrategyFile(enText),
+                              tooltip: isAr ? 'رفع ملف' : 'Upload file',
+                            ),
                         ],
                       ),
                     );
@@ -936,4 +1135,3 @@ class _GrowthEngineCardState extends State<GrowthEngineCard> {
     );
   }
 }
-

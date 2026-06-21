@@ -25,9 +25,9 @@ import 'package:permission_handler/permission_handler.dart';
 class SafeLocalStorage extends LocalStorage {
   final _inMemoryStore = <String, String>{};
   final SharedPreferences? _prefs;
-  static const _key = 'supabase.auth.token';
+  final String _key;
 
-  SafeLocalStorage(this._prefs);
+  SafeLocalStorage(this._prefs) : _key = 'supabase.auth.token_${AppConfig.flavorName}';
 
   @override
   Future<void> initialize() async {}

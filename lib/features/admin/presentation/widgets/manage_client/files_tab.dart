@@ -96,6 +96,58 @@ class FilesTab extends ConsumerWidget {
   }
 
   Future<void> _uploadFile(BuildContext context, WidgetRef ref) async {
+    String? selectedCategory;
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    
+    final categories = {
+      'brand_asset': isAr ? 'أصول العلامة التجارية' : 'Brand Asset',
+      'strategy': isAr ? 'الاستراتيجية' : 'Strategy',
+      'report': isAr ? 'تقرير' : 'Report',
+      'contract': isAr ? 'عقد' : 'Contract',
+      'design': isAr ? 'تصميم' : 'Design',
+      'keyword_research': isAr ? 'بحث الكلمات المفتاحية' : 'Keyword Research',
+      'other': isAr ? 'أخرى' : 'Other',
+    };
+
+    String currentCategory = 'other';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.cardColor,
+            title: Text(isAr ? 'اختر تصنيف الملف' : 'Select File Category', style: const TextStyle(color: Colors.white)),
+            content: DropdownButtonFormField<String>(
+              value: currentCategory,
+              dropdownColor: AppTheme.cardColor,
+              style: const TextStyle(color: Colors.white),
+              items: categories.entries.map((e) {
+                return DropdownMenuItem(
+                  value: e.key,
+                  child: Text(e.value),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => currentCategory = val);
+              },
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(isAr ? 'إلغاء' : 'Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
+                onPressed: () => Navigator.pop(ctx, true), 
+                child: Text(isAr ? 'متابعة' : 'Continue', style: const TextStyle(color: Colors.black)),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+
+    if (confirmed != true) return;
+    selectedCategory = currentCategory;
+
     final result = await FilePicker.pickFiles(withData: true);
     if (result == null) return;
     final file = result.files.first;
@@ -115,12 +167,12 @@ class FilesTab extends ConsumerWidget {
         'name': file.name,
         'file_url': url,
         'size_kb': (file.size / 1024).round(),
-        'file_type': file.extension ?? 'bin',
+        'file_type': selectedCategory,
       });
       ref.invalidate(projectFilesProvider(pid));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم رفع الملف ✅'), backgroundColor: AppTheme.primaryGreen));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'تم رفع الملف ✅' : 'File uploaded ✅'), backgroundColor: AppTheme.primaryGreen));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل الرفع: $e'), backgroundColor: Colors.red));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isAr ? 'فشل الرفع: $e' : 'Upload failed: $e'), backgroundColor: Colors.red));
     }
   }
 }

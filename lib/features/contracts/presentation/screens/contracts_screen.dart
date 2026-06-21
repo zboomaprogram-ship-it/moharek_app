@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
 import 'package:moharek_app/shared/services/data_providers.dart';
@@ -9,6 +9,7 @@ import 'package:moharek_app/shared/services/haptic_service.dart';
 import 'package:moharek_app/features/contracts/presentation/screens/contract_sign_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:moharek_app/core/utils/error_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ContractsScreen extends ConsumerWidget {
   const ContractsScreen({super.key});
@@ -193,6 +194,15 @@ class ContractsScreen extends ConsumerWidget {
   }
 
   void _openContract(BuildContext context, Contract contract) {
+    if (kIsWeb && contract.fileUrl != null) {
+      final uri = Uri.parse(contract.fileUrl!);
+      canLaunchUrl(uri).then((can) {
+        if (can) {
+          launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      });
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -231,7 +241,28 @@ class _ContractViewerScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(contract.title)),
       body: contract.fileUrl != null
-          ? SfPdfViewer.network(contract.fileUrl!)
+          ? (kIsWeb 
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.picture_as_pdf, size: 64, color: Colors.redAccent),
+                      const SizedBox(height: 16),
+                      const Text('تعذر فتح الملف في هذه النافذة', style: TextStyle(color: Colors.white, fontSize: 16)),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.black,
+                        ),
+                        onPressed: () => launchUrl(Uri.parse(contract.fileUrl!), mode: LaunchMode.externalApplication),
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('فتح الملف في نافذة جديدة'),
+                      ),
+                    ],
+                  ),
+                )
+              : SfPdfViewer.network(contract.fileUrl!))
           : const Center(child: Text('ملف العقد غير متوفر', style: TextStyle(color: Colors.grey))),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:moharek_app/shared/widgets/image_viewer_screen.dart';
@@ -9,6 +10,13 @@ Future<void> openFileInApp(BuildContext context, String url, String title) async
 
   // 1. PDF
   if (lowerUrl.contains('.pdf') || lowerUrl.endsWith('.pdf')) {
+    if (kIsWeb) {
+      final uri = Uri.parse(cleanUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PdfViewerScreen(url: cleanUrl, title: title),

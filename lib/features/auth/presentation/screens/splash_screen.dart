@@ -62,12 +62,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
         } else {
           // Check onboarding for clients:
           // Show onboarding when onboardingCompleted is false OR null (new user)
-          if (profile?.onboardingCompleted != true) {
+          if (kIsWeb) {
+            context.go('/dashboard');
+          } else if (profile?.onboardingCompleted != true) {
             context.go('/onboarding');
           } else {
             context.go('/dashboard');
           }
-
         }
       } catch (e) {
         debugPrint('Splash Error: $e');
@@ -77,7 +78,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       // First-time check: if onboarding has not been shown, show it!
       final prefs = await SharedPreferences.getInstance();
       final shown = prefs.getBool('onboarding_shown') ?? false;
-      if (!shown) {
+      if (kIsWeb) {
+        context.go('/login');
+      } else if (!shown) {
         context.go('/onboarding');
       } else {
         context.go('/login');

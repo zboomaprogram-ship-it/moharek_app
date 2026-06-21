@@ -84,27 +84,39 @@ serve(async (req) => {
         )
       }
 
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      })
-      if (authError) throw authError
+      // Check if user already exists
+      const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+      if (listError) throw listError
+      
+      const existingUser = existingUsers.users.find(u => u.email === email)
+      let authUserId = null
 
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: authUser.user.id,
-          full_name,
-          company_name,
-          role: 'client'
+      if (existingUser) {
+        authUserId = existingUser.id
+      } else {
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
         })
-      if (profileError) throw profileError
+        if (authError) throw authError
+        authUserId = authUser.user.id
+
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            id: authUserId,
+            full_name,
+            company_name,
+            role: 'client'
+          })
+        if (profileError) throw profileError
+      }
 
       const { data: project, error: projectError } = await supabaseAdmin
         .from('projects')
         .insert({
-          client_id: authUser.user.id,
+          client_id: authUserId,
           name: project_name,
           status: 'active',
           current_stage: 'audit',
@@ -115,7 +127,7 @@ serve(async (req) => {
       if (projectError) throw projectError
 
       return new Response(
-        JSON.stringify({ success: true, user_id: authUser.user.id, project }),
+        JSON.stringify({ success: true, user_id: authUserId, project }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }

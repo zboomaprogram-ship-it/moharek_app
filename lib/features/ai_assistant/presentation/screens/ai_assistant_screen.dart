@@ -117,8 +117,8 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   Widget _buildEmptyState(bool isAr) {
     final suggestions = isAr
-        ? ['اشرح لي نتائج SEO الأخيرة', 'ما هي المهام الحالية للفريق؟', 'كيف أحسن مؤشر صحة مشروعي؟']
-        : ['Explain my recent SEO results', 'What are the current team tasks?', 'How can I improve my health score?'];
+        ? ['اشرح لي أداء المبيعات الأخير', 'كيف أحسن معدل التحويل (CR)؟', 'ما هي المنتجات الأكثر مبيعاً؟']
+        : ['Explain my recent sales performance', 'How can I improve my Conversion Rate?', 'What are the top-selling products?'];
 
     return Center(
       child: FadeInUp(

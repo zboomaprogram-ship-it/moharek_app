@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -48,14 +49,14 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
     }
 
     return Scaffold(
-      backgroundColor: RabhanTheme.background,
+      backgroundColor: const Color(0xFF0A0F1C),
       appBar: AppBar(
         title: Text(
           isAr ? 'تقارير الأداء والتحليلات' : 'Performance Reports & Analytics',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
         ),
         centerTitle: true,
-        backgroundColor: RabhanTheme.background,
+        backgroundColor: const Color(0xFF0A0F1C),
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
@@ -490,32 +491,55 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
 
   Widget _buildFunnelStage(String label, String value, double percent, Color barColor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-              Text(value, style: TextStyle(color: barColor, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+              Text(value, style: TextStyle(color: barColor, fontSize: 14, fontWeight: FontWeight.w900)),
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: percent,
-                    minHeight: 12,
-                    backgroundColor: Colors.white.withAlpha(10),
-                    valueColor: AlwaysStoppedAnimation<Color>(barColor),
+          const SizedBox(height: 8),
+          Container(
+            height: 14,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(50),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: (percent * 100).toInt(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: [barColor.withAlpha(200), barColor],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: barColor.withAlpha(50),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  flex: 100 - (percent * 100).toInt(),
+                  child: const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -955,51 +979,100 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
     required IconData icon,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: RabhanTheme.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withAlpha(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(color: RabhanTheme.textSecondary, fontSize: 11)),
-              Icon(icon, color: color, size: 20),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withAlpha(50), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: color.withAlpha(20),
+                blurRadius: 20,
+                spreadRadius: -5,
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          FittedBox(
-            child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title, 
+                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              FittedBox(
+                child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    subText.contains('-') ? Icons.trending_down : Icons.trending_up, 
+                    color: subText.contains('-') ? Colors.redAccent : RabhanTheme.primaryGreen, 
+                    size: 14
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      subText, 
+                      style: TextStyle(color: subText.contains('-') ? Colors.redAccent : RabhanTheme.primaryGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(subText, style: TextStyle(color: Colors.grey.shade600, fontSize: 10)),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildCardWrapper({required String title, required String subtitle, required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: RabhanTheme.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withAlpha(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 2),
-          Text(subtitle, style: const TextStyle(color: RabhanTheme.textSecondary, fontSize: 11)),
-          const SizedBox(height: 20),
-          child,
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha(12),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withAlpha(20), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              const SizedBox(height: 24),
+              child,
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1017,12 +1090,26 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
           LineChartBarData(
             spots: spots,
             isCurved: true,
+            curveSmoothness: 0.4,
             color: RabhanTheme.primaryGreen,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
+            barWidth: 4,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: RabhanTheme.primaryGreen.withAlpha((0.1 * 255).round()),
+              gradient: LinearGradient(
+                colors: [
+                  RabhanTheme.primaryGreen.withAlpha(100),
+                  RabhanTheme.primaryGreen.withAlpha(0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            shadow: Shadow(
+              color: RabhanTheme.primaryGreen.withAlpha(100),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ),
         ],
@@ -1042,8 +1129,18 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
       return BarChartGroupData(
         x: idx,
         barRods: [
-          BarChartRodData(toY: profit, color: RabhanTheme.primaryGreen, width: 10, borderRadius: BorderRadius.circular(2)),
-          BarChartRodData(toY: spend, color: RabhanTheme.gold, width: 10, borderRadius: BorderRadius.circular(2)),
+          BarChartRodData(
+            toY: profit, 
+            gradient: LinearGradient(colors: [RabhanTheme.primaryGreen.withAlpha(200), RabhanTheme.primaryGreen]), 
+            width: 12, 
+            borderRadius: BorderRadius.circular(4)
+          ),
+          BarChartRodData(
+            toY: spend, 
+            gradient: LinearGradient(colors: [RabhanTheme.gold.withAlpha(200), RabhanTheme.gold]), 
+            width: 12, 
+            borderRadius: BorderRadius.circular(4)
+          ),
         ],
       );
     }).toList();
@@ -1064,12 +1161,12 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
     final rangeStr = '${start.day}/${start.month} - ${end.day}/${end.month}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: RabhanTheme.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withAlpha(5)),
+        color: Colors.white.withAlpha(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withAlpha(15)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1079,10 +1176,10 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
             children: [
               Text(
                 isAr ? 'فترة الأداء' : 'Performance Period',
-                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 2),
-              Text(rangeStr, style: const TextStyle(color: RabhanTheme.textSecondary, fontSize: 11)),
+              const SizedBox(height: 4),
+              Text(rangeStr, style: const TextStyle(color: Colors.white54, fontSize: 12)),
             ],
           ),
           Column(
@@ -1090,12 +1187,12 @@ class _RabhanResultsViewState extends ConsumerState<RabhanResultsView> with Sing
             children: [
               Text(
                 '${m['total_sales']} $currency',
-                style: const TextStyle(color: RabhanTheme.primaryGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: RabhanTheme.primaryGreen, fontSize: 16, fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 'ROAS: ${m['roas']}x',
-                style: const TextStyle(color: RabhanTheme.gold, fontSize: 11),
+                style: const TextStyle(color: RabhanTheme.gold, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ],
           ),

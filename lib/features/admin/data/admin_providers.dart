@@ -21,13 +21,15 @@ final allPendingApprovalsProvider = FutureProvider<int>((ref) async {
   return (data as List).length;
 });
 
-final allPendingContractsProvider = FutureProvider<int>((ref) async {
+final allPendingContractsProvider = StreamProvider<int>((ref) {
   final client = ref.watch(supabaseClientProvider);
-  final data = await client
-      .from('contracts')
-      .select('id')
-      .eq('status', 'pending');
-  return (data as List).length;
+  return robustQueryStream<Map<String, dynamic>>(
+    client: client,
+    table: 'contracts',
+    filterColumn: 'status',
+    filterValue: 'pending',
+    fromJson: (json) => json,
+  ).map((list) => list.length);
 });
 
 final allPendingInvoicesProvider = FutureProvider<int>((ref) async {
@@ -669,8 +671,8 @@ class AdminActions {
 
   Future<void> resetClientPassword(Map<String, dynamic> data) async {
     await client.functions.invoke(
-      'update-user-password',
-      body: {'userId': data['clientId'], 'password': data['newPassword']},
+      'admin-reset-password',
+      body: {'user_id': data['clientId'], 'new_password': data['newPassword']},
     );
 
     try {
@@ -679,6 +681,60 @@ class AdminActions {
         'action': 'تم تغيير كلمة مرور العميل: ${data['clientName']}',
         'target_type': 'profile',
         'target_id': data['clientId'],
+      });
+    } catch (_) {}
+  }
+
+  /// Updates a client's profile fields (name, email, company) and optionally the project name.
+  Future<void> updateClientProfile({
+    required String userId,
+    required String projectId,
+    String? fullName,
+    String? email,
+    String? companyName,
+    String? projectName,
+  }) async {
+    // Update profile fields
+    final profileUpdates = <String, dynamic>{};
+    if (fullName != null) profileUpdates['full_name'] = fullName;
+    if (companyName != null) profileUpdates['company_name'] = companyName;
+
+    if (profileUpdates.isNotEmpty) {
+      await client.from('profiles').update(profileUpdates).eq('id', userId);
+    }
+
+    // Update project name if provided
+    if (projectName != null) {
+      await client.from('projects').update({'name': projectName}).eq('id', projectId);
+    }
+
+    try {
+      await client.from('admin_logs').insert({
+        'actor_id': client.auth.currentUser!.id,
+        'action': 'تحديث بيانات العميل: $userId',
+        'target_type': 'profile',
+        'target_id': userId,
+      });
+    } catch (_) {}
+  }
+
+  /// Deletes a user account entirely (calls delete-user edge function).
+  Future<void> deleteUserAccount(String userId, String name) async {
+    final response = await client.functions.invoke(
+      'delete-user',
+      body: {'user_id': userId},
+    );
+
+    if (response.status != 200) {
+      final errorMsg = response.data?['error'] ?? 'فشل في حذف حساب العميل';
+      throw Exception(errorMsg);
+    }
+
+    try {
+      await client.from('admin_logs').insert({
+        'actor_id': client.auth.currentUser!.id,
+        'action': 'تم حذف حساب العميل نهائياً: $name ($userId)',
+        'target_type': 'profile',
       });
     } catch (_) {}
   }
@@ -1716,3 +1772,13 @@ final adminProjectEngineProgressProvider = StreamProvider.family<List<Map<String
   );
 });
 
+/// Fetches the full detail of a client project including profile, is_active, email.
+final clientDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, projectId) async {
+  final client = ref.watch(supabaseClientProvider);
+  final data = await client
+      .from('projects')
+      .select('id, name, current_stage, health_score, client_id, profiles!projects_client_id_fkey(id, full_name, email, company_name, is_active, created_at, avatar_url)')
+      .eq('id', projectId)
+      .maybeSingle();
+  return data ?? {};
+});

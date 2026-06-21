@@ -8,6 +8,7 @@ import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
 
 // Tab Imports
+import '../widgets/manage_client/client_info_tab.dart';
 import '../widgets/manage_client/engines_tab.dart';
 import '../widgets/manage_client/tasks_tab.dart';
 import '../widgets/manage_client/results_tab.dart';
@@ -47,7 +48,7 @@ class _AdminManageClientState extends ConsumerState<AdminManageClient> with Sing
   void initState() {
     super.initState();
     final isRabhan = AppConfig.flavorName == 'rabhan';
-    _tabsCount = isRabhan ? 14 : 13;
+    _tabsCount = isRabhan ? 15 : 14;
     _tabController = TabController(length: _tabsCount, vsync: this);
 
     _tabController.addListener(_onTabChanged);
@@ -69,7 +70,21 @@ class _AdminManageClientState extends ConsumerState<AdminManageClient> with Sing
     String? type;
     if (isRabhan) {
       type = switch (index) {
-        3 => 'task',
+        0 => null, // Client Info
+        4 => 'task',
+        7 => 'metrics',
+        8 => 'approval',
+        9 => 'report',
+        10 => 'info',
+        11 => 'meeting',
+        13 => 'invoice',
+        14 => 'support',
+        _ => null,
+      };
+    } else {
+      type = switch (index) {
+        0 => null, // Client Info
+        4 => 'task',
         6 => 'metrics',
         7 => 'approval',
         8 => 'report',
@@ -77,18 +92,6 @@ class _AdminManageClientState extends ConsumerState<AdminManageClient> with Sing
         10 => 'meeting',
         12 => 'invoice',
         13 => 'support',
-        _ => null,
-      };
-    } else {
-      type = switch (index) {
-        3 => 'task',
-        5 => 'metrics',
-        6 => 'approval',
-        7 => 'report',
-        8 => 'info',
-        9 => 'meeting',
-        11 => 'invoice',
-        12 => 'support',
         _ => null,
       };
     }
@@ -194,6 +197,7 @@ class _AdminManageClientState extends ConsumerState<AdminManageClient> with Sing
           unselectedLabelColor: Colors.grey,
           labelStyle: TextStyle(fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w600),
           tabs: [
+            Tab(icon: buildTabIcon(iconData: Icons.person_pin_outlined, notificationType: null), text: 'Client Info'),
             Tab(icon: buildTabIcon(iconData: Icons.rocket_launch_outlined, notificationType: null), text: isRabhan ? 'Ecom Strategy' : 'Strategy'),
             Tab(icon: buildTabIcon(iconData: Icons.assignment_outlined, notificationType: null), text: 'Brief'),
             Tab(icon: buildTabIcon(iconData: Icons.map_outlined, notificationType: null), text: 'Journey'),
@@ -215,6 +219,7 @@ class _AdminManageClientState extends ConsumerState<AdminManageClient> with Sing
       body: TabBarView(
         controller: _tabController,
         children: [
+          ClientInfoTab(pid: widget.projectId, isAdmin: widget.isAdmin),
           EnginesTab(pid: widget.projectId),
           BriefTab(pid: widget.projectId),
           JourneyTab(pid: widget.projectId),
@@ -288,6 +293,8 @@ class _ProjectSettingsSheet extends ConsumerWidget {
                 final name = p?['profiles']?['company_name'] ?? p?['profiles']?['full_name'] ?? 'Project';
                 
                 await actions.deleteProject(pid, name);
+                ref.invalidate(allProjectsProvider);
+                ref.invalidate(adminOverviewProvider);
                 if (context.mounted) {
                   context.go('/admin/clients');
                 }

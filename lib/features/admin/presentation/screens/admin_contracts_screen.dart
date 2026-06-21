@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/theme/app_theme.dart';
@@ -9,31 +10,68 @@ import 'package:moharek_app/shared/services/wordpress_upload_service.dart';
 import 'package:moharek_app/features/am/data/am_providers.dart';
 import 'package:moharek_app/core/utils/error_handler.dart';
 
-final allContractsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final allContractsProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) {
   final client = ref.watch(supabaseClientProvider);
   final user = client.auth.currentUser;
-  if (user == null) return [];
+  if (user == null) return Stream.value([]);
 
-  // Fetch the role of the logged-in user
-  final profileData = await client
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-  final role = profileData['role'] as String? ?? 'client';
-  final isAdmin = role == 'admin';
+  final controller = StreamController<List<Map<String, dynamic>>>.broadcast();
+  StreamSubscription? streamSub;
 
-  var query = client
-      .from('contracts')
-      .select('*, projects!inner(name, account_manager_id, profiles!projects_client_id_fkey(full_name, company_name))');
+  Future<void> fetch() async {
+    try {
+      final profileData = await client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+      final role = profileData['role'] as String? ?? 'client';
+      final isAdmin = role == 'admin';
 
-  if (!isAdmin) {
-    query = query.eq('projects.account_manager_id', user.id);
+      var query = client
+          .from('contracts')
+          .select('*, projects!inner(name, account_manager_id, profiles!projects_client_id_fkey(full_name, company_name))');
+
+      if (!isAdmin) {
+        query = query.eq('projects.account_manager_id', user.id);
+      }
+
+      final data = await query.order('created_at', ascending: false);
+      if (!controller.isClosed) {
+        controller.add((data as List).cast<Map<String, dynamic>>());
+      }
+    } catch (e) {
+      if (!controller.isClosed) {
+        controller.addError(e);
+      }
+    }
   }
 
-  final data = await query.order('created_at', ascending: false);
-  return (data as List).cast<Map<String, dynamic>>();
+  // Initial fetch
+  fetch();
+
+  // Listen to changes in the contracts table
+  try {
+    streamSub = client
+        .from('contracts')
+        .stream(primaryKey: ['id'])
+        .listen((_) {
+          fetch(); // Refetch details when anything in the contracts table changes
+        }, onError: (err) {
+          debugPrint('Realtime contracts stream error: $err');
+        });
+  } catch (e) {
+    debugPrint('Failed to initialize contracts stream: $e');
+  }
+
+  ref.onDispose(() {
+    streamSub?.cancel();
+    controller.close();
+  });
+
+  return controller.stream;
 });
+
 
 class AdminContractsScreen extends ConsumerWidget {
   const AdminContractsScreen({super.key});
@@ -254,8 +292,17 @@ class AdminContractsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
+                if (isSigned && contract['signature_url'] != null) ...[
+                  IconButton(
+                    icon: const Icon(Icons.draw, color: AppTheme.primaryGreen, size: 20),
+                    tooltip: 'عرض التوقيع',
+                    onPressed: () => _downloadSignature(context, contract),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 IconButton(
                   icon: const Icon(Icons.download, color: Colors.white70, size: 20),
+                  tooltip: 'تحميل العقد',
                   onPressed: () => _downloadContract(context, contract),
                 ),
               ],
@@ -283,14 +330,30 @@ class AdminContractsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () => _downloadContract(context, contract),
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('تحميل'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primaryGreen,
-                    padding: EdgeInsets.zero,
-                  ),
+                Row(
+                  children: [
+                    if (isSigned && contract['signature_url'] != null) ...[
+                      TextButton.icon(
+                        onPressed: () => _downloadSignature(context, contract),
+                        icon: const Icon(Icons.draw, size: 18),
+                        label: const Text('التوقيع'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryGreen,
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    TextButton.icon(
+                      onPressed: () => _downloadContract(context, contract),
+                      icon: const Icon(Icons.download, size: 18),
+                      label: const Text('تحميل'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryGreen,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -298,6 +361,17 @@ class AdminContractsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _downloadSignature(BuildContext context, Map<String, dynamic> contract) async {
+    final sigUrl = contract['signature_url'] as String?;
+    if (sigUrl != null && sigUrl.isNotEmpty) {
+      await openFileInApp(context, sigUrl, 'توقيع: ${contract['title']}');
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يوجد توقيع متاح')));
+      }
+    }
   }
 
   Future<void> _downloadContract(BuildContext context, Map<String, dynamic> contract) async {

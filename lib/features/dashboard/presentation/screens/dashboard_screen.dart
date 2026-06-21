@@ -166,6 +166,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ? profile.fullName
                       : (profile?.email ?? l10n.unknownUser);
 
+                  final isClient = profile?.role == 'client' || profile?.role == null;
+                  final project = projectAsync.valueOrNull;
+
+                  if (isClient && project == null && projectAsync.hasValue) {
+                    return _buildNoProjectScreen(context, displayName, l10n, isAr);
+                  }
+
                   final String? displaySubtitle =
                       profile?.clientGoal ??
                       projectAsync.value?.projectGoal ??
@@ -856,6 +863,165 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNoProjectScreen(
+    BuildContext context,
+    String displayName,
+    AppLocalizations l10n,
+    bool isAr,
+  ) {
+    return Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 500),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF1E293B).withValues(alpha: 0.8),
+                const Color(0xFF0F172A).withValues(alpha: 0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.05),
+                blurRadius: 30,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon with glowing effect
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryGreen.withValues(alpha: 0.2),
+                      AppTheme.primaryBlue.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.folder_off_outlined,
+                    size: 44,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              // Greeting
+              Text(
+                isAr ? 'مرحباً، $displayName' : 'Welcome, $displayName',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Main Alert Title
+              Text(
+                isAr ? 'تم إزالة أو انتهاء المشروع' : 'No Active Project',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Detailed Explanatory Subtitle
+              Text(
+                isAr
+                    ? 'لم يعد هناك مشروع نشط مرتبط بحسابك حالياً. تم حذف مشروعك السابق أو لم يتم تعيين مشروع جديد لك بعد.\n\nيرجى التواصل مع مدير حسابك أو الإدارة لربط مشروع جديد ومتابعة نمو متجرك.'
+                    : 'There is currently no active project associated with your account. Your previous project has been deleted or completed, or a new project has not yet been assigned.\n\nPlease contact your Account Manager or Administrator to link a new project.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 40),
+              // Refresh Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    HapticService.light();
+                    ref.invalidate(profileProvider);
+                    ref.invalidate(currentProjectProvider);
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: Text(
+                    isAr ? 'تحديث الحالة' : 'Check Again',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Sign Out Button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    HapticService.light();
+                    await Supabase.instance.client.auth.signOut();
+                  },
+                  icon: const Icon(Icons.logout_rounded, size: 20),
+                  label: Text(
+                    isAr ? 'تسجيل الخروج' : 'Sign Out',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(
+                      color: Colors.redAccent.withValues(alpha: 0.3),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

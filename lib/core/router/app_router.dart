@@ -156,6 +156,9 @@ String? _processRedirect(
   // Onboarding Gate: Allow accessing onboarding only if not completed yet, or if edit=true query parameter is set
   if (isClient) {
     if (path == '/onboarding') {
+      if (kIsWeb) {
+        return '/dashboard';
+      }
       final editMode = stateUri.queryParameters['edit'] == 'true';
       if (!editMode && onboardingCompleted) {
         return '/dashboard';
@@ -288,7 +291,13 @@ late final appRouter = GoRouter(
       );
     } catch (e) {
       debugPrint('Security Gate Error: $e');
-      // On error, don't redirect — let the user stay on their current page
+      if (e.toString().contains('PGRST301') || e.toString().contains('JWT')) {
+        // Corrupted/mismatched session token (e.g. from another flavor)
+        // Automatically sign out to clear local storage and redirect to login
+        unawaited(client.auth.signOut());
+        return '/login';
+      }
+      // On other errors, don't redirect — let the user stay on their current page
       return null;
     }
   },

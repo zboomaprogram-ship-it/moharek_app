@@ -9,6 +9,7 @@ import 'package:moharek_app/features/dashboard/presentation/widgets/main_drawer.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:moharek_app/core/config/app_config.dart';
 import 'package:moharek_app/features/notifications/data/notifications_provider.dart';
+import 'package:moharek_app/shared/services/data_providers.dart';
 
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({required this.navigationShell, Key? key})
@@ -41,6 +42,19 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final projectAsync = ref.watch(currentProjectProvider);
+    final profileAsync = ref.watch(profileProvider);
+
+    final isClient = profileAsync.valueOrNull?.role == 'client' || profileAsync.valueOrNull?.role == null;
+    final hasNoProject = isClient && projectAsync.hasValue && projectAsync.valueOrNull == null;
+
+    if (hasNoProject) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: widget.navigationShell,
+      );
+    }
+
     final connectivity = ref.watch(connectivityStatusProvider);
     final isOffline = connectivity.value == ConnectivityStatus.isDisconnected;
     final l10n = AppLocalizations.of(context)!;
