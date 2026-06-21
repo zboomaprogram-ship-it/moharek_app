@@ -48,7 +48,6 @@
 		<array>
 			<string>fetch</string>
 			<string>remote-notification</string>
-			<string>voip</string>
 		</array>
 		<key>NSBluetoothAlwaysUsageDescription</key>
 		<string>Moharek requires Bluetooth access to detect and connect to external audio devices. For example, this allows you to use wireless Bluetooth headsets or speakers for audio routing during live voice and video calls.</string>
