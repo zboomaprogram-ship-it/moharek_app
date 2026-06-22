@@ -189,10 +189,10 @@ packages:
     dependency: "direct main"
     description:
       name: connectivity_plus
-      sha256: b5e72753cf63becce2c61fd04dfe0f1c430cc5278b53a1342dc5ad839eab29ec
+      sha256: "62ffa266d9a23b79fb3fcbc206afc00bb979417ba57b1324c546b5aab95ba057"
       url: "https://pub.dev"
     source: hosted
-    version: "6.1.5"
+    version: "7.1.1"
   connectivity_plus_platform_interface:
     dependency: transitive
     description:
@@ -593,10 +593,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_webrtc
-      sha256: b832dc76c0d1577f14aaf35e9c38d4ed7667cbc89c492b7bf4505d8d5f62e08b
+      sha256: "0f86b518e9349e71a136a96e0ea11294cad8a8531b2bc9ae99e69df332ac898a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.12.12+hotfix.1"
+    version: "1.3.0"
   freezed_annotation:
     dependency: transitive
     description:
@@ -833,10 +833,18 @@ packages:
     dependency: "direct main"
     description:
       name: livekit_client
-      sha256: e1e2524c8b0c9280ab852b5239b9ad00f10f50c82c5f6cc674df3583b6d3408b
+      sha256: "51d97a4501e385e53c140b8367a52316af5b466e71e6d800c8826065b6061521"
       url: "https://pub.dev"
     source: hosted
-    version: "2.3.1+hotfix.1"
+    version: "2.6.4"
+  logger:
+    dependency: transitive
+    description:
+      name: logger
+      sha256: "25aee487596a6257655a1e091ec2ae66bc30e7af663592cc3a27e6591e05035c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.7.0"
   logging:
     dependency: transitive
     description:
@@ -877,6 +885,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mime_type:
+    dependency: transitive
+    description:
+      name: mime_type
+      sha256: d652b613e84dac1af28030a9fba82c0999be05b98163f9e18a0849c6e63838bb
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   nested:
     dependency: transitive
     description:
@@ -905,10 +921,10 @@ packages:
     dependency: "direct main"
     description:
       name: onesignal_flutter
-      sha256: "8b96061c197b01d79d96b34632d277bfe55a314565265a6e021ab34954976517"
+      sha256: "70c22b209eab569a8b163b04b0e26072d8f1fb04062219686d8a2c44c0e67f78"
       url: "https://pub.dev"
     source: hosted
-    version: "5.5.4"
+    version: "5.6.2"
   particles_flutter:
     dependency: "direct main"
     description:
@@ -1045,14 +1061,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.6"
-  platform_detect:
-    dependency: transitive
-    description:
-      name: platform_detect
-      sha256: "6e91e2158b9db7f6f4581a0f0b3a77171570b392108de196ba0c52e3c1976334"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.6"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -1089,10 +1097,10 @@ packages:
     dependency: transitive
     description:
       name: protobuf
-      sha256: "68645b24e0716782e58948f8467fd42a880f255096a821f9e7d0ec625b00c84d"
+      sha256: "75ec242d22e950bdcc79ee38dd520ce4ee0bc491d7fadc4ea47694604d22bf06"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0"
+    version: "6.0.0"
   provider:
     dependency: transitive
     description:
@@ -1109,14 +1117,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.10"
-  pub_semver:
-    dependency: transitive
-    description:
-      name: pub_semver
-      sha256: "5bfcf68ca79ef689f8990d1160781b4bad40a3bd5e5218ad4076ddb7f4081585"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.0"
   realtime_client:
     dependency: transitive
     description:
